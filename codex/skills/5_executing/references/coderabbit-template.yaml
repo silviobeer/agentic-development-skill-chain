@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit config tuned for the Skill-5 wave-gate flow.
+# Goal: surface Critical/High/Blocker quickly, skip bikeshedding.
+# Profile `chill` keeps signal-to-noise high during per-wave reviews.
+#
+# `coderabbit review --agent` reads this file automatically when placed at repo root.
+
+language: en-US
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - WIP
+      - wip
+      - "skip-review"
+
+  # Keep the diff scope lean. Add project-specific ignores below if needed.
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/.next/**"
+    - "!**/coverage/**"
+    - "!**/.turbo/**"
+    - "!**/*.lock"
+    - "!**/*.lockb"
+    - "!**/pnpm-lock.yaml"
+    - "!**/package-lock.json"
+    - "!**/yarn.lock"
+    - "!**/bun.lockb"
+    - "!**/.vercel/**"
+    - "!**/.supabase/**"
+    - "!**/migrations/snapshot*.json"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+    - "!**/*.generated.ts"
+    - "!**/*.d.ts"
+
+  path_instructions:
+    - path: "src/**/*.{ts,tsx,js,jsx}"
+      instructions: |
+        Focus on correctness, type safety, security, and over-engineering.
+        Flag unused abstractions, speculative error handling, and premature generalisation.
+        Do NOT nitpick naming or style issues — that's the formatter's job.
+    - path: "**/*.{test,spec}.{ts,tsx,js,jsx}"
+      instructions: |
+        Check that tests cover real integration paths, not just mocks.
+        Flag tests that assert implementation details instead of observable behavior.
+        Flag tests that mock the database when a real fixture would be trivially cheap.
+    - path: "supabase/migrations/**/*.sql"
+      instructions: |
+        Focus on data loss risk, concurrent-write safety, and RLS gaps.
+        Block DROP/TRUNCATE without an explicit rollback note.
+
+  tools:
+    # Fast syntactic rules — essential for JS/TS correctness
+    ast-grep:
+      essential_rules: true
+    # Biome: only if the project uses it; otherwise remove this block
+    biome:
+      enabled: true
+    # Turn off noisy language-agnostic checkers unless project needs them
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+
+chat:
+  auto_reply: false
+
+# Knowledge Base pulls context from past reviews — useful across waves
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto
