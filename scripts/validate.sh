@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EXPECTED=(
+CORE_SKILLS=(
   0_process-guide
   1_brainstorming
   1b_visual-companion
@@ -15,6 +15,10 @@ EXPECTED=(
   6_qa
   7_documentation
 )
+OPTIONAL_SKILLS=(
+  refactor-dreamer
+)
+EXPECTED=("${CORE_SKILLS[@]}" "${OPTIONAL_SKILLS[@]}")
 
 fail() {
   echo "validate: $*" >&2
@@ -51,7 +55,7 @@ if grep -R -n 'CLAUDE\.md Candidates\|CLAUDE-PROJ' "$ROOT/codex" "$ROOT/claude" 
   fail "stale CLAUDE.md candidate convention found"
 fi
 
-if find "$ROOT/claude/skills" -maxdepth 1 -type d -name autonomous-execution | grep -q .; then
+if find "$ROOT/claude/skills" "$ROOT/codex/skills" -maxdepth 1 -type d -name autonomous-execution | grep -q .; then
   fail "autonomous-execution must not be included"
 fi
 

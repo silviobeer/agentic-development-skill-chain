@@ -13,4 +13,4 @@ for skill in "$ROOT"/claude/skills/*; do
   cp -R "$skill" "$DEST/$name"
 done
 
-echo "Installed Claude skill chain to $DEST"
+echo "Installed Claude skills to $DEST"

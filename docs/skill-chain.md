@@ -18,6 +18,8 @@ flowchart LR
   S6 --> S7[7 documentation]
 ```
 
+`refactor-dreamer` intentionally sits outside this flow. Launch it separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step.
+
 ## Step Roles
 
 | Step | Skill | Purpose |
@@ -33,3 +35,9 @@ flowchart LR
 | 5 | executing | Implement waves with TDD and quality gates |
 | 6 | qa | Run E2E QA, security, persona review, and simplicity review |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
+
+## Optional Skills
+
+| Skill | Purpose |
+|---|---|
+| refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |

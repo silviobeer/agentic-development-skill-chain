@@ -31,5 +31,5 @@ This copies the bundled chain into:
 ## Notes
 
 - Existing skill folders with the same names are overwritten.
-- Only the 0-to-7 core chain is installed.
+- The 0-to-7 core chain and optional skills are installed.
 - `CLAUDE.md` is not installed as a skill. It is a repo-level pointer file only.

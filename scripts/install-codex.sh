@@ -13,4 +13,4 @@ for skill in "$ROOT"/codex/skills/*; do
   cp -R "$skill" "$DEST/$name"
 done
 
-echo "Installed Codex skill chain to $DEST"
+echo "Installed Codex skills to $DEST"

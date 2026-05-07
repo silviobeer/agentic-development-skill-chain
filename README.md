@@ -20,7 +20,15 @@ The chain turns a rough product idea into a buildable concept, explores UI shape
 7_documentation
 ```
 
-Only the core chain is included. Claude-specific experimental or personal skills are intentionally excluded.
+## Optional Skills
+
+```text
+refactor-dreamer
+```
+
+`refactor-dreamer` is not part of the 0-to-7 chain. It is a separate long-run/overnight skill that scans a grown codebase for architecture drift, larger refactor opportunities, simplification targets, ADR candidates, fitness functions, and a `chain-input.md` artifact that can feed back into the normal chain.
+
+Claude-specific experimental or personal skills are intentionally excluded.
 
 ## Repository Layout
 
@@ -47,7 +55,7 @@ Install the Claude skills:
 ./scripts/install-claude.sh
 ```
 
-Both scripts copy only the bundled 0-to-7 chain into the default local skill directories.
+Both scripts copy the bundled core chain and optional skills into the default local skill directories.
 
 ## Validate
 
