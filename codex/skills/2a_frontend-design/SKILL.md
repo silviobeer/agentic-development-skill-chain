@@ -23,6 +23,22 @@ Define the visual identity and design language for a project before any UI is bu
 
 For `hybrid` projects, do not reinvent the whole visual language. Fill only the documented gaps from Visual Companion and preserve existing tokens/components.
 
+## Decomposed PROJ Handling
+
+Design language may be cross-PROJ when brainstorming decomposes one seed into tightly linked UI PROJs. In that case, run this skill once for the approved PROJ family rather than inventing separate visual systems for each sibling.
+
+Use this rule:
+
+- **Shared design language:** audience, brand, navigation shell, visual tone, tokens, typography, status colors, component styling, and accessibility standards that should remain consistent across sibling PROJs.
+- **Per-PROJ deltas:** only document differences required by a specific workflow, risk level, or user role.
+
+Artifact handling:
+
+- Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<thema>/4_design/design-language.md`.
+- In the document, include a `## Applies To` section listing sibling PROJs that should consume it.
+- Later sibling PROJs should reference this canonical file from their Visual Companion, UI Mockup, PRD, architecture, and plan artifacts.
+- If a sibling needs a local deviation, write a short local `4_design/design-delta.md` instead of creating a competing full design language.
+
 ## Input
 
 - Concept doc from Step 1 (`specs/PROJ-<X>-<thema>/1_brainstorm/PROJ-<X>-concept.md`) — understand the app's purpose and audience
@@ -84,6 +100,10 @@ Create these files:
 # Design Language — [Project Name]
 
 > [One sentence: the visual personality]
+
+## Applies To
+- PROJ-<X>-<thema>: canonical owner
+- PROJ-<Y>-<sibling>: consumes this design language
 
 ## Tone
 [Professional/Playful/Minimal/Bold/etc. — with reasoning]

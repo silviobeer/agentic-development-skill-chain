@@ -4,6 +4,8 @@ An opinionated 0-to-7 skill chain for agentic software development, maintained i
 
 The chain turns a rough product idea into a buildable concept, explores UI shape when needed, writes requirements, creates architecture and implementation plans, executes the work, runs QA, and curates human-readable documentation.
 
+Brainstorming can also decompose one broad seed into multiple PROJs before downstream work starts. Downstream skills then handle one PROJ at a time, using sibling PROJs as dependency context; `frontend-design` may define one shared design language for tightly linked UI PROJ families.
+
 ## What Is Included
 
 ```text

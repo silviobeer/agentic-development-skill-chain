@@ -18,6 +18,16 @@ Read both sources:
 
 The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance.
 
+## Decomposed PROJ Handling
+
+Plans are written one PROJ at a time. If the architecture or concept references sibling PROJs:
+
+- Include only current-PROJ user stories in the wave graph.
+- Treat sibling PROJs as prerequisites, external contracts, or future dependents.
+- Do not create waves for sibling PROJ work in the current PROJ's plan files.
+- If a prerequisite sibling is not complete, mark the affected current-PROJ stories as blocked and stop planning those waves until the dependency is resolved.
+- Shared design language may be referenced across PROJs, but UI tasks must still map to current-PROJ PRDs and mockups.
+
 ## Workflow
 
 ### 1. Analyse inputs
@@ -248,6 +258,7 @@ Present all wave plans for approval. Adjust if needed.
 - ACs must be deterministically verifiable — Ralph loop checks each AC with actual test commands.
 - Every task must map to at least one AC.
 - Waves must respect the dependency graph: no US in wave N+1 depends on a US in wave N that hasn't completed.
+- Cross-PROJ prerequisites must be satisfied before scheduling dependent current-PROJ stories.
 - Frontend/full-stack tasks must not rely on raw HTML mockup interpretation alone; they must include the explicit UI handoff constraints.
 
 ## Execution Handoff

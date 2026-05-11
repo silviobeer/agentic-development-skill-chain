@@ -1,21 +1,21 @@
 ---
 name: brainstorming
-description: "Use as Step 1 of the PROJ workflow before creating or changing any feature, component, workflow, or behavior. Turns a feature idea into an approved buildable concept through project discovery, structured intake, bounded exploration, assumption playback, and risk review. Produces specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md, then hands off to visual-companion for UI features or requirements-engineer for backend/API features."
+description: "Use as Step 1 of the PROJ workflow before creating or changing any feature, component, workflow, or behavior. Turns a feature idea into one or more approved buildable concepts through project discovery, scope decomposition, structured intake, bounded exploration, assumption playback, and risk review. Produces specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md, then hands off to visual-companion for UI features or requirements-engineer for backend/API features."
 ---
 
 # Brainstorming Ideas Into Feature Concepts
 
 ## Purpose
 
-Turn a feature idea into a clear, buildable feature concept.
+Turn a feature idea into one or more clear, buildable feature concepts.
 
-This is the start of the whole PROJ skill chain. It establishes the PROJ number, theme slug, project folder, concept document, scope boundaries, assumptions, and first handoff decision that every later skill depends on.
+This is the start of the whole PROJ skill chain. It establishes the PROJ number, theme slug, project folder, concept document, scope boundaries, assumptions, and first handoff decision that every later skill depends on. If the seed idea is too broad for one PROJ, this skill first cuts it into separate PROJs with explicit dependencies and sequencing.
 
-This is not free-form ideation and not implementation planning. The endpoint is always an approved buildable feature concept written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the process-guide Step 1 output.
+This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the process-guide Step 1 output.
 
 The concept document defines the feature's purpose, users, scope, success criteria, constraints, explored approaches, selected direction, and known risks.
 
-Start by understanding the current project context. Then collect the minimum inputs needed to shape the feature concept. Ask questions one at a time. Explore alternatives before choosing a direction. Do not proceed until the user confirms that nothing important is unclear.
+Start by understanding the current project context. Then assess whether the seed idea fits one PROJ or should be decomposed into multiple PROJs. After the scope boundary is approved, collect the minimum inputs needed to shape each feature concept. Ask questions one at a time. Explore alternatives before choosing a direction. Do not proceed until the user confirms that nothing important is unclear.
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write code, scaffold a project, edit production files, or create an implementation plan until you have presented a feature concept and the user has approved it.
@@ -50,7 +50,9 @@ Later skills consume this artifact:
 - `architecture` uses it with PRDs to write PROJ-level technical design.
 - `writing-plans`, `executing`, `qa`, and `documentation` rely on its scope boundaries and project identity.
 
-Because this starts the chain, the concept must be stable enough for downstream skills to use without re-litigating the basic feature intent. Do not leave unresolved ambiguity in the concept just because a later step exists.
+Because this starts the chain, each concept must be stable enough for downstream skills to use without re-litigating the basic feature intent. Do not leave unresolved ambiguity in the concept just because a later step exists.
+
+When one seed idea becomes multiple PROJs, each PROJ has its own concept document, downstream path, scope boundary, and dependency notes. Later skills run per PROJ unless the user explicitly asks to continue with several PROJs in sequence.
 
 ## Output Contract
 
@@ -61,6 +63,7 @@ The concept document must provide enough product-level input for downstream skil
 - Feature intent and selected product direction.
 - Primary users and concrete usage scenarios.
 - Current workflow or pain.
+- If decomposed from a larger seed: how this PROJ relates to sibling PROJs and what dependency order exists.
 - Scope boundaries: in scope, out of scope, later.
 - Success criteria stated as product/user outcomes.
 - Product-level constraints, dependencies, and risks.
@@ -122,26 +125,113 @@ Brainstorming must produce the inputs later skills need without doing their work
 
 When a question drifts into a later skill's responsibility, capture it as a downstream input, handoff note, or open decision instead of resolving it in brainstorming.
 
+## Project Decomposition Gate
+
+Run this gate immediately after project-context discovery and before detailed feature-concept intake.
+
+### Why This Exists
+
+PRDs, user stories, and waves are too late for deciding whether one broad seed is actually multiple PROJs:
+
+- **PRDs/user stories** split behavior inside an already-approved PROJ. They are good for testable feature slices, not for deciding project identity.
+- **Waves** split implementation order. They are good for dependency management during execution, not for product scoping.
+- **Brainstorming** owns product boundaries. It must decide whether the seed should become one PROJ or multiple PROJs before downstream artifacts inherit the wrong scope.
+
+Skipping this gate is acceptable only when the seed has one coherent user outcome, one main audience, and one downstream path.
+
+### When To Decompose
+
+Split one seed idea into multiple PROJs when two or more of these are true:
+
+- It contains independent user goals that can ship, test, or be adopted separately.
+- It touches different subsystems with different owners, risk profiles, data models, or rollout paths.
+- It mixes foundation/enabling work with user-facing workflows.
+- It includes multiple audiences whose success criteria differ materially.
+- It would naturally produce several PRDs with weak dependency between them.
+- It needs separate UI exploration paths, such as admin tooling plus end-user workflow.
+- It contains a risky or unknown piece that should be isolated before broader product work.
+- One part is clearly MVP-critical while another is expansion, automation, analytics, migration, support tooling, or polish.
+
+Do not decompose only because a feature is complex. Keep it as one PROJ when the pieces must be designed, shipped, and validated together to create user value.
+
+### Decomposition Output
+
+If the seed appears too broad, stop detailed questioning and present a proposed project map:
+
+```markdown
+This seed looks larger than one PROJ. I recommend splitting it into:
+
+1. PROJ-A candidate: <theme>
+   - User value:
+   - Scope:
+   - Explicitly not included:
+   - Depends on:
+   - Suggested downstream path: visual-companion | requirements-engineer
+
+2. PROJ-B candidate: <theme>
+   - User value:
+   - Scope:
+   - Explicitly not included:
+   - Depends on:
+   - Suggested downstream path: visual-companion | requirements-engineer
+
+Recommended first PROJ: <theme>, because <reason>.
+```
+
+Use temporary labels such as "PROJ-A candidate" until the user approves the split. Do not allocate real PROJ numbers before approval.
+
+### User Approval Rules
+
+Ask the user to approve or correct the split before continuing:
+
+> "Does this project split match your intent, or should any of these be merged, removed, renamed, or reordered?"
+
+This is a concrete decision, so a vague "yes" is not enough if the split has unresolved boundaries. Re-ask with specific merge/remove/reorder options when needed.
+
+After approval:
+
+- Decide whether to create concepts for all approved PROJs now or only the recommended first PROJ.
+- If the user wants all concepts now, process them one at a time in dependency order.
+- Allocate real PROJ numbers only after the split and ordering are approved.
+- Each PROJ gets its own folder and concept doc.
+- Each concept doc must record its sibling PROJs, dependencies, and excluded sibling scope.
+- If one PROJ blocks another, mark the blocked PROJ's next step as "wait for PROJ-<X>" rather than handing it directly to the next skill.
+
+### Decomposition In Concept Documents
+
+For every concept created from a decomposed seed, include:
+
+- Original seed idea.
+- Approved decomposition map.
+- This PROJ's role in the map.
+- Sibling PROJs and boundaries.
+- Dependencies and recommended order.
+- What intentionally belongs to another PROJ.
+
+If the user rejects decomposition, document the conscious decision in the concept under `Risks And Trade-Offs`, including why the broader scope is still acceptable as one PROJ.
+
 ## Checklist
 
 Create a task for each item and complete them in order:
 
 1. **Explore project context** - inspect docs, specs, routes, components, APIs, recent commits, and relevant agent instructions.
-2. **Assess scope** - if the idea spans multiple independent subsystems, stop and decompose before detailed questioning.
-3. **Collect feature-concept intake** - gather required inputs, using project discovery where possible.
-4. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
-5. **Clarifying questions** - ask one at a time until mandatory deep-dives are covered.
-6. **Controlled exploration** - explore 2-4 viable directions before selecting an approach.
-7. **Assumption playback** - read back every assumption and wait for confirmation/correction.
-8. **Devil's-Advocate pass** - list 3-5 weaknesses, risks, or unresolved tensions and resolve them with the user.
-9. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
-10. **Present feature concept** - section by section, scaled to complexity, and get approval.
-11. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-12. **Create PROJ folder** - `specs/PROJ-<X>-<theme>/1_brainstorm/`.
-13. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
-14. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
-15. **User reviews written concept** - wait for approval before transition.
-16. **Transition** - UI feature -> `visual-companion`; pure backend/API -> `requirements-engineer`.
+2. **Run project decomposition gate** - if the idea spans multiple independent user goals, subsystems, risks, rollout paths, or audiences, stop detailed questioning and propose a multi-PROJ split.
+3. **Approve project boundary** - get explicit user approval for one PROJ or an approved multi-PROJ map before feature intake.
+4. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or write all concepts in dependency order.
+5. **Collect feature-concept intake** - gather required inputs for the current PROJ, using project discovery where possible.
+6. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
+7. **Clarifying questions** - ask one at a time until mandatory deep-dives are covered.
+8. **Controlled exploration** - explore 2-4 viable directions before selecting an approach.
+9. **Assumption playback** - read back every assumption and wait for confirmation/correction.
+10. **Devil's-Advocate pass** - list 3-5 weaknesses, risks, or unresolved tensions and resolve them with the user.
+11. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
+12. **Present feature concept** - section by section, scaled to complexity, and get approval.
+13. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
+14. **Create PROJ folder** - `specs/PROJ-<X>-<theme>/1_brainstorm/`.
+15. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
+16. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
+17. **User reviews written concept** - wait for approval before transition.
+18. **Repeat or transition** - for multi-PROJ maps, repeat concept creation for the next approved PROJ or transition the current PROJ to visual-companion/requirements-engineer.
 
 ## Feature Concept Intake
 
@@ -168,6 +258,7 @@ These must be known before the concept can be approved:
 - **Current workflow or pain:** What happens today, and where does it break down?
 - **Success criteria:** How will we know the feature is finished and successful? Prefer observable or measurable signals.
 - **Scope boundaries:** What is in scope, out of scope, and explicitly later?
+- **Project boundary:** Is this one coherent PROJ, or should it be split into multiple PROJs with separate outcomes?
 - **Constraints:** Technical, data, auth, privacy, compliance, mobile/desktop, timeline, operational, or deployment constraints.
 
 ### Conditional Inputs
@@ -310,6 +401,7 @@ Present the concept in sections scaled to complexity. Ask for approval after eac
 
 Cover:
 
+- Original seed and decomposition map, if this came from a broader idea
 - Problem and goal
 - Primary users and scenarios
 - Current workflow or pain
@@ -346,6 +438,15 @@ Use this structure:
 Approved concept
 
 ## Feature Seed
+
+## Decomposition Context
+- Original broader seed:
+- Approved project map:
+- This PROJ's role:
+- Sibling PROJs:
+- Depends on:
+- Blocks:
+- Scope intentionally assigned to another PROJ:
 
 ## Project Context
 - Existing system:
@@ -421,17 +522,18 @@ Review the written concept before asking the user to review it:
 1. **Placeholder scan:** no `TBD`, `TODO`, empty sections, or vague words standing in for decisions.
 2. **Internal consistency:** selected direction, scope, users, success criteria, and risks do not contradict each other.
 3. **Scope check:** the concept is focused enough for one PROJ, or it has been decomposed.
-4. **Ambiguity check:** requirements cannot be interpreted in materially different ways.
-5. **Deep-dive coverage:** success criteria, out-of-scope, and users/scenarios are explicitly documented.
-6. **Exploration record:** rejected/deferred alternatives are captured briefly.
-7. **Assumption record:** confirmed assumptions are documented; unresolved assumptions are not hidden.
-8. **Output contract check:** required downstream inputs are present for `visual-companion` or `requirements-engineer`, and for architecture/planning.
-9. **Downstream boundary check:** none of these have leaked into the concept:
+4. **Decomposition check:** for broad seeds, the approved project map, sibling PROJs, dependencies, and excluded sibling scope are documented.
+5. **Ambiguity check:** requirements cannot be interpreted in materially different ways.
+6. **Deep-dive coverage:** success criteria, out-of-scope, and users/scenarios are explicitly documented.
+7. **Exploration record:** rejected/deferred alternatives are captured briefly.
+8. **Assumption record:** confirmed assumptions are documented; unresolved assumptions are not hidden.
+9. **Output contract check:** required downstream inputs are present for `visual-companion` or `requirements-engineer`, and for architecture/planning.
+10. **Downstream boundary check:** none of these have leaked into the concept:
    - UI container choice such as sidepanel, modal, drawer, wizard, split view, or dedicated page.
    - Screen list, sitemap, detailed UI states, component reuse decision, visual styling, or UI implementation handoff.
    - User stories, acceptance criteria, or detailed edge-case matrix.
    - API design, schema design, package choice, architecture decision, task plan, test plan, file ownership, or production code.
-10. **Implementation success check:** high-level implementation success is documented as product constraints, risks, or handoff notes, not as technical design.
+11. **Implementation success check:** high-level implementation success is documented as product constraints, risks, or handoff notes, not as technical design.
 
 Fix issues inline. If fixing requires information not already confirmed, ask the user.
 
@@ -447,6 +549,7 @@ Wait for the user's response. If they request changes, update the concept and ru
 
 - If the feature has a UI component, invoke `visual-companion`.
 - If the feature is pure backend/API, invoke `requirements-engineer`.
+- If the current PROJ depends on an uncreated or unapproved sibling PROJ, pause transition and create or approve that prerequisite first.
 - Do NOT invoke writing-plans, architecture, executing, QA, documentation, or implementation directly from brainstorming.
 
 ## Key Principles
@@ -454,6 +557,8 @@ Wait for the user's response. If they request changes, update the concept and ru
 - Feature concept is the endpoint.
 - Ask one question at a time.
 - Inspect the project before asking questions the repo can answer.
+- Split broad seeds into multiple PROJs before detailed intake.
+- Get explicit approval for project boundaries before allocating PROJ numbers.
 - Ask, never assume.
 - Vague answers are non-answers.
 - Explore before converging.

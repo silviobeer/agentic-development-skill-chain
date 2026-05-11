@@ -24,6 +24,16 @@ Examples:
 
 The output is not "the design". It is a decision aid for requirements.
 
+## Decomposed PROJ Handling
+
+Visual Companion normally runs for one PROJ at a time. If the concept says the seed was decomposed into sibling PROJs:
+
+- Read the `Decomposition Context` in the concept and keep this exploration scoped to the current PROJ's user outcome.
+- Mention sibling PROJs only as context, dependencies, or future navigation/entry points.
+- Do not design screens or flows that belong to sibling PROJs unless the user explicitly asks for a combined UI review.
+- If several sibling PROJs are tightly linked in the same UI, the shared **design language** may be handled once by `frontend-design` for the PROJ family; this skill still records the current PROJ's layout decision.
+- Record any cross-PROJ UI dependency in `layout-decision.md` so `ui-mockup` and `requirements-engineer` do not accidentally absorb sibling scope.
+
 ## Required Outputs
 
 Write all outputs to `specs/PROJ-<X>-<thema>/2_visual-companion/`:

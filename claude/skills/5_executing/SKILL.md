@@ -11,6 +11,8 @@ Orchestrate implementation by creating an agent team and spawning teammates per 
 
 **One PROJ at a time:** The executing loop runs per PROJ. Each PROJ has multiple wave-plan files (`PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …) that are read in order. A single `7_progress/PROJ-<X>-progress.md` tracks all waves. When the user provides multiple PROJ plans, execute each PROJ fully (all waves → Quality Gate → QA) before starting the next.
 
+**Decomposed PROJs:** If the plan references sibling PROJs, treat them as dependencies or context only. Do not implement sibling scope from the current PROJ's waves. If a wave depends on an incomplete sibling PROJ, stop before that wave and report the blocker. Shared design-language files from sibling PROJs may be consumed, but they do not authorize building sibling workflows.
+
 ## Context economy — always delegate to subagents
 
 The orchestrator (main agent) must stay lean so it survives the full PROJ → QA → docs chain without a mid-run compact crash. **Default: delegate everything to subagents; main agent only coordinates.**

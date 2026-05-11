@@ -34,6 +34,16 @@ Read the following for the PROJ under test:
 
 QA runs across all PRDs of the PROJ. Each PRD's acceptance criteria become tests.
 
+## Decomposed PROJ Handling
+
+QA tests one PROJ at a time. If the concept, architecture, or plans reference sibling PROJs:
+
+- Test current-PROJ acceptance criteria, edge cases, security, UI, and regressions.
+- Verify integration points with already-completed sibling PROJs when the current PROJ depends on them.
+- Do not fail the current PROJ because an unbuilt sibling workflow is absent, unless the current PRD/architecture promised that behavior.
+- Do fail scope creep: implemented sibling-PROJ behavior that was not required by the current PROJ can be a simplicity or product-scope bug.
+- Shared design-language compliance may be tested across sibling UI surfaces that already exist, but QA results belong to the current PROJ.
+
 ## Core Rule
 
 QA finds, documents, and prioritizes bugs. QA NEVER fixes bugs.

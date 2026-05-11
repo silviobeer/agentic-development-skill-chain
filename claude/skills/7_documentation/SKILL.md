@@ -27,6 +27,16 @@ Update only what needs updating, but do not keep the docs shallow when the featu
 
 No per-feature documentation files by default. The PRDs under `specs/PROJ-<X>-<theme>/3_PRDs/` remain the detailed requirement source; link to them instead of copying acceptance criteria.
 
+## Decomposed PROJ Handling
+
+Documentation updates the completed PROJ while preserving the larger decomposition map:
+
+- `docs/PROJECT.md` should show how this PROJ fits sibling PROJs when the concept has `Decomposition Context`.
+- Refresh only the current PROJ's detailed section; keep sibling sections intact.
+- If this PROJ introduces or consumes shared design language, document the canonical design file and which sibling PROJs it applies to.
+- `docs/TECHNICAL.md` should document cross-PROJ contracts only when they are source-backed by concept, architecture, plans, or implementation.
+- Do not describe unbuilt sibling PROJs as shipped capabilities.
+
 ## Input
 
 Read in this priority order. Structured data first; raw reconstruction only as fallback.

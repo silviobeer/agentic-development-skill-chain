@@ -11,6 +11,16 @@ Erstelle leichtgewichtige HTML-Mockups und eine visuelle Sitemap basierend auf C
 
 Zusätzlich erzeugt der Skill einen kompakten **Implementation Handoff**. Dieser macht die visuelle Entscheidung fuer Requirements, Architecture, Writing Plans und Execution umsetzbar, ohne dass Implementierer das HTML-Mockup interpretieren muessen.
 
+## Decomposed PROJ Handling
+
+UI-Mockup arbeitet normalerweise pro PROJ. Wenn das Concept eine `Decomposition Context` enthaelt:
+
+- Mockups und Sitemap nur fuer den aktuellen PROJ bauen.
+- Sibling-PROJs nur als Kontext, Navigation, Dependency oder "kommt spaeter" markieren.
+- Keine Screens/States fuer Sibling-PROJs ausarbeiten, ausser der User fordert explizit einen kombinierten UI-Review.
+- Wenn `frontend-design` eine gemeinsame Design Language fuer die PROJ-Family erstellt hat, diese kanonische Datei verwenden, auch wenn sie in einem Sibling-PROJ liegt.
+- Falls der aktuelle PROJ eine lokale Abweichung braucht, `4_design/design-delta.md` lesen/erstellen und im Implementation Handoff dokumentieren.
+
 ## Prinzipien
 
 - **Leichtgewichtig:** Einzelne HTML-Dateien, nur Inline-CSS und kleines Vanilla-JS, keine externen Abhaengigkeiten
@@ -29,7 +39,8 @@ Lese diese Inputs:
 1. Concept: `specs/PROJ-<X>-<thema>/1_brainstorm/PROJ-<X>-concept.md`
 2. Visual Companion: `specs/PROJ-<X>-<thema>/2_visual-companion/layout-decision.md`
 3. Visual Companion prototype: `specs/PROJ-<X>-<thema>/2_visual-companion/layout-exploration.html`
-4. Optional design language: `specs/PROJ-<X>-<thema>/4_design/design-language.md`
+4. Optional design language: `specs/PROJ-<X>-<thema>/4_design/design-language.md` oder eine kanonische Sibling-Design-Language, die den aktuellen PROJ unter `Applies To` auffuehrt
+5. Optional design delta: `specs/PROJ-<X>-<thema>/4_design/design-delta.md`
 
 Die ausgewaehlte Richtung in `layout-decision.md` ist verbindlich. UI-Mockup verfeinert diese Richtung in konkrete Screens und States. Es erfindet keine alternativen Layout-Container mehr, ausser der User fordert das explizit.
 
@@ -45,7 +56,7 @@ Lies aus `layout-decision.md` besonders:
 ### 1. Design System, Komponenten und App-Shell erkennen
 
 **Design System Referenz laden:**
-Wenn `4_design/design-language.md` existiert, ist es die primaere Design-Referenz.
+Wenn `4_design/design-language.md` existiert, ist es die primaere Design-Referenz. Wenn das Concept oder `layout-decision.md` eine kanonische Sibling-Design-Language nennt, diese stattdessen oder zusaetzlich laden und nur lokale `design-delta.md`-Abweichungen ergaenzen.
 Suche nach `.codex/skills/references/design-system.md` (erst im Projekt, dann global unter `~/.codex/skills/references/`). Falls vorhanden: Farben, Typografie, Spacing, Komponenten-Muster und Do/Don't-Regeln daraus uebernehmen.
 
 **Falls keine Referenz existiert**, scanne das Projekt nach:

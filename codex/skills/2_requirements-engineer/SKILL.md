@@ -39,6 +39,16 @@ specs/PROJ-2-blog/3_PRDs/
 
 Abhaengigkeiten zwischen PRDs (auch ueber PROJ-Grenzen) im File dokumentieren.
 
+## Decomposed PROJ Handling
+
+Requirements laufen pro PROJ. Wenn das Concept eine `Decomposition Context` enthaelt:
+
+- Schreibe PRDs nur fuer den aktuellen PROJ.
+- Sibling-PROJ-Scope nicht als User Story aufnehmen.
+- Cross-PROJ-Abhaengigkeiten explizit unter `## Abhaengigkeiten` dokumentieren.
+- Wenn ein Sibling blockiert, keine Stories schreiben, die dessen Verhalten voraussetzen, ausser als Dependency/Precondition.
+- Gemeinsame Design-Language aus einem Sibling-PROJ darf referenziert werden; sie erweitert aber nicht den aktuellen Produktscope.
+
 ## Input
 
 Lese diese Inputs:
@@ -49,6 +59,7 @@ Lese diese Inputs:
 4. UI implementation handoff: `specs/PROJ-<X>-<thema>/5_mockups/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<thema>/2_visual-companion/layout-decision.md`
 6. Optional design language: `specs/PROJ-<X>-<thema>/4_design/design-language.md`
+7. Optional shared sibling design language referenced by the concept, layout decision, or mockup handoff
 
 Das Mockup ist bei UI-Features Pflichtinput. Es definiert Screens, Flow, States und wichtige UI-Entscheidungen, aus denen User Stories, Acceptance Criteria und Edge Cases abgeleitet werden. Der `implementation-handoff.md` ist ebenfalls Pflichtinput bei UI-Features; er uebersetzt das Mockup in umsetzbare Vorgaben fuer Komponenten-Reuse, neue Component Candidates, Design Tokens, Interaction Contract und Implementation Tolerance. PROJ-X und `<thema>` wurden im Brainstorming festgelegt und bleiben fuer alle PRDs dieses Projekts gleich.
 

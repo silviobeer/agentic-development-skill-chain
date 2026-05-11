@@ -20,6 +20,17 @@ flowchart LR
 
 `refactor-dreamer` intentionally sits outside this flow. Launch it separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step.
 
+## Decomposed Ideas
+
+Step 1 can split a broad seed into several PROJs before detailed intake. This is for product boundaries, not task management: PRDs split behavior inside one PROJ, and waves split implementation order.
+
+After decomposition:
+
+- Each PROJ gets its own concept, PRDs, architecture, plans, execution, QA, and docs.
+- Downstream skills work one PROJ at a time and treat sibling PROJs as dependencies, context, or future scope.
+- `frontend-design` may be shared across tightly linked UI PROJs through one canonical `4_design/design-language.md` with an `Applies To` section.
+- `visual-companion` and `ui-mockup` stay scoped to the current PROJ unless the user explicitly requests a combined UI review.
+
 ## Step Roles
 
 | Step | Skill | Purpose |
