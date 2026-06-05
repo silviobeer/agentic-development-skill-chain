@@ -9,12 +9,12 @@ Brainstorming can also decompose one broad seed into multiple PROJs before downs
 ## What Is Included
 
 ```text
-0_process-guide
+0_chain-guide
 1_brainstorming
 1b_visual-companion
+1c_frontend-design
+1d_ui-mockup
 2_requirements-engineer
-2a_frontend-design
-2b_ui-mockup
 3_architecture
 4_writing-plans
 5_executing
@@ -42,6 +42,8 @@ scripts/         Install and validation helpers
 ```
 
 `AGENTS.md` is the only curated durable-context file. `CLAUDE.md` is pointer-only and tells Claude to read `AGENTS.md`.
+
+Skill 0 is `chain-guide`. The UI preparation branch is `1b_visual-companion` -> `1c_frontend-design` when needed -> `1d_ui-mockup`, and requirements remain Step 2.
 
 ## Install
 

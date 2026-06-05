@@ -6,13 +6,13 @@
 # starts. Exit 0 = pass. Non-zero exit = BLOCK next wave.
 #
 # Usage:
-#   bash scripts/wave-gate.sh <wave-number> <proj-x> <thema>
+#   bash scripts/wave-gate.sh <wave-number> <proj-x> <theme>
 # Example:
 #   bash scripts/wave-gate.sh 2 1 auth
 #
 # Requires:
 #   - jq (for parsing wave-gate-config.json)
-#   - The config file at specs/PROJ-<X>-<thema>/6_plan/wave-gate-config.json
+#   - The config file at specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json
 #   - coderabbit CLI
 #   - agent-browser CLI (for frontend smoke tests when routes are configured)
 #
@@ -26,7 +26,7 @@ PROJ="${2:-}"
 THEMA="${3:-}"
 
 if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEMA" ]]; then
-  echo "Usage: $0 <wave-number> <proj-x> <thema>" >&2
+  echo "Usage: $0 <wave-number> <proj-x> <theme>" >&2
   exit 64
 fi
 

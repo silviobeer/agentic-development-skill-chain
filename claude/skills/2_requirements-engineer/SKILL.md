@@ -1,124 +1,137 @@
 ---
 name: requirements-engineer
-description: "Erstellt detaillierte Feature Specifications mit User Stories, Acceptance Criteria und Edge Cases nach Visual Companion, Frontend Design und UI Mockup. Verwenden wenn: (1) Concept und ggf. UI-Mockups in strukturierte PRDs verwandelt werden sollen, (2) User Stories und Acceptance Criteria geschrieben werden muessen, (3) Edge Cases identifiziert werden muessen. Nicht fuer: UI-Mockups, Code schreiben, Tech-Design, Debugging."
+description: "Create detailed feature PRDs with user stories, acceptance criteria, and edge cases after Visual Companion, optional Frontend Design, and UI Mockup. Use when: (1) an approved concept and optional UI mockups need to become structured PRDs, (2) user stories and acceptance criteria must be written, (3) edge cases must be identified. Not for: UI mockups, writing code, technical design, or debugging."
 ---
 
 # Requirements Engineer
 
-Verwandle das Concept in strukturierte PRDs (Product Requirements Documents). Fokus auf WAS das Feature tun soll, nicht WIE es implementiert wird.
+Turn the approved concept into structured Product Requirements Documents. Focus on what the feature must do, not how it will be implemented.
 
-**Niemals Code oder Tech-Design schreiben** — das machen Solution Architect und Devs.
+Never write code or technical architecture in this skill. Architecture and implementation happen later in the chain.
 
 ## PROJ vs. PRD
 
-- **PROJ-X** = die Initiative/das Thema (z.B. `PROJ-1-auth`). Wird im Brainstorming festgelegt und als Folder-Name festgehalten.
-- **PRD-Y** = ein einzelnes testbares/deploybares Feature innerhalb des PROJ. Pro PROJ bei 1 starten und hochzaehlen.
+- **PROJ-X** is the initiative or feature theme, for example `PROJ-1-auth`. Brainstorming assigns it and creates the folder.
+- **PRD-Y** is one testable, deployable feature inside the PROJ. Number PRDs from 1 within each PROJ.
 
-## Feature-Granularitaet (Single Responsibility)
+## Feature Granularity
 
-**Jede PRD = EINE testbare, deploybare Einheit!**
+Each PRD should describe one testable, deployable unit.
 
-Faustregel fuer Aufteilung:
-1. Kann es unabhaengig getestet werden? → Eigene PRD
-2. Kann es unabhaengig deployed werden? → Eigene PRD
-3. Hat es eine andere User-Rolle? → Eigene PRD
-4. Ist es eine separate UI-Komponente/Screen? → Eigene PRD
+Split into a separate PRD when:
 
-Statt EINER grossen PRD → MEHRERE fokussierte Files innerhalb desselben PROJ:
-```
+1. It can be tested independently.
+2. It can be deployed independently.
+3. It serves a different user role.
+4. It is a separate UI component, screen, API capability, or workflow.
+
+Prefer several focused files inside the same PROJ over one large PRD:
+
+```text
 specs/PROJ-1-auth/3_PRDs/
   PROJ-1-PRD-1-user-signup.md
   PROJ-1-PRD-2-login.md
   PROJ-1-PRD-3-password-reset.md
-
-specs/PROJ-2-blog/3_PRDs/
-  PROJ-2-PRD-1-create-post.md
-  PROJ-2-PRD-2-post-list.md
-  PROJ-2-PRD-3-post-comments.md
 ```
 
-Abhaengigkeiten zwischen PRDs (auch ueber PROJ-Grenzen) im File dokumentieren.
+Document dependencies between PRDs, including cross-PROJ dependencies, inside each PRD.
 
 ## Decomposed PROJ Handling
 
-Requirements laufen pro PROJ. Wenn das Concept eine `Decomposition Context` enthaelt:
+Requirements run one PROJ at a time. If the concept contains `Decomposition Context`:
 
-- Schreibe PRDs nur fuer den aktuellen PROJ.
-- Sibling-PROJ-Scope nicht als User Story aufnehmen.
-- Cross-PROJ-Abhaengigkeiten explizit unter `## Abhaengigkeiten` dokumentieren.
-- Wenn ein Sibling blockiert, keine Stories schreiben, die dessen Verhalten voraussetzen, ausser als Dependency/Precondition.
-- Gemeinsame Design-Language aus einem Sibling-PROJ darf referenziert werden; sie erweitert aber nicht den aktuellen Produktscope.
+- Write PRDs only for the current PROJ.
+- Do not absorb sibling PROJ scope into user stories.
+- Document cross-PROJ dependencies explicitly under `## Dependencies`.
+- If a sibling PROJ is a blocker, do not write stories that assume its behavior except as a dependency or precondition.
+- A shared design language from a sibling PROJ may be referenced, but it does not expand the current product scope.
 
 ## Input
 
-Lese diese Inputs:
+Read these inputs:
 
-1. Concept-Doc: `specs/PROJ-<X>-<thema>/1_brainstorm/PROJ-<X>-concept.md`
-2. UI-Mockups: `specs/PROJ-<X>-<thema>/5_mockups/*.html`
-3. Sitemap: `specs/PROJ-<X>-<thema>/5_mockups/sitemap.html`
-4. UI implementation handoff: `specs/PROJ-<X>-<thema>/5_mockups/implementation-handoff.md`
-5. Optional Visual Companion decision: `specs/PROJ-<X>-<thema>/2_visual-companion/layout-decision.md`
-6. Optional design language: `specs/PROJ-<X>-<thema>/4_design/design-language.md`
+1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+2. UI mockups: `specs/PROJ-<X>-<theme>/5_mockups/*.html`
+3. Sitemap: `specs/PROJ-<X>-<theme>/5_mockups/sitemap.html`
+4. UI implementation handoff: `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`
+5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md`
+6. Optional design language: `specs/PROJ-<X>-<theme>/4_design/design-language.md`
 7. Optional shared sibling design language referenced by the concept, layout decision, or mockup handoff
 
-Das Mockup ist bei UI-Features Pflichtinput. Es definiert Screens, Flow, States und wichtige UI-Entscheidungen, aus denen User Stories, Acceptance Criteria und Edge Cases abgeleitet werden. Der `implementation-handoff.md` ist ebenfalls Pflichtinput bei UI-Features; er uebersetzt das Mockup in umsetzbare Vorgaben fuer Komponenten-Reuse, neue Component Candidates, Design Tokens, Interaction Contract und Implementation Tolerance. PROJ-X und `<thema>` wurden im Brainstorming festgelegt und bleiben fuer alle PRDs dieses Projekts gleich.
+For UI features, mockups and `implementation-handoff.md` are required inputs. They define screens, flows, states, component reuse, new component candidates, design tokens, the interaction contract, and implementation tolerance.
 
-Wenn ein UI-Feature keine Mockups hat, STOP und zuerst `visual-companion` → optional `frontend-design` → `ui-mockup` ausfuehren. Pure Backend/API-Features duerfen direkt vom Concept kommen.
+If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `ui-mockup` first. Pure backend/API features may proceed directly from the concept.
 
 ## Workflow
 
-### 1. Bestehende PRDs pruefen
+### 1. Check Existing PRDs
 
-Vor jeder neuen PRD: Welche PRDs existieren bereits in diesem PROJ? Pruefen via `ls specs/PROJ-<X>-<thema>/3_PRDs/`. Naechste freie `PRD-Y`-Nummer innerhalb des PROJ verwenden (bei 1 starten, keine Luecken). PROJ-X selbst ist bereits vom Brainstorming vergeben.
+Before creating a PRD, inspect `specs/PROJ-<X>-<theme>/3_PRDs/`.
 
-### 2. Feature verstehen
+Use the next available `PRD-Y` number inside the PROJ, starting at 1 and avoiding gaps where practical. Do not duplicate existing PRDs.
 
-Bei UI-Features zuerst die Mockups und Sitemap durchgehen:
-- Welche Screens existieren?
-- Welche User-Flows sind klickbar oder verlinkt?
-- Welche States sind sichtbar (Normal, Empty, Loading, Error)?
-- Welche Source-Referenzen oder Annahmen sind im Mockup markiert?
-- Welcher `Project Mode` gilt (`greenfield`, `brownfield`, `hybrid`)?
-- Welche bestehenden Komponenten/Tokens muessen wiederverwendet werden?
-- Welche neuen Component Candidates sind vom User akzeptiert?
-- Welche Interaktionen sind Implementierungsvertrag und welche Mockup-Elemente sind nur Demo?
+### 2. Understand The Feature
 
-Nutze `AskUserQuestion` mit Multiple-Choice Optionen:
-- Wer sind die primaeren User?
-- Was ist MVP-Scope vs. Nice-to-Have?
-- Welche Constraints existieren?
+For UI features, read mockups and sitemap first:
 
-Eine Frage pro Nachricht. Follow-up Fragen basierend auf Antworten stellen.
+- Which screens exist?
+- Which user flows are clickable or linked?
+- Which states are visible?
+- Which assumptions or source references are marked?
+- Which `Project Mode` applies?
+- Which components and tokens must be reused?
+- Which new component candidates did the user accept?
+- Which interactions are implementation contract vs. demo-only?
 
-### 3. Edge Cases klaeren
+Ask the user focused questions only when needed:
 
-Edge Cases mit `AskUserQuestion` priorisieren lassen:
-- Was passiert bei unerwarteten Inputs?
-- Wie handhaben wir Fehlerfaelle?
-- Security-relevante Szenarien?
+- Who are the primary users?
+- What is MVP scope vs. nice-to-have?
+- What constraints exist?
 
-### 4. PRD schreiben
+Ask one question at a time and follow up based on the answer.
 
-PRD in `specs/PROJ-<X>-<thema>/3_PRDs/PROJ-<X>-PRD-<Y>-<kurzbeschreib>.md` speichern. `<kurzbeschreib>` ist kebab-case (z.B. `user-signup`, `post-comments`).
+### 3. Clarify Edge Cases
+
+Identify and prioritize edge cases:
+
+- Unexpected inputs
+- Empty or missing data
+- Permission and role boundaries
+- Failure and retry behavior
+- Security-relevant scenarios
+- Limits, quotas, and performance-sensitive paths
+
+### 4. Write PRDs
+
+Save PRDs under:
+
+```text
+specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<short-description>.md
+```
+
+Use kebab-case for `<short-description>`.
+
+Template:
 
 ```markdown
-# PROJ-<X>-PRD-<Y>: Feature-Name
+# PROJ-<X>-PRD-<Y>: Feature Name
 
 ## Status: Planned
 
 ## User Stories
 
-### US-1: Als [User-Typ] moechte ich [Aktion] um [Ziel]
-**Given** [Ausgangszustand]
-**When** [Aktion]
-**Then** [Erwartetes Ergebnis]
-**And** [weiteres Ergebnis, falls noetig]
+### US-1: As a [user type], I want [action] so that [goal]
+**Given** [starting condition]
+**When** [action]
+**Then** [expected result]
+**And** [additional expected result, if needed]
 
 **Acceptance Criteria:**
-- [ ] AC-1: Kriterium direkt aus dem Then/And (testbar formuliert)
-- [ ] AC-2: Weiteres testbares Kriterium fuer diese Story
+- [ ] AC-1: Testable criterion derived from the Then/And clauses
+- [ ] AC-2: Another testable criterion for this story
 
-### US-2: Als [User-Typ] moechte ich ...
+### US-2: As a [user type], I want ...
 **Given** ...
 **When** ...
 **Then** ...
@@ -127,16 +140,16 @@ PRD in `specs/PROJ-<X>-<thema>/3_PRDs/PROJ-<X>-PRD-<Y>-<kurzbeschreib>.md` speic
 - [ ] AC-3: ...
 
 ## Edge Cases
-- Was passiert wenn...?
+- What happens when...?
 
-## Abhaengigkeiten
-- Benoetigt: PROJ-<X>-PRD-<Y> (falls zutreffend, z.B. PROJ-1-PRD-2)
-- Cross-PROJ Abhaengigkeit moeglich (z.B. PROJ-1-PRD-3 braucht PROJ-2-PRD-1)
+## Dependencies
+- Requires: PROJ-<X>-PRD-<Y>
+- Cross-PROJ dependency: PROJ-<A>-PRD-<B>
 
-## Technische Anforderungen (optional)
-- Performance, Security, etc.
+## Technical Requirements
+- Performance, security, compatibility, or operational constraints.
 
-## UI Implementation Notes (UI PRDs only)
+## UI Implementation Notes
 - Project mode:
 - Reuse:
 - New component candidates:
@@ -145,30 +158,32 @@ PRD in `specs/PROJ-<X>-<thema>/3_PRDs/PROJ-<X>-PRD-<Y>-<kurzbeschreib>.md` speic
 - Implementation tolerance:
 ```
 
-**Wichtig:** Jede User Story traegt ihre eigenen Acceptance Criteria. Kein separater globaler AC-Abschnitt. Die ACs werden direkt aus den Then/And-Klauseln der Story abgeleitet und testbar formuliert.
+Each user story owns its own acceptance criteria. Do not create one global acceptance-criteria section. Derive ACs directly from the story's Given/When/Then/And clauses and make them testable.
 
-### 5. User Review
+### 5. Review With The User
 
-User um Review bitten via `AskUserQuestion`. Bei Aenderungswuenschen: Spec anpassen und erneut vorlegen.
+Ask the user to review the PRDs. If changes are requested, update the PRDs and present them again.
+
+Also ask the user to review the PRD artifacts with a different model before approval, for example GPT reviewing Claude output or Claude reviewing GPT output. This second-model review should focus on missing user stories, weak acceptance criteria, ambiguous edge cases, and scope drift.
 
 ### 6. Handoff
 
-Nach Approval → Architecture Skill (3) fuer PROJ-level Tech-Design empfehlen. UI-Mockups sind bereits erledigt und dienen der Architektur als visuelle Referenz.
+After approval, recommend `architecture` (3) for PROJ-level technical design. For UI features, the mockups and implementation handoff remain visual references for architecture.
 
-## Checklist vor Abschluss
+## Completion Checklist
 
-- [ ] Bestehende PRDs in `specs/PROJ-<X>-<thema>/3_PRDs/` geprueft (keine Duplikate, naechste freie PRD-Nummer)
-- [ ] User hat alle wichtigen Fragen beantwortet
-- [ ] Bei UI-Features: Mockups und Sitemap aus `5_mockups/` gelesen und in Stories/ACs beruecksichtigt
-- [ ] Bei UI-Features: `5_mockups/implementation-handoff.md` gelesen und UI Implementation Notes in den PRDs beruecksichtigt
-- [ ] Mindestens 3-5 User Stories definiert (Given/When/Then)
-- [ ] Jede User Story hat eigene Acceptance Criteria (kein globaler AC-Abschnitt)
-- [ ] Mindestens 3-5 Edge Cases dokumentiert
-- [ ] PRD-ID (PROJ-<X>-PRD-<Y>) vergeben und File im korrekten Ordner gespeichert
-- [ ] User hat PRD reviewed und approved
+- [ ] Existing PRDs checked for duplicates and next PRD number
+- [ ] Necessary user questions answered
+- [ ] UI mockups and sitemap read for UI features
+- [ ] `implementation-handoff.md` read for UI features
+- [ ] At least 3-5 user stories defined where feature size warrants it
+- [ ] Every user story has its own acceptance criteria
+- [ ] At least 3-5 edge cases documented where feature size warrants it
+- [ ] PRD ID assigned and file saved in the correct folder
+- [ ] User reviewed and approved the PRD
 
 ## Git Commit Format
 
-```
-feat(PROJ-<X>-PRD-<Y>): Add PRD for [feature name]
+```text
+feat(PROJ-<X>-PRD-<Y>): Add PRD for <feature-name>
 ```

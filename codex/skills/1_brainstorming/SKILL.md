@@ -11,7 +11,7 @@ Turn a feature idea into one or more clear, buildable feature concepts.
 
 This is the start of the whole PROJ skill chain. It establishes the PROJ number, theme slug, project folder, concept document, scope boundaries, assumptions, and first handoff decision that every later skill depends on. If the seed idea is too broad for one PROJ, this skill first cuts it into separate PROJs with explicit dependencies and sequencing.
 
-This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the process-guide Step 1 output.
+This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the chain-guide Step 1 output.
 
 The concept document defines the feature's purpose, users, scope, success criteria, constraints, explored approaches, selected direction, and known risks.
 
@@ -541,7 +541,7 @@ Fix issues inline. If fixing requires information not already confirmed, ask the
 
 After self-review, ask the user to review the written concept:
 
-> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`. Please review it and let me know if you want to make any changes before we continue."
+> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`. Please review it and, ideally, have a different model review the artifact too (for example GPT reviewing Claude output, or Claude reviewing GPT output) before we continue. Let me know if you want to make any changes."
 
 Wait for the user's response. If they request changes, update the concept and run self-review again. Only proceed after approval.
 

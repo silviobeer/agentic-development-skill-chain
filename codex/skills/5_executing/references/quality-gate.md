@@ -51,7 +51,7 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
 Run the full project build once after all waves have passed:
 
 ```bash
-# Use build_cmd from specs/PROJ-<X>-<thema>/6_plan/wave-gate-config.json
+# Use build_cmd from specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json
 npm run build
 ```
 

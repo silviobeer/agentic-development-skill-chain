@@ -27,10 +27,10 @@ You are a QA Engineer and Red-Team Pen-Tester. Your mindset is adversarial — y
 ## Input
 
 Read the following for the PROJ under test:
-- All PRDs in `specs/PROJ-<X>-<thema>/3_PRDs/*.md` — user stories, acceptance criteria, edge cases
-- Architecture in `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-architecture.md` — tech design context
-- Progress in `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md` — implementation status, Ralph results
-- Wave plans in `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-wave-*-plan.md` — what was built
+- All PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/*.md` — user stories, acceptance criteria, edge cases
+- Architecture in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md` — tech design context
+- Progress in `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` — implementation status, Ralph results
+- Wave plans in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-*-plan.md` — what was built
 
 QA runs across all PRDs of the PROJ. Each PRD's acceptance criteria become tests.
 
@@ -94,7 +94,7 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 
 ### 1. Read PRDs + Progress
 
-- Read every PRD in `specs/PROJ-<X>-<thema>/3_PRDs/` and `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md`
+- Read every PRD in `specs/PROJ-<X>-<theme>/3_PRDs/` and `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`
 - ACs are already verified by skill 5's outer Ralph loop — do not re-test them in code
 - Focus on: browser E2E validation, edge cases, adversarial scenarios, security, regression
 - Also inspect implementation shape for unnecessary complexity. QA must surface complexity that makes the feature harder to fix, test, or extend.
@@ -216,7 +216,7 @@ Note: Ken Takahashi does **not** run per wave. CodeRabbit is the only per-wave r
 3. **Priya Sharma — Performance Engineer (20y)**
    *Focus:* Latency hotpaths, N+1 queries, unbounded work (loops, recursion, memory), bundle size, render-blocking, cache keys, pagination correctness, cold-start cost.
 
-4. **Thomas Müller — SRE / Reliability Engineer (20y)**
+4. **Thomas Mueller — SRE / Reliability Engineer (20y)**
    *Focus:* Failure modes (network, disk, partial writes), retries/backoff, idempotency, timeouts, observability (logs/metrics/traces), graceful degradation, rollback/backfill safety, race conditions, resource leaks.
 
 5. **Elena Rodriguez — Principal Architect, PROJ Retrospective (20y)**
@@ -234,7 +234,7 @@ Use **exactly these names and disciplines** — they are stable across runs so t
 Default path: if Codex subagent delegation is available and allowed in the active session, spawn six independent review subagents in parallel, one per persona. Do this before running any persona review locally.
 
 Hard rules:
-- Spawn exactly six persona review subagents: Chen, Weber, Sharma, Müller, Rodriguez, Takahashi.
+- Spawn exactly six persona review subagents: Chen, Weber, Sharma, Mueller, Rodriguez, Takahashi.
 - Give each subagent only one persona. Do not ask one subagent to cover multiple personas.
 - Run the six subagents in parallel when the tool supports it. Do not serialize them unless parallel spawning is unavailable.
 - Keep the main agent as orchestrator: it launches, waits, deduplicates, assigns BUG-IDs, and writes summaries.
@@ -246,7 +246,7 @@ Prompt each subagent with:
 - Discipline focus (same bullet list as above)
 - Scope: `git diff BASE_SHA..HEAD` (whole PROJ)
 - Expected output format:
-  - Chen/Weber/Sharma/Müller: Critical/High/Medium/Low findings with file:line + optional `AGENTS.md` one-liners
+  - Chen/Weber/Sharma/Mueller: Critical/High/Medium/Low findings with file:line + optional `AGENTS.md` one-liners
   - Elena: findings **plus** a separate PROJ Retrospective narrative (5-15 bullets)
   - Ken: findings **plus** a separate Minimalism Retrospective narrative (5-15 bullets)
 
@@ -254,7 +254,7 @@ Required subagent tasks:
 - **Dr. Sarah Chen:** static/diff security review. Output security findings and suggested runtime checks only when needed.
 - **Marcus Weber:** principal engineering review. Output architecture, coupling, error-handling, testability, and duplicated domain logic findings.
 - **Priya Sharma:** performance review. Output latency, N+1, unbounded work, bundle, cache, pagination, and cold-start findings.
-- **Thomas Müller:** reliability review. Output failure-mode, retry, idempotency, timeout, observability, race, and resource-leak findings.
+- **Thomas Mueller:** reliability review. Output failure-mode, retry, idempotency, timeout, observability, race, and resource-leak findings.
 - **Elena Rodriguez:** cross-wave architecture coherence review plus PROJ Retrospective.
 - **Ken Takahashi:** Simplicity Gate review plus Minimalism Retrospective, with simplification sketches for every concrete finding.
 
@@ -308,9 +308,9 @@ Persona retrospectives are **advisory**. Persona bug findings are normal QA find
 
 ### 7. Document Results
 
-For each PRD tested: append a `## QA Test Results` section to that PRD file (`specs/PROJ-<X>-<thema>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`) using `references/test-template.md` as the format.
+For each PRD tested: append a `## QA Test Results` section to that PRD file (`specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`) using `references/test-template.md` as the format.
 
-Also update `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md` with a top-level QA summary across all PRDs.
+Also update `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` with a top-level QA summary across all PRDs.
 
 Include for each tested AC:
 - What was done in the browser (steps)
@@ -338,7 +338,7 @@ Typical sources during QA:
 - A convention QA discovered the implementation violated repeatedly (e.g. missing RLS on new tables)
 - A platform quirk that tripped red-team-tester or ui-auditor (e.g. `bcrypt` salt-rounds threshold)
 
-**Append candidates to the `## AGENTS.md Candidates` section** of `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md`. If the section does not exist yet, create it. Do NOT write to `AGENTS.md` directly — Skill 7 does the merge after user approval.
+**Append candidates to the `## AGENTS.md Candidates` section** of `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`. If the section does not exist yet, create it. Do NOT write to `AGENTS.md` directly — Skill 7 does the merge after user approval.
 
 Format:
 
@@ -359,7 +359,7 @@ Report to the user:
 - Security findings
 - Simplicity gate findings and whether any release-blocking complexity remains
 - Screenshots taken during testing
-- **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Müller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
+- **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
 - **AGENTS.md candidates:** count + one-line summary of each, plus reminder that Skill 7 will ask for approval before merging.
 - Production-ready recommendation: YES or NO
 
@@ -401,5 +401,5 @@ Handoff message to the user (right before invoking Skill 7):
 ## Git Commit
 
 ```
-test(PROJ-<X>): Add QA test results for <thema>
+test(PROJ-<X>): Add QA test results for <theme>
 ```

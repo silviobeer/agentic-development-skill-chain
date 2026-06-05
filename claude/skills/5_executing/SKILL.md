@@ -50,7 +50,7 @@ Before doing ANYTHING else — before reading plans, before spawning any agent:
    - If any wave in `wave-gate-config.json` has non-empty `frontend_routes` → verify Playwright or active agent-browser/browser automation tools are available. Missing → STOP, tell user: QA in Skill 6 will fail without browser automation. Reconnect or configure browser tooling before continuing.
    - `agent-browser`, `coderabbit`, `jq` CLIs: verify via `command -v`. Missing → STOP.
 3. Record BASE_SHA: `git rev-parse HEAD`
-4. Create `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md` using the template below
+4. Create `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` using the template below
 5. Store BASE_SHA in progress.md
 
 This file is your single source of truth for the whole PROJ. Update it after EVERY action.
@@ -72,7 +72,7 @@ Before spawning ANY teammate for a new wave N+1, you MUST first fill the Post-Wa
 Source the content from `progress.md` + commit messages for the wave's SHA range. Keep each sub-item to one line. Skill 7 reads this verbatim; empty entries (`—`) are fine and explicit.
 
 ```bash
-bash scripts/wave-gate.sh <N> <PROJ-X> <thema>
+bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
 Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
@@ -217,16 +217,16 @@ Write to `agent.md` immediately when a learning occurs — not at the end. Futur
 
 Read the following before starting each PROJ:
 
-**All PRDs** — `specs/PROJ-<X>-<thema>/3_PRDs/*.md`. These are the authoritative requirements source. Used by the outer Ralph loop to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
+**All PRDs** — `specs/PROJ-<X>-<theme>/3_PRDs/*.md`. These are the authoritative requirements source. Used by the outer Ralph loop to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
 
-**Architecture** — `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
+**Architecture** — `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
 
-**Wave plans** — `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
+**Wave plans** — `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
 - The user stories in that wave (may span multiple PRDs)
 - Tasks per US with TDD cycle descriptions and file paths
 - For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `5_mockups/implementation-handoff.md`
 
-**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<thema>/5_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
+**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
 
 The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating HTML mockups as pixel-perfect production specs.
 
@@ -240,7 +240,7 @@ For each PROJ-X plan (in order):
 
 ```
 0. Record BASE_SHA (git rev-parse HEAD)
-1. Create specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md
+1. Create specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md
 2. Execute waves (Steps 1–5 below)
 3. Build check after each wave (Step 5)
 4. CodeRabbit wave review after each wave (Step 7)
@@ -481,7 +481,7 @@ Legacy invocation (per-wave Codex companion / general-purpose subagent at wave-b
 Run the Wave Gate script (see Wave Completion Gate above):
 
 ```bash
-bash scripts/wave-gate.sh <N> <PROJ-X> <thema>
+bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
 - Exit 0 → script appended `### Wave N Gate — PASSED` block to `progress.md`. Commit the wave. **Immediately proceed to next wave — do NOT pause, do NOT ask the user, do NOT announce "ready for next wave".** The gate already proved the wave is done; the next wave's Step 1 (read dependency map) is the next action.
@@ -550,7 +550,7 @@ Create an agent team for QA of PROJ-X.
 Spawn teammates:
 - "red-team" using the red-team-tester agent type with prompt:
   "Test feature PROJ-X for security vulnerabilities and edge cases.
-   Read PRDs at specs/PROJ-<X>-<thema>/3_PRDs/*.md for acceptance criteria.
+   Read PRDs at specs/PROJ-<X>-<theme>/3_PRDs/*.md for acceptance criteria.
    Focus on: injection attacks, auth bypass, boundary values, race conditions."
 - "ui-audit" using the ui-auditor agent type with prompt:
   "Audit PROJ-X UI changes for design system compliance.
@@ -595,13 +595,14 @@ Update `progress.md` with QA results. Mark this PROJ-X as complete.
 ## 11. Handoff to Skill 6 (QA)
 
 <HARD-GATE>
-Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Müller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
+Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
 
 Before invoking Skill 6, flush context:
 
 1. Run `/compact`. Wave plans, agent chatter, Ralph iterations, and Quality-Gate review output are all on disk in `progress.md` — reclaim the context budget for Playwright or agent-browser testing + persona reviewers.
 2. Verify `progress.md` Quality-Gate section is complete (code review + sonar findings logged).
-3. Invoke Skill 6: `/6_qa` (interactive) or — in `autonomous-execution` mode — the orchestrator invokes it directly with `CLAUDE_AUTONOMOUS_LEVEL` still set.
+3. Suggest that the user run QA with a different model than the one that executed the implementation, for example GPT reviewing Claude-built work or Claude reviewing GPT-built work.
+4. Invoke Skill 6: `/6_qa` (interactive) or — in `autonomous-execution` mode — the orchestrator invokes it directly with `CLAUDE_AUTONOMOUS_LEVEL` still set.
 
 **In autonomous mode** (`CLAUDE_AUTONOMOUS_LEVEL` env set, documented at `~/.claude/skills/autonomous-execution/SKILL.md` — Workflow section): skip the `/compact` user-prompt. The autonomous-execution orchestrator already scheduled a compact window between Skills 5 and 6.
 
@@ -631,7 +632,7 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 > ...
 >
 > Learnings documented in `src/features/[feature]/agent.md`.
-> Progress logs at `specs/PROJ-<X>-<thema>/7_progress/PROJ-<X>-progress.md`."
+> Progress logs at `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`."
 
 ---
 

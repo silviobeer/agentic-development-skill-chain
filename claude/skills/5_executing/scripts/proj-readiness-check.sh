@@ -11,9 +11,9 @@
 #   bash scripts/proj-readiness-check.sh 1
 #
 # A PROJ counts as "ready" when it has all of:
-#   - specs/PROJ-<N>-<thema>/6_plan/PROJ-<N>-architecture.md
-#   - specs/PROJ-<N>-<thema>/6_plan/PROJ-<N>-wave-1-plan.md (at least one wave)
-#   - specs/PROJ-<N>-<thema>/6_plan/wave-gate-config.json
+#   - specs/PROJ-<N>-<theme>/6_plan/PROJ-<N>-architecture.md
+#   - specs/PROJ-<N>-<theme>/6_plan/PROJ-<N>-wave-1-plan.md (at least one wave)
+#   - specs/PROJ-<N>-<theme>/6_plan/wave-gate-config.json
 #
 # Exit codes:
 #   0 — next PROJ is ready; prints its folder + NEXT ACTION hint

@@ -34,15 +34,15 @@ Use this rule:
 
 Artifact handling:
 
-- Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<thema>/4_design/design-language.md`.
+- Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<theme>/4_design/design-language.md`.
 - In the document, include a `## Applies To` section listing sibling PROJs that should consume it.
 - Later sibling PROJs should reference this canonical file from their Visual Companion, UI Mockup, PRD, architecture, and plan artifacts.
 - If a sibling needs a local deviation, write a short local `4_design/design-delta.md` instead of creating a competing full design language.
 
 ## Input
 
-- Concept doc from Step 1 (`specs/PROJ-<X>-<thema>/1_brainstorm/PROJ-<X>-concept.md`) — understand the app's purpose and audience
-- Visual Companion output (`specs/PROJ-<X>-<thema>/2_visual-companion/layout-decision.md` and `layout-exploration.html`) — understand selected UI structure, `Project Mode`, `Shape Brief`, and interaction containers
+- Concept doc from Step 1 (`specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`) — understand the app's purpose and audience
+- Visual Companion output (`specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md` and `layout-exploration.html`) — understand selected UI structure, `Project Mode`, `Shape Brief`, and interaction containers
 - User preferences expressed during brainstorming
 
 ## Process
@@ -94,7 +94,7 @@ Based on context, create a coherent design system with:
 
 Create these files:
 
-**`specs/PROJ-<X>-<thema>/4_design/design-language.md`** — The design language document:
+**`specs/PROJ-<X>-<theme>/4_design/design-language.md`** — The design language document:
 
 ```markdown
 # Design Language — [Project Name]
@@ -102,7 +102,7 @@ Create these files:
 > [One sentence: the visual personality]
 
 ## Applies To
-- PROJ-<X>-<thema>: canonical owner
+- PROJ-<X>-<theme>: canonical owner
 - PROJ-<Y>-<sibling>: consumes this design language
 
 ## Tone
@@ -174,8 +174,8 @@ Include a short implementation-facing section:
 
 ## Output
 
-The design language document at `specs/PROJ-<X>-<thema>/4_design/design-language.md` plus updated config files. This document becomes the reference for:
-- **Step 2b (UI Mockup):** Mockups use the defined colors, fonts, spacing
+The design language document at `specs/PROJ-<X>-<theme>/4_design/design-language.md` plus updated config files. This document becomes the reference for:
+- **Step 1d (UI Mockup):** Mockups use the defined colors, fonts, spacing
 - **Step 3 (Architecture):** Tech design references the design tokens
 - **Step 5 (Executing):** frontend-implementer follows the design language
 - **Step 6 (QA):** ui-auditor checks compliance against the design language

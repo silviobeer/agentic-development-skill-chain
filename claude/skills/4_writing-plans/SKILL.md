@@ -12,9 +12,9 @@ DRY. YAGNI. TDD. Frequent commits.
 ## Input
 
 Read both sources:
-- Architecture: `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
-- All PRDs: `specs/PROJ-<X>-<thema>/3_PRDs/*.md` (requirements per feature)
-- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<thema>/5_mockups/implementation-handoff.md`
+- Architecture: `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
+- All PRDs: `specs/PROJ-<X>-<theme>/3_PRDs/*.md` (requirements per feature)
+- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`
 
 The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance.
 
@@ -68,7 +68,7 @@ For each user story in a wave:
 
 ### 4. Write one plan file per wave
 
-Save each wave to `specs/PROJ-<X>-<thema>/6_plan/PROJ-<X>-wave-<N>-plan.md`.
+Save each wave to `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md`.
 
 **Template for wave plan file:**
 
@@ -170,7 +170,7 @@ The `Post-Wave Notes` block is a **placeholder the planner reserves** for Skill 
 
 ### 5. Write `wave-gate-config.json`
 
-Alongside the wave plans, write `specs/PROJ-<X>-<thema>/6_plan/wave-gate-config.json`. This config feeds the `wave-gate.sh` script (Skill 5) — machine-readable source of truth for each wave's completion checks.
+Alongside the wave plans, write `specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json`. This config feeds the `wave-gate.sh` script (Skill 5) — machine-readable source of truth for each wave's completion checks.
 
 **Schema:**
 
@@ -248,6 +248,8 @@ Fix issues inline. Move on.
 
 Present all wave plans for approval. Adjust if needed.
 
+Ask the user to review the wave-plan artifacts with a different model before execution, for example GPT reviewing Claude output or Claude reviewing GPT output. The second-model review should look for missing AC coverage, unsafe wave ordering, vague tasks, missing component-reuse constraints, and weak gate commands.
+
 ## Rules
 
 - Exact file paths always
@@ -265,7 +267,7 @@ Present all wave plans for approval. Adjust if needed.
 
 After saving all wave plans + the gate config:
 
-> "Plans complete. Files in `specs/PROJ-<X>-<thema>/6_plan/`:
+> "Plans complete. Files in `specs/PROJ-<X>-<theme>/6_plan/`:
 > - `PROJ-<X>-architecture.md`
 > - `PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …
 > - `wave-gate-config.json` (machine-readable Wave Gate)

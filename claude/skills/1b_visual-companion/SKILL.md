@@ -36,7 +36,7 @@ Visual Companion normally runs for one PROJ at a time. If the concept says the s
 
 ## Required Outputs
 
-Write all outputs to `specs/PROJ-<X>-<thema>/2_visual-companion/`:
+Write all outputs to `specs/PROJ-<X>-<theme>/2_visual-companion/`:
 
 1. `layout-exploration.html` — one interactive HTML file with 3-4 clickable layout approaches.
 2. `layout-decision.md` — summary, project mode, trade-off matrix, recommendation, and open decisions.
@@ -44,7 +44,7 @@ Write all outputs to `specs/PROJ-<X>-<thema>/2_visual-companion/`:
 Commit with:
 
 ```bash
-docs(PROJ-<X>): explore UI layout approaches for <thema>
+docs(PROJ-<X>): explore UI layout approaches for <theme>
 ```
 
 ## Workflow
@@ -54,7 +54,7 @@ docs(PROJ-<X>): explore UI layout approaches for <thema>
 Read the concept doc:
 
 ```text
-specs/PROJ-<X>-<thema>/1_brainstorm/PROJ-<X>-concept.md
+specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
 ```
 
 Then inspect the existing app so the exploration fits what is already there:
@@ -140,7 +140,7 @@ Each approach must include:
 Create:
 
 ```text
-specs/PROJ-<X>-<thema>/2_visual-companion/layout-exploration.html
+specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html
 ```
 
 The file must be self-contained HTML/CSS/JS and runnable by opening it in a browser. No build step.
@@ -163,13 +163,13 @@ Visual rules:
 Create:
 
 ```text
-specs/PROJ-<X>-<thema>/2_visual-companion/layout-decision.md
+specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md
 ```
 
 Use this structure:
 
 ```markdown
-# PROJ-<X> Visual Companion — <thema>
+# PROJ-<X> Visual Companion — <theme>
 
 ## Existing UI Patterns
 - ...
@@ -232,7 +232,7 @@ Your response must:
 
 Good prompt:
 
-> "I created an interactive layout exploration at `specs/PROJ-<X>-<thema>/2_visual-companion/layout-exploration.html`. Please try the variants and tell me which direction should drive the requirements: A, B, C, or a combination."
+> "I created an interactive layout exploration at `specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html`. Please try the variants and tell me which direction should drive the requirements: A, B, C, or a combination."
 
 Iterate by editing the same files. Do not create many `v2` files unless the user explicitly wants history.
 

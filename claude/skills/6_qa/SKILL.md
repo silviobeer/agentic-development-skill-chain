@@ -215,7 +215,7 @@ Note: Ken Takahashi does **not** run per wave. CodeRabbit is the only per-wave r
 3. **Priya Sharma — Performance Engineer (20y)**
    *Focus:* Latency hotpaths, N+1 queries, unbounded work (loops, recursion, memory), bundle size, render-blocking, cache keys, pagination correctness, cold-start cost.
 
-4. **Thomas Müller — SRE / Reliability Engineer (20y)**
+4. **Thomas Mueller — SRE / Reliability Engineer (20y)**
    *Focus:* Failure modes (network, disk, partial writes), retries/backoff, idempotency, timeouts, observability (logs/metrics/traces), graceful degradation, rollback/backfill safety, race conditions, resource leaks.
 
 5. **Elena Rodriguez — Principal Architect, PROJ Retrospective (20y)**
@@ -233,7 +233,7 @@ Use **exactly these names and disciplines** — they are stable across runs so t
 Default path: if Claude subagents are available, spawn six independent review subagents in parallel, one per persona. Do this before running any persona review locally.
 
 Hard rules:
-- Spawn exactly six persona review subagents: Chen, Weber, Sharma, Müller, Rodriguez, Takahashi.
+- Spawn exactly six persona review subagents: Chen, Weber, Sharma, Mueller, Rodriguez, Takahashi.
 - Give each subagent only one persona. Do not ask one subagent to cover multiple personas.
 - Run the six subagents in parallel when the tool supports it. Do not serialize them unless parallel spawning is unavailable.
 - Keep the main agent as orchestrator: it launches, waits, deduplicates, assigns BUG-IDs, and writes summaries.
@@ -245,7 +245,7 @@ Spawn one Claude `Agent` subagent per persona, normally with `subagent_type: gen
 - Discipline focus (same bullet list as above)
 - Scope: `git diff BASE_SHA..HEAD` (whole PROJ)
 - Expected output format:
-  - Chen/Weber/Sharma/Müller: Critical/High/Medium/Low findings with file:line + optional `AGENTS.md` one-liners
+  - Chen/Weber/Sharma/Mueller: Critical/High/Medium/Low findings with file:line + optional `AGENTS.md` one-liners
   - Elena: findings **plus** a separate PROJ Retrospective narrative (5-15 bullets)
   - Ken: findings **plus** a separate Minimalism Retrospective narrative (5-15 bullets)
 
@@ -253,7 +253,7 @@ Required subagent tasks:
 - **Dr. Sarah Chen:** static/diff security review. Output security findings and suggested runtime checks only when needed.
 - **Marcus Weber:** principal engineering review. Output architecture, coupling, error-handling, testability, and duplicated domain logic findings.
 - **Priya Sharma:** performance review. Output latency, N+1, unbounded work, bundle, cache, pagination, and cold-start findings.
-- **Thomas Müller:** reliability review. Output failure-mode, retry, idempotency, timeout, observability, race, and resource-leak findings.
+- **Thomas Mueller:** reliability review. Output failure-mode, retry, idempotency, timeout, observability, race, and resource-leak findings.
 - **Elena Rodriguez:** cross-wave architecture coherence review plus PROJ Retrospective.
 - **Ken Takahashi:** Simplicity Gate review plus Minimalism Retrospective, with simplification sketches for every concrete finding.
 
@@ -358,7 +358,7 @@ Report to the user:
 - Security findings
 - Simplicity gate findings and whether any release-blocking complexity remains
 - Screenshots taken during testing
-- **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Müller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
+- **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
 - **AGENTS.md candidates:** count + one-line summary of each, plus reminder that Skill 7 will ask for approval before merging.
 - Production-ready recommendation: YES or NO
 
