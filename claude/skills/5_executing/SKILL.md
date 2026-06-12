@@ -45,8 +45,10 @@ Before doing ANYTHING else — before reading plans, before spawning any agent:
    - If the config exists, verify it has: `reviews.profile` set (ideally `chill`), `reviews.path_filters` excluding `node_modules`/`dist`/`build`/lockfiles, and no overly-broad `path_instructions` that would swamp the per-wave review. If violations — propose a patch, don't silently rewrite; commit only with user-visible diff.
    - Rationale: without a focused config, CodeRabbit's per-wave review generates hundreds of Low/Medium findings that slow the gate and bury Critical/High signal.
 
-2. **MCP preflight check** (fail fast):
-   - If `package.json` contains `@supabase/*` OR `supabase/` folder exists → verify `mcp__claude_ai_Supabase__*` tools are in the available tool list. Missing → STOP, tell user to reconnect Supabase MCP.
+2. **Supabase and automation preflight check** (fail fast):
+   - If `package.json` contains `@supabase/*` OR `supabase/` folder exists → run `command -v supabase`.
+     - If the Supabase CLI is available, use it for Supabase work instead of MCP or plugin tools. This includes migrations, SQL inspection/execution, type generation, edge functions, project/branch inspection, and local Supabase lifecycle commands.
+     - If the Supabase CLI is missing, verify `mcp__claude_ai_Supabase__*` or relevant Supabase plugin tools are in the available tool list. Missing → STOP, tell user to install the Supabase CLI or reconnect/configure Supabase MCP/plugin tooling.
    - If any wave in `wave-gate-config.json` has non-empty `frontend_routes` → verify Playwright or active agent-browser/browser automation tools are available. Missing → STOP, tell user: QA in Skill 6 will fail without browser automation. Reconnect or configure browser tooling before continuing.
    - `agent-browser`, `coderabbit`, `jq` CLIs: verify via `command -v`. Missing → STOP.
 3. Record BASE_SHA: `git rev-parse HEAD`
