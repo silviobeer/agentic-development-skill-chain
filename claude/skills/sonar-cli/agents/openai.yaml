@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sonar CLI"
+  short_description: "Set up and operate Sonar CLI tools"
+  default_prompt: "Use $sonar-cli to configure Sonar scanning and triage project issues."

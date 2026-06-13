@@ -470,7 +470,16 @@ After all waves for this PROJ-X are complete and all ACs verified, run the Quali
 
 See `references/quality-gate.md` for full instructions.
 
-**Run Gate 1 and Gate 2 in parallel using an agent team:**
+**Run Gate 1, the PROJ-end build, and optional Sonar in parallel where safe:**
+
+Before launching the Sonar stream, check tool availability:
+
+```bash
+command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
+```
+
+- If both CLIs are available, run the Sonar quality-gate stream using the `sonar-cli` skill guidance.
+- If either CLI is missing, skip Sonar and record `SonarCloud: skipped (sonar CLI unavailable)` in `progress.md`. Missing Sonar tooling does not block execution or QA handoff.
 
 ```
 Create an agent team for Quality Gate of PROJ-X.
@@ -478,11 +487,11 @@ Create an agent team for Quality Gate of PROJ-X.
 Spawn teammates:
 - "reviewer" using the code-reviewer-gate agent type with prompt:
   "Review the feature diff from BASE_SHA=$BASE_SHA. Check references/code-reviewer.md for the full checklist."
-- "sonar" using the sonar-scanner-gate agent type with prompt:
-  "Run SonarCloud scan and fetch issues for files changed since BASE_SHA=$BASE_SHA."
+- "sonar" only if `sonar` and `sonar-scanner` are installed, using the sonar-cli skill with prompt:
+  "Run the Sonar quality-gate stream for files changed since BASE_SHA=$BASE_SHA. Use sonar-scanner for project analysis and sonar CLI/API for quality gate, issue, coverage, and duplication data. If project Sonar config is absent, log SonarCloud as skipped rather than blocking."
 ```
 
-Both teammates report their findings. The lead consolidates results.
+The lead also runs `build_cmd` from `wave-gate-config.json` once for the assembled PROJ. The lead consolidates reviewer, build, and optional Sonar results.
 
 **After both teammates report — Handling Findings with Technical Rigor:**
 
@@ -493,14 +502,15 @@ Do NOT blindly implement every finding. Apply the `receiving-code-review` discip
 3. **EVALUATE** — Is this a real problem or a false positive?
    - **Push back when:** The finding breaks existing functionality, violates YAGNI (suggests "proper" patterns for unused scenarios), is technically incorrect, or conflicts with the user's explicit decisions
    - **YAGNI check:** If a reviewer suggests adding error handling for a scenario that can't happen, or abstracting code that's used once — grep the codebase for actual usage before implementing
-4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and BLOCKER/CRITICAL/MAJOR issues
-5. **LOG** P2/P3 and MINOR/INFO to `progress.md` — these are addressed if time permits
+4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR issues
+5. **LOG** P2/P3 and Sonar MINOR/INFO to `progress.md` — these are addressed if time permits
 6. Clean up the team
 
 **Exit criteria:**
 - Zero P0/P1 code review findings
 - `build_cmd` from `wave-gate-config.json` passes once for the assembled PROJ
-- Zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- If Sonar was skipped because CLIs or project config were unavailable: the skip reason is logged in `progress.md`
 - All tests passing, no new lint errors
 
 Update `progress.md` with Quality Gate results.
@@ -562,16 +572,16 @@ Update `progress.md` with QA results. Mark this PROJ-X as complete.
 ## 11. Handoff to Skill 6 (QA)
 
 <HARD-GATE>
-Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the 5-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez) + PROJ Retrospective + AGENTS.md candidate collection.
+Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
 
 Before invoking Skill 6:
 
 1. Verify wave plans, Ralph iterations, and Quality-Gate review output are all summarized in `progress.md`.
-2. Verify `progress.md` Quality-Gate section is complete (code review + sonar findings logged).
+2. Verify `progress.md` Quality-Gate section is complete (code review + build + Sonar findings or explicit Sonar skip reason logged).
 3. Suggest that the user run QA with a different model than the one that executed the implementation, for example GPT reviewing Claude-built work or Claude reviewing GPT-built work.
 4. Invoke Skill 6: `/6_qa` (interactive) or — in `autonomous-execution` mode — the orchestrator invokes it directly with `CODEX_AUTONOMOUS_LEVEL` still set.
 
-**Do NOT skip Skill 6** even if Step 10 reported zero bugs. The 5-persona panel and Elena's PROJ retrospective produce `AGENTS.md` candidates and `## PROJ Retrospective` notes that Skill 7 consumes — skipping them means docs are incomplete.
+**Do NOT skip Skill 6** even if Step 10 reported zero bugs. The persona panel and PROJ retrospectives produce `AGENTS.md` candidates and `## PROJ Retrospective` notes that Skill 7 consumes — skipping them means docs are incomplete.
 </HARD-GATE>
 
 ## 12. Final Summary Report
@@ -587,7 +597,7 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 >
 > Quality Gate:
 > - Code Review: X found, X fixed, X deferred
-> - SonarCloud: X found, X fixed, X deferred
+> - SonarCloud: X found, X fixed, X deferred OR skipped (reason)
 >
 > QA:
 > - [N] bugs found, [N] fixed, [N] Medium/Low deferred

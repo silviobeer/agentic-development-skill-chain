@@ -73,11 +73,12 @@ Fixing is outside QA's role unless the user explicitly asks this session to fix 
 
 ## Quality Gates And Review Sources
 
-QA has five release gates:
+QA has six release gates:
 - Browser behavior: E2E acceptance criteria, edge cases, and regression checks in Playwright or the active agent browser.
 - Runtime security: browser and network probes for leaks, auth bypass, injection, authorization, CSRF, and rate-limit risks.
 - UI consistency: component registry, design-system, focus, spacing, typography, and visual regression checks.
 - Simplicity: unnecessary implementation complexity that materially raises defect or maintenance risk.
+- Sonar quality input: consume Skill 5 Sonar results when present; never make QA rerun Sonar from scratch.
 - Severity merge: all confirmed Critical/High bugs block release, regardless of which stream found them.
 
 The six-persona panel is a diff-level review source, not a separate QA workflow. Persona findings become normal QA bugs after deduplication and severity assignment. Persona retrospectives are advisory; persona bug findings are not advisory once accepted into the bug list.
@@ -99,6 +100,15 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 - Focus on: browser E2E validation, edge cases, adversarial scenarios, security, regression
 - Also inspect implementation shape for unnecessary complexity. QA must surface complexity that makes the feature harder to fix, test, or extend.
 - QA covers the entire PROJ — all PRDs together
+
+### 1b. Sonar Quality-Gate Input
+
+Read the `### SonarCloud` block in `7_progress/PROJ-<X>-progress.md`.
+
+- If Skill 5 logged Sonar findings, treat confirmed BLOCKER/CRITICAL/MAJOR issues in touched files as QA bugs and include them in the severity merge.
+- If Skill 5 logged `SonarCloud: skipped (sonar CLI unavailable)` or `skipped (project not configured)`, record Sonar as skipped in the QA summary and continue. Missing Sonar tooling/config is not a QA blocker.
+- Do not run `sonar-scanner` during QA. The scan belongs to Skill 5's Quality Gate; QA consumes its result and verifies any unresolved high-signal findings.
+- Treat MINOR/INFO findings as non-blocking unless manual verification shows real user, security, or maintainability impact.
 
 ### 2. Browser E2E Testing (Playwright Or Agent Browser)
 
@@ -323,6 +333,11 @@ Also document the `### Simplicity Gate Results` for the PROJ:
 - Explicit statement if no release-blocking complexity was found
 - Simplification candidates that should become AGENTS.md rules if they are project-wide and repeatable
 
+Also document `### Sonar Quality Input`:
+- `ran` with counts by severity, or `skipped` with the exact reason from Skill 5
+- Any Sonar findings promoted to QA bugs, with BUG-IDs
+- Explicit statement when Sonar was skipped and therefore not considered release-blocking
+
 ### 7.5 AGENTS.md Candidates
 
 While testing, collect project-wide rules that future agents should know. These become candidates — not direct edits — for the project-root `AGENTS.md`. Skill 7 (documentation) asks the user to approve each candidate before merging.
@@ -348,7 +363,7 @@ Format:
 - [PROPOSED] <another convention>                    — source: QA regression check
 ```
 
-Skill 5 quality-gate agents (code-reviewer-gate, sonar-scanner-gate, red-team-tester, ui-auditor) may already have added entries to this section — QA adds on top, not overwriting. Omit the section entirely if no candidates emerged.
+Skill 5 quality-gate agents (code-reviewer-gate, optional sonar-cli stream, red-team-tester, ui-auditor) may already have added entries to this section — QA adds on top, not overwriting. Omit the section entirely if no candidates emerged.
 
 ### 8. Present Summary
 
@@ -358,6 +373,7 @@ Report to the user:
 - Bug count by severity
 - Security findings
 - Simplicity gate findings and whether any release-blocking complexity remains
+- Sonar quality input: ran/skipped, blocking findings promoted to QA bugs
 - Screenshots taken during testing
 - **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
 - **AGENTS.md candidates:** count + one-line summary of each, plus reminder that Skill 7 will ask for approval before merging.

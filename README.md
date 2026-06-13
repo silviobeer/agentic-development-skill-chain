@@ -26,9 +26,12 @@ Brainstorming can also decompose one broad seed into multiple PROJs before downs
 
 ```text
 refactor-dreamer
+sonar-cli
 ```
 
 `refactor-dreamer` is not part of the 0-to-7 chain. It is a separate long-run/overnight skill that scans a grown codebase for architecture drift, larger refactor opportunities, simplification targets, ADR candidates, fitness functions, and a `chain-input.md` artifact that can feed back into the normal chain.
+
+`sonar-cli` is not part of the 0-to-7 chain. It is a focused helper for configuring and running SonarScanner CLI, using the SonarQube developer CLI, and triaging quality gate/issues data.
 
 Claude-specific experimental or personal skills are intentionally excluded.
 

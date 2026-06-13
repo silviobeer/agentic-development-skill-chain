@@ -229,6 +229,6 @@ if [[ -f "$NEXT_PLAN" ]]; then
   echo "  Do NOT pause. Do NOT ask the user. Do NOT summarize. The gate is the signal."
 else
   echo "→ NEXT ACTION: All waves complete for PROJ-${PROJ}-${THEMA}."
-  echo "  Start Skill 5 Step 9 Quality Gate: spawn code-reviewer-gate + sonar-scanner-gate in parallel."
+  echo "  Start Skill 5 Step 9 Quality Gate: run code-reviewer-gate + optional sonar-cli stream."
   echo "  After Quality Gate passes → /compact → invoke /6_qa (see Skill 5 Step 11 handoff)."
 fi

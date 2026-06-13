@@ -46,9 +46,20 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
 
 ---
 
-## Gate 2: SonarCloud Scan
+## Gate 2: Optional Sonar Scan
 
-Fetch fresh SonarCloud issues for files touched by this feature.
+Fetch fresh SonarQube Cloud/Server issues for files touched by this feature when both Sonar CLIs are available.
+
+### Preflight
+
+```bash
+command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
+```
+
+- If both commands exist, run this gate using the `sonar-cli` skill guidance.
+- If either command is missing, skip this gate and record `SonarCloud: skipped (sonar CLI unavailable)` in `7_progress/PROJ-<X>-progress.md`.
+- If both commands exist but the project has no Sonar config and no explicit user/plan requirement to create one, skip this gate and record `SonarCloud: skipped (project not configured)`.
+- A skipped Sonar gate does not block QA handoff.
 
 ### Steps
 
@@ -57,20 +68,21 @@ Fetch fresh SonarCloud issues for files touched by this feature.
    git diff BASE_SHA..HEAD --name-only
    ```
 
-2. Run the SonarCloud scanner to upload the latest code for analysis:
+2. Run the Sonar scanner to upload the latest code for analysis:
    ```bash
-   npm run sonar
+   sonar-scanner
    ```
-   This runs tests with coverage and pushes results to SonarCloud. Wait for the scan to complete before proceeding.
+   If the repo provides a matching script such as `npm run sonar` that runs coverage first and then `sonar-scanner`, use that script instead. Wait for the scan to complete before proceeding.
 
-3. Fetch current SonarCloud issues (now including the freshly scanned code):
+3. Fetch current Sonar issues, measures, and quality-gate status:
    ```bash
-   SKILL_DIR="$HOME/.claude/skills/sonar-issues"
    BRANCH=$(git rev-parse --abbrev-ref HEAD)
-   node "$SKILL_DIR/scripts/fetch-sonar-issues.mjs" "$BRANCH" --output scripts/sonar-issues.json
+   sonar list issues --project <project-key> --branch "$BRANCH" --page-size 500
+   sonar api get "/api/measures/component?component=<project-key>&metricKeys=bugs,vulnerabilities,code_smells,security_hotspots,coverage,duplicated_lines_density,ncloc"
+   sonar api get "/api/qualitygates/project_status?projectKey=<project-key>"
    ```
 
-4. Read `scripts/sonar-issues.json` and filter to only issues in files from step 1.
+4. Filter issues to only files from step 1.
 
 5. Classify by SonarCloud severity:
    - **BLOCKER / CRITICAL** → must fix
@@ -92,7 +104,8 @@ Fetch fresh SonarCloud issues for files touched by this feature.
 The quality gate passes when ALL of these are true:
 
 - [ ] Zero P0/P1 code review findings remain
-- [ ] Zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- [ ] If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- [ ] If Sonar was skipped: explicit skip reason is logged
 - [ ] All tests still passing (`npm run test`)
 - [ ] No new lint errors (`npm run lint`)
 
@@ -116,6 +129,8 @@ Update `7_progress/PROJ-<X>-progress.md` with a Quality Gate section after runni
 | P3 Low | 3 | 0 | 3 |
 
 ### SonarCloud
+Status: ran | skipped (sonar CLI unavailable) | skipped (project not configured)
+
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | Critical | 0 | 0 | 0 |

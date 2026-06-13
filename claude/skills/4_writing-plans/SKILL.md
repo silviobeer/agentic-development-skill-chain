@@ -277,7 +277,7 @@ After saving all wave plans + the gate config:
 > Ready to execute! Use the **executing skill** (`/5_executing`) to implement wave by wave.
 > It will read wave plans in order, spawn subagents per US, verify ACs with Ralph loops, run `wave-gate.sh` between waves, and track progress in a single `7_progress/PROJ-<X>-progress.md`.
 >
-> **After the last wave:** Skill 5 Step 9 (Quality Gate: code-reviewer-gate + sonar-scanner-gate in parallel) runs automatically, then hands off to Skill 6 (QA: 5-persona panel + Playwright). No Quality Gate / QA text needs to live in the wave plans — the skills own those stages."
+> **After the last wave:** Skill 5 Step 9 (Quality Gate: code-reviewer-gate + optional sonar-cli stream) runs automatically, then hands off to Skill 6 (QA: six-persona panel + browser testing). No Quality Gate / QA text needs to live in the wave plans — the skills own those stages."
 
 ## Git Commit
 

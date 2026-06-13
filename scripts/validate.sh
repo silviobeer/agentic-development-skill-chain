@@ -17,6 +17,7 @@ CORE_SKILLS=(
 )
 OPTIONAL_SKILLS=(
   refactor-dreamer
+  sonar-cli
 )
 EXPECTED=("${CORE_SKILLS[@]}" "${OPTIONAL_SKILLS[@]}")
 

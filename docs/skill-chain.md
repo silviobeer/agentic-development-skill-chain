@@ -18,7 +18,7 @@ flowchart LR
   S6 --> S7[7 documentation]
 ```
 
-`refactor-dreamer` intentionally sits outside this flow. Launch it separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step.
+`refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
 
 ## Decomposed Ideas
 
@@ -52,3 +52,4 @@ After decomposition:
 | Skill | Purpose |
 |---|---|
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
+| sonar-cli | Set up and operate SonarScanner CLI and SonarQube CLI for project analysis, quality gates, and issue triage |
