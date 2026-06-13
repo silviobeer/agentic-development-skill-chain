@@ -1,6 +1,6 @@
 ---
 name: sonar-cli
-description: Set up, run, troubleshoot, and triage SonarQube Cloud/Server analysis from Codex. Use when working with SonarScanner CLI (`sonar-scanner`), SonarQube CLI (`sonar`), SonarCloud project setup, `sonar-project.properties`, `SONAR_TOKEN`, quality gate/issue queries, scanner authentication failures, or confusion about which Sonar CLI to use.
+description: Set up, run, troubleshoot, and triage SonarQube Cloud/Server analysis from Codex. Use when working with SonarScanner CLI (`sonar-scanner`), SonarQube CLI (`sonar`), SonarCloud project setup, quality gate creation/assignment/status, `sonar-project.properties`, `SONAR_TOKEN`, coverage import/LCOV merging, issue/security hotspot queries, scanner authentication failures, or confusion about which Sonar CLI to use.
 ---
 
 # Sonar CLI
@@ -34,6 +34,7 @@ If the user is confused about the two tools, read `references/cli-distinction.md
 5. Run coverage before the scanner.
 6. Run `sonar-scanner` with an analysis token, normally through `SONAR_TOKEN`, never committed.
 7. Wait for the compute task, then pull issue and measure data through `sonar api` or `sonar list issues`.
+8. Keep project measured state separate from quality gate status. Clean measures do not mean an enforced gate exists.
 
 ## Authentication Workflow
 
@@ -54,6 +55,37 @@ SONAR_TOKEN=$(TOKEN_JSON="$TOKEN_JSON" node -e 'const data=JSON.parse(process.en
 ```
 
 If the organization from `sonar auth status` differs from `sonar.organization`, either log into the correct org/account or change the project config only if that matches the user's intent.
+
+## Quality Gate Workflow
+
+Measured project state and quality gate status are separate. A project can have clean measures while `/api/qualitygates/project_status` returns `NONE` because no gate is assigned or no new analysis has run since assignment.
+
+Use this workflow when a project needs an enforced gate:
+
+```bash
+sonar api get "/api/qualitygates/list?organization=<org>"
+sonar api post "/api/qualitygates/create" --data "name=<gate-name>&organization=<org>"
+# or copy an existing gate:
+sonar api post "/api/qualitygates/copy" --data "id=<source-gate-id>&name=<gate-name>&organization=<org>"
+sonar api post "/api/qualitygates/create_condition" --data "gateName=<gate-name>&metric=coverage&op=LT&error=80&organization=<org>"
+sonar api post "/api/qualitygates/select" --data "organization=<org>&projectKey=<project-key>&gateName=<gate-name>"
+sonar-scanner
+```
+
+Gate assignment is not retroactive. After assigning or changing a gate, the previous analysis may still show `NONE`; run a fresh `sonar-scanner` analysis before expecting `project_status` to become `OK` or `ERROR`.
+
+Always check both assignment and evaluated status:
+
+```bash
+sonar api get "/api/qualitygates/get_by_project?organization=<org>&project=<project-key>"
+sonar api get "/api/qualitygates/project_status?projectKey=<project-key>"
+```
+
+Do not use `security_hotspots` directly as a quality-gate metric through `create_condition`; check hotspots separately:
+
+```bash
+sonar api get "/api/hotspots/search?projectKey=<project-key>&ps=500"
+```
 
 ## Triage Workflow
 
@@ -76,13 +108,50 @@ Prioritize fixes in this order:
 
 Use `NOSONAR` sparingly and only with a precise inline reason when the finding is a confirmed false positive or an intentional local-only prototype artifact.
 
+## Coverage Workflow
+
+Sonar's `coverage` metric combines line and branch/condition coverage. An LCOV line coverage value such as 85% can become Sonar coverage around 79.3% if branch/condition coverage is lower.
+
+Use coverage exclusions sparingly. Exclude boundary wrappers only when justified, such as:
+
+- Next.js `page`/`layout` wrappers.
+- Server-action wrappers with no domain logic.
+- Generated Supabase types.
+- Supabase client factories.
+
+Keep domain logic, repositories, services, validation, and UI components in coverage scope.
+
+For repos with separate unit and DB Jest configs, merge LCOV before scanning:
+
+```bash
+rm -rf coverage
+npm run test:unit -- --coverage --coverageDirectory=coverage/unit
+npm run test:db -- --coverage --coverageDirectory=coverage/db
+npx lcov-result-merger "coverage/**/lcov.info" "coverage/lcov.info"
+sonar-scanner
+```
+
+If the repo uses different scripts or reporters, preserve the same shape: produce one merged `coverage/lcov.info`, point `sonar.javascript.lcov.reportPaths` at it, then scan.
+
+## Final Verification Bundle
+
+Run this bundle before declaring Sonar clean:
+
+```bash
+sonar api get "/api/issues/search?componentKeys=<project-key>&resolved=false&ps=500"
+sonar api get "/api/hotspots/search?projectKey=<project-key>&ps=500"
+sonar api get "/api/measures/component?component=<project-key>&metricKeys=bugs,vulnerabilities,code_smells,security_hotspots,coverage"
+sonar api get "/api/qualitygates/project_status?projectKey=<project-key>"
+```
+
 ## Common Failure Modes
 
 - `sonar.organization` missing: SonarQube Cloud scanner config is incomplete.
 - `Project not found`: wrong `sonar.projectKey`, wrong `sonar.organization`, missing project, or token lacks access.
 - Scanner 403 while `sonar auth status` is connected: the scanner is not using the `sonar` CLI login token; pass `SONAR_TOKEN`.
 - Coverage warning about unresolved paths: LCOV references files outside indexed `sonar.sources`/`sonar.tests`, or test helper files are not included in `sonar.test.inclusions`.
-- Missing blame for changed files: local uncommitted files or SCM state; not usually a blocker for local triage.
+- Missing blame warnings are expected with dirty/uncommitted files and do not necessarily affect quality gate conditions.
+- Quality gate status remains `NONE` after assignment: run a fresh `sonar-scanner`; gate assignment is not retroactive.
 
 ## Official References
 
