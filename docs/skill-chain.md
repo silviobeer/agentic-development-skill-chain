@@ -47,6 +47,8 @@ After decomposition:
 | 6 | qa | Run E2E QA, security, persona review, and simplicity review |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 
+For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
+
 ## Optional Skills
 
 | Skill | Purpose |
