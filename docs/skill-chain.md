@@ -10,13 +10,18 @@ flowchart LR
   S1B --> S1C[1c frontend-design]
   S1C --> S1D[1d ui-mockup]
   S1B --> S1D
+  S1D -->|iterated| S1E[1e concept-sync]
   S1D --> S2
+  S1E --> S2
+  S2 -.discovery track.-> S2B[2b handoff-package]
   S2 --> S3[3 architecture]
   S3 --> S4[4 writing-plans]
   S4 --> S5[5 executing]
   S5 --> S6[6 qa]
   S6 --> S7[7 documentation]
 ```
+
+The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
 `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
 
@@ -39,8 +44,10 @@ After decomposition:
 | 1 | brainstorming | Turn an idea into a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define visual language for greenfield or hybrid UI work |
-| 1d | ui-mockup | Create lightweight mockups and implementation handoff |
-| 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases |
+| 1d | ui-mockup | Create lightweight mockups and implementation handoff; track stakeholder iterations |
+| 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
+| 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; Linear handoff mode for discovery |
+| 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
 | 3 | architecture | Produce PM-friendly technical architecture |
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 5 | executing | Implement waves with TDD and quality gates |

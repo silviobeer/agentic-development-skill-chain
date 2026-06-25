@@ -36,6 +36,17 @@ specs/PROJ-1-auth/3_PRDs/
 
 Document dependencies between PRDs, including cross-PROJ dependencies, inside each PRD.
 
+## Delivery Track
+
+Detect how this PROJ will be delivered before writing PRDs. The concept's `Handoff Readiness` section (written by `concept-sync`) sets `Delivery track`; if it is absent, infer from context and confirm with the user.
+
+- **Full chain (in-repo build):** Steps 3–7 follow in this repo. Write PRDs normally, including the `UI Implementation Notes` section with component reuse and file-path hints.
+- **Discovery / Linear handoff:** There is no codebase here. You are producing a developer handoff that goes to Linear (https://linear.app). The developer who picks it up owns architecture and implementation. In this mode:
+  - Write the same PRDs (user stories, acceptance criteria, edge cases) — these are the contract.
+  - Do **not** invent in-repo file paths or component locations. Replace `UI Implementation Notes` component-path hints with mockup references and design intent only.
+  - Additionally produce a paste-ready `linear-import.md` (see the Linear handoff workflow step).
+  - Do **not** recommend `architecture` (3); the chain stops at Step 2 for this PROJ.
+
 ## Decomposed PROJ Handling
 
 Requirements run one PROJ at a time. If the concept contains `Decomposition Context`:
@@ -160,15 +171,56 @@ Template:
 
 Each user story owns its own acceptance criteria. Do not create one global acceptance-criteria section. Derive ACs directly from the story's Given/When/Then/And clauses and make them testable.
 
-### 5. Review With The User
+### 5. Produce The Linear Handoff (Discovery Track Only)
+
+Skip this step for the full-chain track. For the discovery / Linear handoff track, create:
+
+```text
+specs/PROJ-<X>-<theme>/3_PRDs/linear-import.md
+```
+
+This file is structured so each PRD becomes a Linear issue and each user story becomes a checklist item or sub-issue. Keep it paste-ready and free of in-repo implementation detail.
+
+```markdown
+# Linear Import — PROJ-<X> <theme>
+
+> One project/epic in Linear. Each PRD below is one issue. Copy each block into a new Linear issue.
+
+## Issue: PROJ-<X>-PRD-<Y> — <feature name>
+**Description**
+<short feature summary from the concept>
+
+**Mockups:** `specs/PROJ-<X>-<theme>/5_mockups/<file>.html` (attach exported images/PDF in Linear)
+
+**User stories & acceptance criteria**
+- [ ] US-1: As a <user>, I want <action> so that <goal>
+  - AC-1: <testable criterion>
+  - AC-2: <testable criterion>
+- [ ] US-2: ...
+
+**Edge cases**
+- <edge case>
+
+**Dependencies**
+- <other PRD / external dependency>
+
+**Design intent**
+- Fidelity: wireframe greyscale | adopt existing design system
+- Notes: <visual/interaction intent the developer must preserve>
+```
+
+Tell the user the developer owns architecture and implementation in Linear, and that the mockups should be attached to each issue (export HTML to images or PDF before import).
+
+### 6. Review With The User
 
 Ask the user to review the PRDs. If changes are requested, update the PRDs and present them again.
 
 Also ask the user to review the PRD artifacts with a different model before approval, for example GPT reviewing Claude output or Claude reviewing GPT output. This second-model review should focus on missing user stories, weak acceptance criteria, ambiguous edge cases, and scope drift.
 
-### 6. Handoff
+### 7. Handoff
 
-After approval, recommend `architecture` (3) for PROJ-level technical design. For UI features, the mockups and implementation handoff remain visual references for architecture.
+- **Full chain:** recommend `architecture` (3) for PROJ-level technical design. For UI features, the mockups and implementation handoff remain visual references for architecture.
+- **Discovery / Linear handoff:** do not recommend `architecture`. For a quick handoff, point the user to `3_PRDs/linear-import.md` and remind them to attach exported mockups to each Linear issue. If the work goes to people outside this repo (an external UI/UX expert, an external dev team) and a single standalone deliverable is wanted, recommend `handoff-package` (2b) to assemble a self-contained, zippable package. The chain ends here for this PROJ.
 
 ## Completion Checklist
 
@@ -180,6 +232,8 @@ After approval, recommend `architecture` (3) for PROJ-level technical design. Fo
 - [ ] Every user story has its own acceptance criteria
 - [ ] At least 3-5 edge cases documented where feature size warrants it
 - [ ] PRD ID assigned and file saved in the correct folder
+- [ ] Delivery track determined (full chain vs. discovery / Linear handoff)
+- [ ] `linear-import.md` produced for the discovery track
 - [ ] User reviewed and approved the PRD
 
 ## Git Commit Format
@@ -187,3 +241,5 @@ After approval, recommend `architecture` (3) for PROJ-level technical design. Fo
 ```text
 feat(PROJ-<X>-PRD-<Y>): Add PRD for <feature-name>
 ```
+
+Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the PRD files and `linear-import.md` are the durable artifacts.

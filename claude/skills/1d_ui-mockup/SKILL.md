@@ -32,6 +32,16 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 - **Component-near, not pixel-perfect:** Approximate existing React components structurally and visually. Label intended reuse clearly.
 - **Show states:** Include normal, empty, loading, error, and success states where relevant.
 
+## Fidelity Modes
+
+Pick the fidelity from the project mode and design references. State the chosen mode to the user before building.
+
+- **Wireframe (greyscale):** Default for greenfield projects with no design system, especially when a UI/UX expert takes over the visual design later. Use a neutral greyscale palette, very small border radii (about 2–4px), no brand colors, no decorative imagery. Communicate structure, hierarchy, flows, and states — not visual identity. This keeps mockups cheap to change during iteration and avoids implying final styling.
+- **Design-system:** Use when an existing design system is present (brownfield) or when `frontend-design` produced a `design-language.md`. Adopt the existing or defined tokens, colors, typography, spacing, and radii so the mockups read as the real product.
+- **Hybrid:** Apply the existing design system to known areas and fall back to greyscale wireframe for the documented gaps.
+
+If `1c_frontend-design` was skipped for a greenfield project, default to **Wireframe (greyscale)** rather than inventing a visual identity.
+
 ## Input
 
 Read these inputs:
@@ -41,6 +51,7 @@ Read these inputs:
 3. Visual Companion prototype: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html`
 4. Optional design language: `specs/PROJ-<X>-<theme>/4_design/design-language.md` or a canonical sibling design language that lists the current PROJ under `Applies To`
 5. Optional design delta: `specs/PROJ-<X>-<theme>/4_design/design-delta.md`
+6. Optional brownfield as-is reference (discovery track): `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
 
 The selected direction in `layout-decision.md` is binding. Refine it into concrete screens and states. Do not invent alternate layout containers unless the user explicitly asks.
 
@@ -69,7 +80,9 @@ If no design reference exists, scan:
 - `globals.css` or `theme.css`
 - Existing HTML/CSS files
 
-If style evidence exists, reuse it. Otherwise use minimal clean defaults: system fonts and neutral colors.
+On the **discovery track there is no codebase to scan**. Use `0_context/existing-state.md` and the screenshots/links in `0_context/references/` as the design source instead: derive colors, typography, spacing, radii, and component patterns from the captured design system. This is the design-system fidelity input when there are no config files.
+
+If style evidence exists (config, design language, or captured existing state), reuse it in **design-system mode**. Otherwise, for greenfield discovery, use **Wireframe (greyscale)** rather than inventing a visual identity.
 
 Detect existing components before building mockups:
 
@@ -157,7 +170,7 @@ Code minimalism:
 
 Before writing, ask yourself: can this mockup be expressed with fewer reusable primitives?
 
-### 4. Review With The User
+### 4. Review And Iterate With Stakeholders
 
 Open the mockups in a browser and ask the user to review:
 
@@ -165,7 +178,23 @@ Open the mockups in a browser and ask the user to review:
 - Are screens or flows missing?
 - Do the states fit?
 
-If changes are requested, update the mockups and present them again.
+Stakeholders typically iterate here by prompting changes directly into the mockups until everyone agrees. Treat this as the primary working loop, not a single pass. Apply requested changes, present the updated mockups, and repeat until the user signals agreement.
+
+**Track every change** so the agreed result can later flow back into the concept. Maintain `specs/PROJ-<X>-<theme>/5_mockups/iteration-log.md` and append an entry per iteration round:
+
+```markdown
+# Mockup Iteration Log — PROJ-<X> <theme>
+
+## Iteration <N> — <date>
+- Change: <what changed in the mockup>
+- Driver: <stakeholder feedback | own decision | open question resolved>
+- Affects concept: yes (scope) | yes (behavior) | no (presentation-only)
+- Screen(s): <which mockup files>
+```
+
+Classify each change's `Affects concept` field honestly: only scope or behavior changes need to flow back into the concept later; presentation-only tweaks stay in the mockups. This log is the input to `concept-sync` (1e).
+
+Do not edit the concept doc from this skill. Capture changes in the log; reconciliation happens in `concept-sync`.
 
 ### 5. Create The Implementation Handoff
 
@@ -240,7 +269,12 @@ If changes are requested, update mockups and handoff together.
 
 ### 7. Handoff
 
-After approval, recommend `requirements-engineer` (2). The mockups are now required input for user stories, acceptance criteria, and edge cases.
+After approval:
+
+- If the mockups were iterated and the concept may have drifted (any `iteration-log.md` entry with `Affects concept: yes`), recommend `concept-sync` (1e) next so the agreed changes flow back into the concept before requirements.
+- If nothing affected the concept, recommend `requirements-engineer` (2) directly.
+
+Either way, the mockups are required input for user stories, acceptance criteria, and edge cases.
 
 ## Completion Checklist
 
@@ -255,11 +289,16 @@ After approval, recommend `requirements-engineer` (2). The mockups are now requi
 - [ ] Reusable HTML/CSS/JS primitives used
 - [ ] Empty, loading, and error states included
 - [ ] Source references included in mockups
+- [ ] Fidelity mode chosen and stated (wireframe greyscale / design-system / hybrid)
+- [ ] `iteration-log.md` maintained across iteration rounds with concept-impact classified
 - [ ] `implementation-handoff.md` created
 - [ ] User reviewed and approved mockups and handoff
+- [ ] Next step recommended: `concept-sync` (1e) if concept drifted, else `requirements-engineer` (2)
 
 ## Git Commit Format
 
 ```text
 docs(PROJ-<X>): Add UI mockups and sitemap for <theme>
 ```
+
+Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the mockup files and `iteration-log.md` are the durable artifacts.

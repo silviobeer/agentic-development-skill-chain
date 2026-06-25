@@ -67,7 +67,9 @@ Then inspect the existing app so the exploration fits what is already there:
 
 Summarize the reusable patterns found in `layout-decision.md` under `Existing UI Patterns`.
 
-If no app UI exists yet, state that clearly and choose common patterns appropriate to the domain.
+On the **discovery track there is no codebase to inspect**. If `specs/PROJ-<X>-<theme>/0_context/existing-state.md` exists (brownfield discovery), use it and the references in `0_context/references/` as the source of existing surfaces, navigation shell, and design system instead of scanning the repo.
+
+If no app UI and no captured existing state exist yet, state that clearly (greenfield) and choose common patterns appropriate to the domain.
 
 Classify the project mode and document it in `layout-decision.md`:
 - `greenfield` — no reusable app shell, component set, design tokens, or real screens exist yet.
