@@ -15,8 +15,10 @@ Step  Skill                  Output
   1   brainstorming          specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
  1b   visual-companion (opt) specs/PROJ-<X>-<theme>/2_visual-companion/layout-*.*
  1c   frontend-design (opt)  specs/PROJ-<X>-<theme>/4_design/design-language.md
- 1d   ui-mockup (UI req.)    specs/PROJ-<X>-<theme>/5_mockups/sitemap.html + mockups + implementation-handoff.md
-  2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md
+ 1d   ui-mockup (UI req.)    specs/PROJ-<X>-<theme>/5_mockups/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
+ 1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
+  2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md (+ linear-import.md on discovery track)
+ 2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/8_handoff/ standalone package (+ zip) — discovery track only
   3   architecture           specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
   5   executing              implements code + tests + specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md
@@ -25,6 +27,27 @@ Step  Skill                  Output
 ```
 
 Each PROJ has its own folder `specs/PROJ-<X>-<theme>/` with numbered subfolders per step. Architecture and plans are siblings in `6_plan/`. Progress is a single file in `7_progress/` tracking all waves.
+
+## Two Tracks
+
+The same chain serves two delivery tracks. Detect which one applies before recommending a next step.
+
+- **Full chain (in-repo build):** brainstorm → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
+- **Product discovery (Linear handoff):** brainstorm → visual-companion → ui-mockup (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — brainstorming, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
+
+Detect the discovery track when any of these hold:
+
+- The concept's `Handoff Readiness` sets `Delivery track: discovery (Linear handoff)`.
+- A `5_mockups/iteration-log.md` exists with stakeholder iterations but the repo has no application code (no `package.json`/`src/` app, only `specs/` and `docs/`).
+- The user states they are doing discovery/PM only and will hand off to developers.
+
+On the discovery track, do not recommend Steps 3–7. The chain ends at `requirements-engineer` with `3_PRDs/linear-import.md`, optionally followed by `handoff-package` (2b) when a standalone deliverable for external UI/UX experts or developers is needed.
+
+Discovery-track notes:
+
+- **Folder structure is identical** to the full chain (`specs/PROJ-<X>-<theme>/`); `brainstorming` bootstraps it on first run. No manual scaffolding.
+- **Git is optional.** If the workspace is not a git repo, skip commit recommendations; the files are the durable artifacts. Optionally suggest `git init` for iteration history.
+- **Brownfield discovery** captures the existing product/design system/vocabulary into `0_context/existing-state.md` during brainstorming, since there is no codebase to scan.
 
 ## Detect Current State
 
@@ -35,7 +58,10 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 3. Project-mode detection: prefer `2_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
 4. `4_design/design-language.md` exists → step 1c done
 5. `5_mockups/*.html` + `5_mockups/implementation-handoff.md` — mockups and UI handoff present? → step 1d done
-6. `3_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done
+   - `5_mockups/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
+   - Concept contains `Concept Sync Log` / `Handoff Readiness` → step 1e done.
+6. `3_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `3_PRDs/linear-import.md` exists or `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
+   - `8_handoff/README.md` exists → step 2b done; the standalone package is assembled.
 7. `6_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `6_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
 9. `7_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
@@ -69,8 +95,17 @@ Based on detected state, tell the user:
 **Design language exists, no mockups, no PRDs:**
 > "Design language is ready at `specs/PROJ-<X>-<theme>/4_design/design-language.md`. Next step: use **ui-mockup** (1d); it consumes the Visual Companion decision and design language."
 
-**Mockups exist, no PRDs:**
-> "Mockups and UI implementation handoff are ready at `specs/PROJ-<X>-<theme>/5_mockups/`. Next step: use **requirements-engineer** (2); the mockups and handoff are required input for user stories, acceptance criteria, component reuse, and UI implementation notes."
+**Mockups exist, iterated, concept not yet synced:**
+> "Mockups for `PROJ-<X>-<theme>` were iterated (`5_mockups/iteration-log.md`) and the concept hasn't been reconciled yet. Next step: use **concept-sync** (1e) to flow the agreed mockup changes back into the concept before requirements."
+
+**Mockups exist, concept in sync (or no concept-affecting iterations), no PRDs:**
+> "Mockups and UI implementation handoff are ready at `specs/PROJ-<X>-<theme>/5_mockups/`. Next step: use **requirements-engineer** (2); the mockups and handoff are required input for user stories, acceptance criteria, component reuse, and UI implementation notes. For a discovery/Linear handoff, requirements-engineer runs in Linear handoff mode and the chain ends there."
+
+**Discovery track, PRDs + linear-import.md exist, no package:**
+> "`PROJ-<X>-<theme>` is a product-discovery PROJ. PRDs and `3_PRDs/linear-import.md` are ready to hand to a developer in Linear. Attach exported mockups to each issue. For a single standalone deliverable to share with an external UI/UX expert or dev team, optionally run **handoff-package** (2b). Otherwise the chain is complete — Steps 3–7 don't apply."
+
+**Discovery track, handoff package assembled:**
+> "The standalone handoff package for `PROJ-<X>-<theme>` is ready at `specs/PROJ-<X>-<theme>/8_handoff/`. Zip it and share it with the UI/UX expert and/or developers. This chain is complete — Steps 3–7 don't apply."
 
 **PRDs exist, no architecture:**
 > "PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/`. Next step: use **architecture** (3) to write the PROJ-level tech design."
@@ -117,8 +152,10 @@ If the user asks "what does each step do?":
 | 1 | brainstorming | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
-| 1d | ui-mockup (UI required) | HTML sitemap + per-screen mockups + `implementation-handoff.md` |
-| 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases |
+| 1d | ui-mockup (UI required) | HTML sitemap + per-screen mockups + `implementation-handoff.md` + `iteration-log.md`; greyscale-wireframe or design-system fidelity |
+| 1e | concept-sync (optional) | Reconcile iterated mockup changes back into the concept; set delivery track (full chain vs. Linear handoff) |
+| 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces `linear-import.md` |
+| 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |
 | 4 | writing-plans | Wave-based implementation plans; propagates UI handoff into frontend/full-stack tasks |
 | 5 | executing | Implement wave by wave with TDD, using UI handoff constraints where relevant |

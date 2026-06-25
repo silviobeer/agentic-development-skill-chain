@@ -9,6 +9,8 @@ CORE_SKILLS=(
   2_requirements-engineer
   1c_frontend-design
   1d_ui-mockup
+  1e_concept-sync
+  2b_handoff-package
   3_architecture
   4_writing-plans
   5_executing

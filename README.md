@@ -6,6 +6,8 @@ The chain turns a rough product idea into a buildable concept, explores UI shape
 
 Brainstorming can also decompose one broad seed into multiple PROJs before downstream work starts. Downstream skills then handle one PROJ at a time, using sibling PROJs as dependency context; `frontend-design` may define one shared design language for tightly linked UI PROJ families.
 
+The same skills serve two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track for pure product management — brainstorm, wireframe, mockup, iterate with stakeholders, reconcile the concept with `concept-sync`, then hand a PRD to a developer via Linear at Step 2. An optional `handoff-package` (2b) assembles a standalone, zippable deliverable for an external UI/UX expert and/or developers. No codebase required. See [docs/pm-chain.md](docs/pm-chain.md).
+
 ## What Is Included
 
 ```text
@@ -14,7 +16,9 @@ Brainstorming can also decompose one broad seed into multiple PROJs before downs
 1b_visual-companion
 1c_frontend-design
 1d_ui-mockup
+1e_concept-sync
 2_requirements-engineer
+2b_handoff-package
 3_architecture
 4_writing-plans
 5_executing
@@ -46,7 +50,7 @@ scripts/         Install and validation helpers
 
 `AGENTS.md` is the only curated durable-context file. `CLAUDE.md` is pointer-only and tells Claude to read `AGENTS.md`.
 
-Skill 0 is `chain-guide`. The UI preparation branch is `1b_visual-companion` -> `1c_frontend-design` when needed -> `1d_ui-mockup`, and requirements remain Step 2.
+Skill 0 is `chain-guide`. The UI preparation branch is `1b_visual-companion` -> `1c_frontend-design` when needed -> `1d_ui-mockup` -> `1e_concept-sync` when mockups were iterated, and requirements remain Step 2.
 
 ## Install
 
