@@ -69,10 +69,11 @@ specs/PROJ-<X>-<theme>/8_handoff/
   04-ui-handoff.md              # UI/UX expert: personas, screen families, workflow contracts, red lines vs latitude, mockup caveats
   05-developer-handoff.md       # developers: functional domain rules, server-enforced invariants, explicit out-of-scope
   06-mockups/                   # standalone copy of mockups, design-language, sitemap, implementation-handoff, iteration-log
+  07-review-changelog.md        # what changed across review rounds (only when review-reconcile has run)
   linear-import.md              # paste-ready Linear issues (only when developers are an audience)
 ```
 
-Copy mockups, design language, sitemap, implementation handoff, and iteration log into `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` and `linear-import.md` if developers are not.
+Copy mockups, design language, sitemap, implementation handoff, and iteration log into `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths. If `3_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` and `linear-import.md` if developers are not.
 
 ### 3. Write `README.md` (Index)
 

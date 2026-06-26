@@ -11,6 +11,7 @@ CORE_SKILLS=(
   1d_ui-mockup
   1e_concept-sync
   2b_handoff-package
+  2c_review-reconcile
   3_architecture
   4_writing-plans
   5_executing

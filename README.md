@@ -6,7 +6,7 @@ The chain turns a rough product idea into a buildable concept, explores UI shape
 
 Brainstorming can also decompose one broad seed into multiple PROJs before downstream work starts. Downstream skills then handle one PROJ at a time, using sibling PROJs as dependency context; `frontend-design` may define one shared design language for tightly linked UI PROJ families.
 
-The same skills serve two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track for pure product management — brainstorm, wireframe, mockup, iterate with stakeholders, reconcile the concept with `concept-sync`, then hand a PRD to a developer via Linear at Step 2. An optional `handoff-package` (2b) assembles a standalone, zippable deliverable for an external UI/UX expert and/or developers. No codebase required. See [docs/pm-chain.md](docs/pm-chain.md).
+The same skills serve two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track for pure product management — brainstorm, wireframe, mockup, iterate with stakeholders, reconcile the concept with `concept-sync`, then hand a PRD to a developer via Linear at Step 2. An optional `handoff-package` (2b) assembles a standalone, zippable deliverable for an external UI/UX expert and/or developers. When a developer reviews the PRDs and sends back gaps, `review-reconcile` (2c) resolves them point by point and feeds a handoff-facing changelog. No codebase required. See [docs/pm-chain.md](docs/pm-chain.md).
 
 ## What Is Included
 
@@ -19,6 +19,7 @@ The same skills serve two delivery tracks: the full in-repo build (Steps 1–7) 
 1e_concept-sync
 2_requirements-engineer
 2b_handoff-package
+2c_review-reconcile
 3_architecture
 4_writing-plans
 5_executing

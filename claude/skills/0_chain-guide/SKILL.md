@@ -19,6 +19,7 @@ Step  Skill                  Output
  1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
   2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md (+ linear-import.md on discovery track)
  2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/8_handoff/ standalone package (+ zip) — discovery track only
+ 2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/3_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
   5   executing              implements code + tests + specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md
@@ -41,7 +42,7 @@ Detect the discovery track when any of these hold:
 - A `5_mockups/iteration-log.md` exists with stakeholder iterations but the repo has no application code (no `package.json`/`src/` app, only `specs/` and `docs/`).
 - The user states they are doing discovery/PM only and will hand off to developers.
 
-On the discovery track, do not recommend Steps 3–7. The chain ends at `requirements-engineer` with `3_PRDs/linear-import.md`, optionally followed by `handoff-package` (2b) when a standalone deliverable for external UI/UX experts or developers is needed.
+On the discovery track, do not recommend Steps 3–7. The chain ends at `requirements-engineer` with `3_PRDs/linear-import.md`, optionally followed by `handoff-package` (2b) when a standalone deliverable for external UI/UX experts or developers is needed. When a developer or stakeholder reviews the PRDs and returns gaps, recommend `review-reconcile` (2c) to resolve them point by point and update the artifacts before the next review cycle.
 
 Discovery-track notes:
 

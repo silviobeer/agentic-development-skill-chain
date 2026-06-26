@@ -16,6 +16,9 @@ flowchart LR
   S2 --> S2B[2b handoff-package · optional]
   S2 --> LIN([Linear handoff])
   S2B --> EXT([Standalone package · UI expert + devs])
+  LIN -->|developer review returns gaps| S2C[2c review-reconcile · optional]
+  S2C -->|point-by-point decisions + changelog| S2
+  S2C -.->|items needing engineering| MTG([Developer meeting agenda])
 ```
 
 Steps 3–7 (architecture, plans, executing, QA, documentation) do **not** apply on this track.
@@ -52,6 +55,18 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
 | 2 | requirements-engineer | Produce PRDs plus a paste-ready `linear-import.md` for the developer |
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
+| 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
+
+## The review-reconcile loop
+
+The Linear/handoff endpoint is rarely one-shot. A developer reviewing the PRDs typically returns a list of gaps, contradictions, and open questions. `review-reconcile` (2c) closes that loop:
+
+- It reads the review and the canonical scope/decisions source, then walks each gap **point by point** — explaining what is flagged and why, framing the options with a recommendation, and deciding with the product owner there and then.
+- Items that need engineering input (feasibility, architecture, effort, security, provider constraints) are **not force-decided**; they are deferred onto a `Developer Meeting Agenda` and stay open for the next round.
+- Every decided item is recorded before any binding edit, then reconciled across the PRD (binding), concept (if one exists), and mockups (only where they now contradict the PRD; mockup changes are logged in `iteration-log.md`).
+- A running, audience-facing `3_PRDs/review-changelog.md` records what changed since the reviewed version, so `handoff-package` can show downstream UI/UX experts and developers the delta without the full internal decision log.
+
+It is the post-requirements sibling of `concept-sync`: `concept-sync` reconciles mockup iterations into the concept *before* requirements; `review-reconcile` reconciles review feedback into the PRDs *after* requirements. Skip it when the feedback is pure copyediting (edit the PRD directly) or when it is a fresh mockup iteration (use `ui-mockup` + `concept-sync`).
 
 ## Brownfield: capturing what already exists
 
@@ -88,6 +103,7 @@ When the work goes to people outside the repo — an external UI/UX expert (e.g.
 - `04-ui-handoff.md` — for the UI/UX expert: personas, screen families, workflow contracts, and **red lines vs. design latitude** (what must not drift vs. what the expert owns).
 - `05-developer-handoff.md` — for developers: functional domain rules, server-enforced invariants, and an explicit out-of-scope list.
 - `06-mockups/` — a standalone copy of the mockups, design language, sitemap, and iteration log (reference only).
+- `07-review-changelog.md` — when `review-reconcile` (2c) has run: the audience-facing record of what changed across review rounds, so downstream readers see the delta since the version they reviewed.
 - `linear-import.md` — paste-ready Linear issues when developers are an audience.
 
 Use it for external/standalone handoffs. Skip it when a quick PRD→Linear handoff (`linear-import.md` from Step 2) is enough.
@@ -95,3 +111,5 @@ Use it for external/standalone handoffs. Skip it when a quick PRD→Linear hando
 ## Detection
 
 `chain-guide` (0) recommends this track when the concept's `Handoff Readiness` is `discovery (Linear handoff)`, when a mockup iteration log exists in a repo with no application code, or when the user states they are doing discovery/PM only.
+
+`chain-guide` recommends `review-reconcile` (2c) when PRDs already exist and the user brings back a developer/stakeholder review of them (gaps, contradictions, open questions), or when a `*-review-decisions.md` record exists with open items.
