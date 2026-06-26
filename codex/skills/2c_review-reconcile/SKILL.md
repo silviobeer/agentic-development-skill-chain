@@ -109,7 +109,7 @@ Source: <who reviewed / review title>
 Deferred to developer meeting: <Qn list, or none>
 ```
 
-This is distinct from the internal decision record: the changelog is the short, reader-facing "what changed and why" that flows into the handoff. `handoff-package` (2b) folds it into the standalone deliverable so downstream readers see the delta without reading the full decision log.
+This is distinct from the internal decision record: the changelog is the short, reader-facing "what changed and why" that flows into the handoff. `handoff-package` (2b) folds it into the standalone deliverable as the primary review-delta artifact. The per-round `*-review-decisions.md` files may also be copied into the handoff as an audit appendix, but readers should not need them to understand current scope, decisions, or blockers.
 
 ### 6. Review With The User
 
@@ -125,7 +125,7 @@ Confirm before finalizing. Update each decided entry's status to `Decided and ap
 ### 7. Handoff
 
 - If items were deferred: the `Developer Meeting Agenda` in the decision record is the ready-to-use agenda. After the meeting, re-run this skill for the remaining items.
-- If a standalone deliverable is needed: recommend `handoff-package` (2b); it picks up `review-changelog.md`.
+- If a standalone deliverable is needed: recommend `handoff-package` (2b); it picks up `review-changelog.md` and includes any `*-review-decisions.md` files as an audit appendix.
 - Otherwise the updated PRDs are ready to go back into the review cycle / Linear.
 
 ## Completion Checklist

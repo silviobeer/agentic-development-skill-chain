@@ -18,7 +18,7 @@ Step  Skill                  Output
  1d   ui-mockup (UI req.)    specs/PROJ-<X>-<theme>/5_mockups/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
  1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
   2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md (+ linear-import.md on discovery track)
- 2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/8_handoff/ standalone package (+ zip) — discovery track only
+ 2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/8_handoff/YYYY-MM-DD-handoff*/ standalone package (+ zip) — discovery track only
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/3_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
@@ -62,13 +62,13 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
    - `5_mockups/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
    - Concept contains `Concept Sync Log` / `Handoff Readiness` → step 1e done.
 6. `3_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `3_PRDs/linear-import.md` exists or `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
-   - `8_handoff/README.md` exists → step 2b done; the standalone package is assembled.
+   - `8_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `6_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `6_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
 9. `7_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
    - Has every wave marked complete? → step 5 done
    - Has "QA Results" section at top level? → step 6 done
-10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, and `AGENTS.md`, but only `docs/PROJECT.md` is guaranteed to exist.
+10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
 11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
 
 ## Respond to the User
@@ -106,7 +106,7 @@ Based on detected state, tell the user:
 > "`PROJ-<X>-<theme>` is a product-discovery PROJ. PRDs and `3_PRDs/linear-import.md` are ready to hand to a developer in Linear. Attach exported mockups to each issue. For a single standalone deliverable to share with an external UI/UX expert or dev team, optionally run **handoff-package** (2b). Otherwise the chain is complete — Steps 3–7 don't apply."
 
 **Discovery track, handoff package assembled:**
-> "The standalone handoff package for `PROJ-<X>-<theme>` is ready at `specs/PROJ-<X>-<theme>/8_handoff/`. Zip it and share it with the UI/UX expert and/or developers. This chain is complete — Steps 3–7 don't apply."
+> "The standalone handoff package for `PROJ-<X>-<theme>` is ready in the latest dated run folder under `specs/PROJ-<X>-<theme>/8_handoff/`. Zip that run folder and share it with the UI/UX expert and/or developers. This chain is complete — Steps 3–7 don't apply."
 
 **PRDs exist, no architecture:**
 > "PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/`. Next step: use **architecture** (3) to write the PROJ-level tech design."
@@ -124,7 +124,7 @@ Based on detected state, tell the user:
 > "All waves implemented. Next step: use **qa** (6) for end-to-end testing against the PRDs' acceptance criteria."
 
 **QA passed, no docs:**
-> "QA passed for `PROJ-<X>-<theme>`. Next step: use **documentation** (7) — conditionally updates `README.md`, `docs/PROJECT.md`, `docs/TECHNICAL.md`, and asks for approval on any `AGENTS.md` candidates collected during QA."
+> "QA passed for `PROJ-<X>-<theme>`. Next step: use **documentation** (7) — conditionally updates `README.md`, `docs/PROJECT.md`, `docs/TECHNICAL.md`, asks for approval on any `AGENTS.md` candidates collected during QA, and keeps `CLAUDE.md` pointer-only."
 
 **Documentation complete:**
 > "Feature `PROJ-<X>-<theme>` is fully implemented, tested, and documented. Ready for release."
