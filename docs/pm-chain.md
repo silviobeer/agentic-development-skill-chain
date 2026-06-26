@@ -94,9 +94,11 @@ In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories
 
 ## Standalone handoff package
 
-When the work goes to people outside the repo — an external UI/UX expert (e.g. a Figma assignment) and/or a separate dev team — `handoff-package` (2b) assembles a single self-contained dated run folder under `8_handoff/` that survives being zipped and shared. Every run gets its own folder, for example `8_handoff/YYYY-MM-DD-handoff/`; repeated runs on the same day append `-02`, `-03`, and so on:
+When the work goes to people outside the repo — an external UI/UX expert (e.g. a Figma assignment) and/or a separate dev team — `handoff-package` (2b) assembles a single self-contained dated run folder under `8_handoff/` that survives being zipped and shared. Every run gets its own folder, for example `8_handoff/YYYY-MM-DD-handoff/`; repeated runs on the same day append `-02`, `-03`, and so on. Repeat handoffs start with a curated delta since the previous run, then provide the full current package:
 
+- `00-what-changed-since-last-handoff.md` — the first-read delta for returning UI/UX experts and developers: changed PRDs, decisions, review rounds, mockups, audience impact, and "no material changes" when applicable.
 - `README.md` — index, reading order, source of truth, and conflict rules (PRD wins over mockup).
+- `handoff-manifest.md` — run metadata used by future handoff runs: previous-run pointer, source snapshot, included artifacts, git commit when available, audiences, and open items.
 - `01-product-brief.md` — product framing without prototype bias.
 - `02-scope-and-decisions.md` — the **single source of truth**: vocabulary, invariant rules, scope matrix, and a resolved/open decisions register. Open questions include owner, downstream impact, and next decision point. Every other file references it instead of restating it.
 - `03-requirements/` — the binding PRDs, copied in.
