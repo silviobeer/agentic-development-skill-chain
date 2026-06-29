@@ -63,7 +63,7 @@ Confirm the delivery phasing if the concept defines phases, and whether the desi
 
 ### 2. Detect Previous Handoff And Create The Run Folder
 
-Create a new standalone package run under `8_handoff/` for every invocation. Do not overwrite or reuse a previous handoff run. Name the run folder with the local date. Before writing it, look for the latest existing run folder matching `YYYY-MM-DD-handoff*`; that is the baseline for the delta section. If no previous run exists, mark this as the first handoff.
+Create a new standalone package run under `8_handoff/` for every invocation. Do not overwrite, patch, or reuse a previous handoff run. Name the run folder with the local date. Before writing it, look for the latest existing run folder matching `YYYY-MM-DD-handoff*`; that is the baseline for the delta section. If no previous run exists, mark this as the first handoff. `handoff-package` is the only skill that may create or update files under `8_handoff/`; all other skills must update source artifacts and then trigger a new package run when needed.
 
 ```text
 specs/PROJ-<X>-<theme>/8_handoff/

@@ -12,7 +12,7 @@ It is the post-requirements counterpart of `concept-sync`:
 - `concept-sync` (1e): mockup iterations → concept, **before** requirements.
 - `review-reconcile` (2c): review feedback → PRDs/concept/mockups, **after** requirements.
 
-It produces a durable decision record, an explicit agenda of items that still need a developer meeting, and a handoff-facing changelog so downstream UI/UX experts and developers can trace what changed since the version they reviewed.
+It produces a durable decision record, an explicit agenda of items that still need a developer meeting, and a handoff-facing changelog so downstream UI/UX experts and developers can trace what changed since the version they reviewed. It does **not** edit existing `8_handoff/` package runs.
 
 ## When To Use
 
@@ -32,6 +32,8 @@ It produces a durable decision record, an explicit agenda of items that still ne
 Decide before you edit. Capture every decision in a record **before** touching the binding PRDs, so the trail from "review gap" to "artifact change" is always reconstructable. Never silently resolve a gap by editing a PRD with no recorded rationale.
 
 Not every gap is the product owner's to decide. Some require engineering input (architecture, feasibility, effort, security). Those are **deferred to a developer meeting**, not force-decided — they stay open with a clear status and land on an agenda.
+
+`specs/PROJ-<X>-<theme>/8_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `3_PRDs/`, `5_mockups/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
 
 ## Decomposed PROJ Handling
 
@@ -111,6 +113,8 @@ Deferred to developer meeting: <Qn list, or none>
 
 This is distinct from the internal decision record: the changelog is the short, reader-facing "what changed and why" that flows into the handoff. `handoff-package` (2b) folds it into the standalone deliverable as the primary review-delta artifact. The per-round `*-review-decisions.md` files may also be copied into the handoff as an audit appendix, but readers should not need them to understand current scope, decisions, or blockers.
 
+Do not write this changelog into `8_handoff/`, and do not patch any existing packaged `07-review-changelog.md`. Maintain only `3_PRDs/review-changelog.md`; `handoff-package` copies it into the next generated package run.
+
 ### 6. Review With The User
 
 Show a concise summary:
@@ -125,7 +129,7 @@ Confirm before finalizing. Update each decided entry's status to `Decided and ap
 ### 7. Handoff
 
 - If items were deferred: the `Developer Meeting Agenda` in the decision record is the ready-to-use agenda. After the meeting, re-run this skill for the remaining items.
-- If a standalone deliverable is needed: recommend `handoff-package` (2b); it picks up `review-changelog.md` and includes any `*-review-decisions.md` files as an audit appendix.
+- If a standalone deliverable is needed: recommend `handoff-package` (2b); it creates a new dated run, picks up `review-changelog.md`, and includes any `*-review-decisions.md` files as an audit appendix. Do not update prior handoff runs in place.
 - Otherwise the updated PRDs are ready to go back into the review cycle / Linear.
 
 ## Completion Checklist
@@ -138,6 +142,7 @@ Confirm before finalizing. Update each decided entry's status to `Decided and ap
 - [ ] PRD edits applied; contradicting canonical lines aligned in the same pass
 - [ ] Mockup changes limited to real contradictions; logged in `iteration-log.md`
 - [ ] `review-changelog.md` updated for this round (handoff-facing)
+- [ ] No existing `8_handoff/` package run edited
 - [ ] User reviewed the summary and approved
 - [ ] Decided items marked applied; deferred items left open for the next round
 
