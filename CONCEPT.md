@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.14 — under iteration (leading version; the German
+**Status:** Draft v0.15 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -26,6 +26,9 @@ evidence-gated; "scripts ship with skills" convention + inventory §7)*
 *(v0.14: deterministic output layer — "LLM decides, scripts render":
 script specifications with input/output/exit contracts, template
 inventory, JSON schemas validated on write)*
+*(v0.15: `0b_intake` fully specified as a collaborative skill —
+extraction with provenance markers + developer interview for gaps,
+assumptions, and code inconsistencies; near-greenfield variant)*
 **Date:** 2026-07-10
 **Basis:** existing SkillChain 0–7 (`~/.claude/skills/`)
 
@@ -202,19 +205,52 @@ telemetry (Ralph iterations, gate failures, fix spawns), statusline
 
 ## 3. Brownfield Model
 
-### First Run (Bootstrap)
+### First Run (Bootstrap) — Skill `0b_intake`
 
-The first run on an existing product starts with an **intake phase**
-(one-time, spec-miner principle: Arch Hat + QA Hat):
+The first run on an existing product starts with a one-time intake,
+owned by a dedicated skill. Its core principle: **extraction and
+interview are two different sources, and the skill needs both.** Code
+can tell you what IS; only the developer can tell you what is
+INTENDED — product scope and non-goals, security requirements, and
+which of two inconsistent code conventions is the rule going forward.
+The intake is therefore a collaborative session with the developer,
+not a batch job.
 
-1. Reverse-engineer the codebase → first draft of `docs/ARCHITECTURE.md`
-2. Extract product context (from code, README, existing docs)
-   → first draft of `docs/PRODUCT.md`
-3. Derive conventions from the code → first draft of `docs/GUIDELINES.md`
-4. Build the component registry (component-scout, exists) → `docs/components.md`
-5. **A human validates the first drafts** — one-time extra checkpoint,
-   handled via the `4a_checkpoint` reconcile loop (generated
-   architecture docs are hypotheses, not truth)
+**Step 1 — Scan & draft (automated; spec-miner principle: Arch Hat +
+QA Hat; component-scout for the registry).** Produce first drafts of
+all curated docs, with every statement carrying a provenance marker:
+
+- `extracted` — derived from code/README/git history, with evidence
+  (file references)
+- `assumed` — plausible inference that needs developer confirmation
+- `gap` — cannot be derived from code at all; must be asked
+
+**Step 2 — Developer interview (the "together" part).** Work through
+all `gap` and `assumed` items point by point (AskUserQuestion /
+guided conversation), plus every detected **inconsistency**: "the
+codebase handles errors via X in ~60% of cases and Y in ~40% — which
+is the rule going forward?" The answer becomes a GUIDELINES rule; the
+losing pattern becomes a known-debt note, not silently rewritten.
+
+**Step 3 — Reconcile & seal** via the `4a_checkpoint` loop (decision
+log; generated docs are hypotheses, not truth). Final docs must pass
+the file caps (§5) — the interview output is curated, not dumped.
+
+**Step 4 — Commit** as the initial curation baseline. From here on,
+P7 curation owns all updates; `0b_intake` is re-run only as a
+deliberate drift audit, never automatically.
+
+**Files produced:** `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`
+(+ `docs/architecture/` details), `docs/GUIDELINES.md`,
+`docs/DESIGN-SYSTEM.md` (brownfield: extract tokens from the code; if
+none exist, record a pointer to `1c_frontend-design` instead of
+inventing one), `docs/components.md` (component-scout), the security
+baseline and test conventions, and an initial `AGENTS.md`.
+
+**Near-greenfield variant:** if there is almost no code yet, the
+extraction step is thin and the interview carries the weight — same
+skill, same output files, sourced from the concept/PRDs plus the
+developer's answers.
 
 **Timing:** The bootstrap happens AS EARLY AS POSSIBLE — the codebase is
 still small today, so the intake is correspondingly cheap and the
@@ -943,12 +979,13 @@ agent-browser smoke tests.
    handoff only via state.json). With this, today's flow already runs
    unattended — without compact roulette.
 2. **Stage 2 — bootstrap & context (now, while cheap):**
-   intake bootstrap (docs/ first drafts, validated via
-   `4a_checkpoint`), the `4a_checkpoint` skill (CP1 + bootstrap;
-   shares the reconcile reference with `8_delivery`), context-injector
-   hook (define the manifest schema following the claude-skills
-   frontmatter taxonomy), install + scope the ponytail plugin (§7),
-   agent.md protocol + P7 curation
+   `0b_intake` skill (scan & draft with provenance markers → developer
+   interview → reconcile via `4a_checkpoint` → seal; see §3), the
+   `4a_checkpoint` skill (CP1 + bootstrap; shares the reconcile
+   reference with `8_delivery`), context-injector hook (define the
+   manifest schema following the claude-skills frontmatter taxonomy),
+   install + scope the ponytail plugin (§7), agent.md protocol +
+   P7 curation
 3. **Stage 3:** P3 rework (baseline/delta), pre-mortem reviews in
    P3/P4. **Jira intake Mode B = TODO within this stage:**
    `2d_prd-import` (fetch, snapshot, ID mapping, AC check, sync-back;
