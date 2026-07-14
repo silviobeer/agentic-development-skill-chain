@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.15 — under iteration (leading version; the German
+**Status:** Draft v0.16 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -29,7 +29,11 @@ inventory, JSON schemas validated on write)*
 *(v0.15: `0b_intake` fully specified as a collaborative skill —
 extraction with provenance markers + developer interview for gaps,
 assumptions, and code inconsistencies; near-greenfield variant)*
-**Date:** 2026-07-10
+*(v0.16: cross-model review — skill `3a_cross-review`: Codex CLI as an
+adversarial SECOND model for the P3/P4 pre-mortems and the P7
+curated-docs review; pattern borrowed from grill-me-codex, not adopted
+as a plugin; findings → ledger, blocking per §8)*
+**Date:** 2026-07-14
 **Basis:** existing SkillChain 0–7 (`~/.claude/skills/`)
 
 **Settled decisions (v0.2):**
@@ -71,7 +75,10 @@ file-disjoint stories; isolated worktrees + merge gate only if
 telemetry proves the nightly window overflows). All review sources flow
 into ONE deduplicated findings ledger with a single fix queue;
 Medium/Low findings are automatically deferred as marked debt instead
-of prompting the user.
+of prompting the user. Pre-mortems and the curated docs additionally
+pass an adversarial review by a SECOND model (Codex, via
+`3a_cross-review`) — the model that made the decisions never grades
+its own work alone.
 
 **Why it stays cheap:** Context is the most expensive resource. Hence:
 curated half-page docs instead of full texts, injection only by spawn
@@ -351,10 +358,52 @@ serves the implementing agents.
    repeating them ("uses the standing auth decision; NEW: event queue
    for status transitions, because …").
 3. **Pre-mortem:** automated review (the-fool modes: devil's advocate,
-   pre-mortem, evidence audit) against delta + PRDs.
+   pre-mortem, evidence audit) against delta + PRDs, PLUS a cross-model
+   pass via `3a_cross-review` (below) — a foreign model critiques the
+   delta instead of the authoring model reviewing itself.
 4. **Derive contracts:** `specs/PROJ-X/api-contracts.md` — interfaces
    between soon-to-be-parallel stories are pinned down HERE, not guessed
    by implementers.
+
+### Cross-Model Review Skill `3a_cross-review` (new)
+
+Same-model review is an echo chamber: the model that made the
+decisions, wrote the code, and curated the docs will grade its own
+summaries as accurate. The-fool personas vary the PROMPT, but not the
+model — blind spots survive persona rotation. This skill sends an
+artifact set to a FOREIGN model for adversarial review: the **Codex
+CLI**, headless (`codex exec`), strictly read-only, bounded rounds.
+
+**Pattern source:** grill-me-codex
+(github.com/chaseai-yt/grill-me-codex) — its core thesis ("the same
+model that plans the build can't be trusted to grade its own work")
+and its Codex-as-read-only-critic mechanic. Deliberately NOT adopted
+as a plugin (unlike ponytail): its flows are interactive
+(human-interrogation acts) and plan-shaped, which collides with the
+autonomy policy (§8 — no user interaction between the checkpoints).
+We keep only the invocation core as our own thin skill.
+
+**Three call sites (analogous to `4a_checkpoint`):**
+
+| Call site | Artifacts reviewed | Review focus |
+|---|---|---|
+| P3 pre-mortem | architecture-delta + PRDs | wrong/missing decisions, unstated assumptions, contradictions with the baseline |
+| P4 plan review | wave plans + wave-gate-config + api-contracts | unsafe ordering, weak AC commands, missing contracts |
+| P7 docs review | curated docs delta (+ full capped docs) vs. the PROJ diff | factual accuracy ("does ARCHITECTURE.md describe what was actually BUILT?"), stale claims, cap-gaming (shrinking docs by deleting true load-bearing statements) |
+
+The P7 call site is the critical one: curated docs are injected into
+every future implementer — a wrong statement there poisons every
+subsequent PROJ. Hence BLOCKING, not advisory.
+
+**Mechanics:** `cross-review.sh` renders the review prompt from a
+template (mode + file list), invokes `codex exec` in a read-only
+sandbox, and normalizes the output into findings JSON lines →
+`ledger.mjs`. No new severity rules: Critical/High block phase
+completion (fix spawn + ONE re-review round; still red → existing
+escalation rules §8 apply), Medium/Low auto-defer as debt. Codex CLI
+missing or unauthenticated → skip with a log entry (like Sonar), made
+visible in the morning report and the PR body ("cross-review:
+skipped") — never silently.
 
 ### P4 — Planning (= Skill 4, extended)
 
@@ -364,8 +413,9 @@ serves the implementing agents.
   stories' file sets are disjoint / worktree parallel (only if Mode 3
   is activated, Stage 4).
 - NEW: pre-mortem review of the wave plans (unsafe ordering, weak AC
-  commands, missing contracts) — replaces the vague "have another model
-  look it over".
+  commands, missing contracts) — the-fool modes PLUS the cross-model
+  pass via `3a_cross-review`, which makes the old vague "have another
+  model look it over" literal and structured.
 - Then ◇ Checkpoint 1 — handled by the checkpoint skill (below).
 
 ### Checkpoint Skill `4a_checkpoint` (new)
@@ -484,7 +534,12 @@ debt section in the PR — not mid-run.
    - `docs/components.md` ← register new components
    - **Curate folder agent.md files:** keep what is confirmed, delete
      what is outdated, promote what is project-wide
-3. Commit everything to the PROJ branch → docs are part of the PR
+3. **Cross-model docs review (`3a_cross-review`, §4):** Codex reviews
+   the curated delta against the PROJ diff — factual accuracy, stale
+   claims, cap-gaming. Critical/High findings BLOCK P7 completion
+   (fix + one re-review round); Medium/Low → debt per §8. The size
+   caps (`curation-caps.sh`) check form; this step checks truth.
+4. Commit everything to the PROJ branch → docs are part of the PR
 
 ### P8 — Delivery (new)
 
@@ -761,6 +816,7 @@ zero unverified assumptions:**
 | `node` | hooks (context injector, ponytail, wave-gate-enforcer) + scripts (ledger, rendering) | ✅ hard |
 | `jq` | wave-gate.sh, ledger scripts, state.json helpers | ✅ hard |
 | `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component) |
+| `codex` | cross-model review (`3a_cross-review`) in P3/P4/P7 | 🟡 skippable with log entry |
 | `agent-browser` | smoke tests in the wave gate, browser E2E in P6 | ✅ hard for frontend waves; backend-only: unused |
 | `sonar` | local scan + secrets check in the wave gate | 🟡 skippable with log entry |
 | `sonar-scanner` | full quality gate at PROJ end (P6) | 🟡 skippable with log entry |
@@ -795,6 +851,15 @@ progress.md/state.json. Auth is checked too (`gh auth status`,
   (`sonar auth status`, `SONAR_TOKEN`) instead of doing setup.
 - If the CLIs are missing on the machine: skip with a log entry, never
   block.
+
+### Codex CLI (cross-model review)
+- `codex exec` headless in a **read-only sandbox** — reviews artifacts,
+  never writes; invoked only by `cross-review.sh` (`3a_cross-review`).
+- Pattern source grill-me-codex (credited in §4); NOT installed as a
+  plugin — we own the prompt template and the ledger integration.
+- Auth via ChatGPT/OpenAI account; the P0 preflight checks auth (not
+  just `command -v`). Missing/unauthenticated → logged skip, surfaced
+  in morning report + PR body.
 
 ### ponytail (ready-made plugin — DECIDED, do not rebuild ourselves)
 
@@ -853,6 +918,7 @@ silently at render time.
 | `state.sh` (4b_setup) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check; any Critical/High → exit ≠ 0 |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
+| `cross-review.sh` (3a_cross-review) | mode (arch/plan/docs), artifact file list, prompt template | Codex findings as JSON lines → `ledger.mjs` | invokes `codex exec` read-only; max 2 rounds (review + one re-review after fixes); exit ≠ 0 only on invocation failure; CLI missing/unauthenticated → logged skip |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
 | `curation-caps.sh` (7_documentation) | `docs/*`, `src/**/agent.md` | cap report | exit ≠ 0 on any cap breach (PRODUCT ½ page, ARCHITECTURE 200 lines, agent.md 100 lines) — curation must shrink before P7 completes |
 | `conflict-probe.sh` (8_delivery) | PROJ branch, `main` | conflict report (JSON: none/trivial/semantic per file) | throwaway worktree, `merge --no-commit`; never touches real branches; classification by file type heuristics |
@@ -872,6 +938,7 @@ silently at render time.
 | `progress-blocks.md.tmpl` (5_executing) | state.json | the structured blocks in progress.md (wave gate PASSED, Ralph iterations, QA results) | after each gate/loop |
 | `jira-comment.md.tmpl` (2d_prd-import, Mode B) | state.json + findings.json | status/PR-link/debt comments on tickets | sync-back (TODO) |
 | `agent-md-entry.md.tmpl` (5_executing) | learning (free text) + date + commit SHA | uniform agent.md entry block | on write — the one place where LLM content flows in, but inside a fixed frame |
+| `cross-review-prompt.md.tmpl` (3a_cross-review) | mode + artifact file list | the adversarial review prompt for `codex exec` (one variant per call site: arch/plan/docs) | P3, P4, P7 |
 
 Free-form LLM text still exists — analysis, findings verification,
 architecture prose, agent.md learnings — but it always lands INSIDE a
@@ -962,6 +1029,7 @@ PushNotification) with a one-liner status ("2 PROJs done, 2 PRs open,
 | Session per phase (runner) | one long session with /compact points |
 | Spawn tiering (micro-fixes without a pack) | the same context for every spawn |
 | Dedup/rendering as scripts | ledger/report work in the LLM context |
+| Cross-model review (Codex) of pre-mortems + curated docs | same-model persona review only; docs content never reviewed |
 
 Unchanged: Skills 1–2 (discovery/PRD), the Ralph loop mechanics, the TDD
 cycle, the wave-gate script principle, the persona QA (Skill 6),
@@ -985,9 +1053,10 @@ agent-browser smoke tests.
    reference with `8_delivery`), context-injector hook (define the
    manifest schema following the claude-skills frontmatter taxonomy),
    install + scope the ponytail plugin (§7), agent.md protocol +
-   P7 curation
+   P7 curation, `3a_cross-review` skill (mechanism + the P7 docs call
+   site — it ships with the curation it guards)
 3. **Stage 3:** P3 rework (baseline/delta), pre-mortem reviews in
-   P3/P4. **Jira intake Mode B = TODO within this stage:**
+   P3/P4 (incl. wiring the existing `3a_cross-review` into both). **Jira intake Mode B = TODO within this stage:**
    `2d_prd-import` (fetch, snapshot, ID mapping, AC check, sync-back;
    mechanism decision MCP vs. CLI/REST) — built only after the chain
    has been tested end-to-end in Mode A (local PRDs).
@@ -1016,12 +1085,13 @@ agent-browser smoke tests.
 | Sonar | SonarQube Cloud, already set up (org/token/project) |
 | Execution mode | sequential is the DEFAULT; Mode 2 (shared-checkout teams, file-disjoint waves) as the cheap middle tier; Mode 3 (worktrees + merge gate) opt-in, built only on telemetry evidence (Stage 4) |
 | Parallelism cap | 3 (applies to Modes 2/3; framework.config, adjustable via telemetry) |
-| Skill numbering | dock on: `0b_intake`, `2d_prd-import`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
+| Skill numbering | dock on: `0b_intake`, `2d_prd-import`, `3a_cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
 | PRD source | TWO modes, downstream identical. Mode A (DEFAULT): PRDs written directly into the repo (existing structure) — the new chain is tested in this mode first. Mode B (TODO, Stage 3): Jira import, created/enriched via Teklens (teklens.ai); local snapshot = working truth per run; Jira keys in commits/PRs; sync-back |
 | PRD ownership | PM PRDs are raw input: developers enrich with technical stories, re-cut into buildable PRDs (in Jira for Mode B), and OWN the selection of the story set sent into the agentic loop — the framework checks AC quality, not scope |
 | Morning report | file in `specs/` + push notification at run end |
 | Minimalism ladder | ponytail as a ready-made plugin (DECIDED); no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
+| Cross-model review | Codex CLI as the second model via our own thin skill `3a_cross-review` (pattern from grill-me-codex, NOT adopted as a plugin — its interactive flows conflict with §8); call sites P3/P4 pre-mortem + P7 docs review; findings → ledger, blocking per §8; CLI missing → logged skip |
 
 New questions arise during the detailed planning of each stage and are
 decided there — no longer here.
