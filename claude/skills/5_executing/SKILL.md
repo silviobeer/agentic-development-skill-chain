@@ -35,23 +35,26 @@ Subagents return a ≤ 300-token summary; raw diffs/logs stay in their context a
 <HARD-GATE>
 Before doing ANYTHING else — before reading plans, before spawning any agent:
 0. Run `/compact` to flush prior conversation context. Steps 1–4 leave large artifacts in the context window that are no longer needed — the PRDs, architecture and wave plans are on disk. Reclaim that space now before the most context-intensive step begins.
-1. **Permission preflight — verify Claude Code was started with `--dangerously-skip-permissions`**:
-   - The `defaultMode: "bypassPermissions"` setting in `.claude/settings.json` covers most cases but some tools (MCP, certain Bash patterns) still prompt. For true zero-prompt autonomous execution, Claude Code MUST be launched with the CLI flag `claude --dangerously-skip-permissions`.
-   - Detection: if a Bash/Write/Edit tool call prompts the user during this skill, the flag is missing. STOP and tell the user: "Start Claude Code with `claude --dangerously-skip-permissions` for uninterrupted execution. Current session has permission prompts active."
-   - **Fallback (belt-and-braces) — project permissions merge**: still run `bash scripts/merge-project-settings.sh` once per project so the allowlist + `defaultMode: bypassPermissions` are in place. If the merge script is missing, copy it from `~/.claude/skills/5_executing/scripts/merge-project-settings.sh`, `chmod +x`, commit. After merge, commit `.claude/settings.json` with `chore: enable Skill 5/6/7 execution permissions`. The merge is authoritative even when users forget the CLI flag.
-   - In autonomous mode the merge runs silently; interactively, show a summary ("added N allow / M deny rules") before commit.
-1b. **CodeRabbit config preflight** (wave reviews depend on this):
-   - If `.coderabbit.yaml` or `.coderabbit.yml` is missing at repo root, copy `~/.claude/skills/5_executing/references/coderabbit-template.yaml` to `.coderabbit.yaml` and commit it. Adjust `path_filters` and `tools.biome.enabled` for the project (remove `biome` block if the project uses ESLint instead).
-   - If the config exists, verify it has: `reviews.profile` set (ideally `chill`), `reviews.path_filters` excluding `node_modules`/`dist`/`build`/lockfiles, and no overly-broad `path_instructions` that would swamp the per-wave review. If violations — propose a patch, don't silently rewrite; commit only with user-visible diff.
-   - Rationale: without a focused config, CodeRabbit's per-wave review generates hundreds of Low/Medium findings that slow the gate and bury Critical/High signal.
-
-2. **Supabase and automation preflight check** (fail fast):
-   - If `package.json` contains `@supabase/*` OR `supabase/` folder exists → run `command -v supabase`.
-     - If the Supabase CLI is available, use it for Supabase work instead of MCP or plugin tools. This includes migrations, SQL inspection/execution, type generation, edge functions, project/branch inspection, and local Supabase lifecycle commands.
-     - If the Supabase CLI is missing, verify `mcp__claude_ai_Supabase__*` or relevant Supabase plugin tools are in the available tool list. Missing → STOP, tell user to install the Supabase CLI or reconnect/configure Supabase MCP/plugin tooling.
-   - If any wave in `wave-gate-config.json` has non-empty `frontend_routes` → verify Playwright or active agent-browser/browser automation tools are available. Missing → STOP, tell user: QA in Skill 6 will fail without browser automation. Reconnect or configure browser tooling before continuing.
-   - `agent-browser`, `coderabbit`, `jq` CLIs: verify via `command -v`. Missing → STOP.
-3. Record BASE_SHA: `git rev-parse HEAD`
+1. **P0 setup gate — setup (4b) owns all preflights.**
+   - If `specs/PROJ-<X>-<theme>/state.json` exists:
+     `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'` must be
+     `P0:done` (fresh PROJ) or `P5:*` (resume). Anything earlier → STOP and
+     route: `CP1:*` → run **checkpoint** (4a); `CP1:approved` → run
+     **setup** (4b). The former inline preflights — permissions merge,
+     `.coderabbit.yaml`, Supabase/browser/CLI + auth checks — now run in
+     4b's `preflight.sh`; do NOT re-run them here.
+   - Then mark the phase if needed: if state shows `P0:done`, run
+     `bash scripts/state.sh transition <X> <theme> P5 running`.
+2. **Standalone fallback (no state.json — manual run without the framework):**
+   run the legacy preflights inline before wave 1: (a) permission preflight —
+   `claude --dangerously-skip-permissions` or `bash scripts/merge-project-settings.sh`
+   (copy from `~/.claude/skills/5_executing/scripts/` if missing, commit);
+   (b) `.coderabbit.yaml` at repo root (copy
+   `~/.claude/skills/5_executing/references/coderabbit-template.yaml`, adjust
+   `path_filters`); (c) tool checks — `jq`, `coderabbit`, browser automation
+   when `wave-gate-config.json` has `frontend_routes`, Supabase CLI/MCP when
+   the project uses Supabase. Any hard tool missing → STOP.
+3. Record BASE_SHA: from `state.json` (`.base_sha`, set by 4b) — standalone: `git rev-parse HEAD`
 4. Create `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` using the template below
 5. Store BASE_SHA in progress.md
 
@@ -86,6 +89,8 @@ The script validates:
 4. **Smoke Test** — `agent-browser` passes on every `frontend_routes` entry (skipped if empty)
 
 On success the script appends a `### Wave N Gate — PASSED` block with timestamp to `progress.md`. This is the canonical proof that the wave is done — no manual checkbox editing.
+
+**Framework runs (state.json exists):** after every green gate, update the machine state too — `bash scripts/state.sh set <X> <theme> .waves '{"current": <N>, "total": <M>, "stories": {…per-US status…}}'` (merge with the existing block). The gate also pipes its CodeRabbit/Sonar findings into the ledger when `scripts/ledger.mjs` is present — never re-enter them by hand.
 
 **If the wave-gate.sh script is missing from the project:** copy the template from `~/.claude/skills/5_executing/scripts/wave-gate.sh` to `scripts/wave-gate.sh`, `chmod +x` it, commit it before running the first wave.
 
@@ -588,8 +593,13 @@ while QA reports Critical or High bugs:
   re-run relevant QA checks for full regression pass
 
 if only Medium/Low bugs remain:
-  present to user and ask: "Which bugs should be fixed before release?"
-  fix user-selected bugs, then re-run QA one final time
+  framework run (state.json exists) — autonomy policy §8, no user question:
+    auto-defer every Medium/Low as debt — ledger record
+    (node scripts/ledger.mjs add <X> <theme>, status deferred) plus a
+    `ponytail:` marker where applicable; the human decides at Checkpoint 2
+  interactive run (no state.json):
+    present to user and ask: "Which bugs should be fixed before release?"
+    fix user-selected bugs, then re-run QA one final time
 ```
 
 **Rules:**
@@ -598,7 +608,7 @@ if only Medium/Low bugs remain:
 - Red-team and ui-audit teammates work on code-level analysis in parallel with browser testing.
 - Fix subagents receive the verbatim bug report from QA (never a summary).
 - After each fix, re-run the specific failing test before the next QA pass.
-- If the same bug persists after 3 fix attempts: escalate to user with full history.
+- If the same bug persists after 3 fix attempts: interactive run — escalate to user with full history; framework run — STOP CONDITION (§8): park the run (rescue branch, state → blocked, stop report), never keep retrying past the cap.
 - QA is considered clean only when it reports no Critical or High bugs.
 
 Update `progress.md` with QA results. Mark this PROJ-X as complete.
@@ -610,7 +620,12 @@ Update `progress.md` with QA results. Mark this PROJ-X as complete.
 <HARD-GATE>
 Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
 
-Before invoking Skill 6, flush context:
+**Framework runs (state.json exists):** seal the phase first —
+`bash scripts/state.sh transition <X> <theme> P5 done`. The phase runner
+then starts P6 as fresh lanes (read-only QA finder + P6 controller);
+do NOT continue into Skill 6 inside this session.
+
+Before invoking Skill 6 (interactive runs), flush context:
 
 1. Run `/compact`. Wave plans, agent chatter, Ralph iterations, and Quality-Gate review output are all on disk in `progress.md` — reclaim the context budget for Playwright or agent-browser testing + persona reviewers.
 2. Verify `progress.md` Quality-Gate section is complete (code review + build + Sonar findings or explicit Sonar skip reason logged).

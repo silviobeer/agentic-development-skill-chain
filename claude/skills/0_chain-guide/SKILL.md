@@ -22,12 +22,21 @@ Step  Skill                  Output
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/3_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
+ 4a   checkpoint (CP1)       specs/PROJ-<X>-<theme>/decisions.md + state.json sealed CP1:approved
+ 4b   setup (P0)             proj/PROJ-<X> branch, preflight block in state.json, framework scripts in scripts/
   5   executing              implements code + tests + specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md
-  6   qa                     appends QA Test Results to each PRD file
+  6   qa                     appends QA Test Results to each PRD file (+ ledger records in findings.json)
   7   documentation          creates/updates docs/PROJECT.md
+  8   delivery (P8)          PR via gh with rendered body, CI green, CP2 comment reconcile
 ```
 
-Each PROJ has its own folder `specs/PROJ-<X>-<theme>/` with numbered subfolders per step. Architecture and plans are siblings in `6_plan/`. Progress is a single file in `7_progress/` tracking all waves.
+Each PROJ has its own folder `specs/PROJ-<X>-<theme>/` with numbered subfolders per step. Architecture and plans are siblings in `6_plan/`. Progress is a single file in `7_progress/` tracking all waves. Framework runs additionally keep machine state in `state.json` (written only via `scripts/state.sh`) and the findings ledger in `findings.json` (written only via `scripts/ledger.mjs`).
+
+**Autonomous full-chain runs** go through the phase runner: after
+`checkpoint` (4a) seals `CP1:approved`, `runner/run-phase.sh auto <X> <theme>`
+drives P0 → P5 → P6 → P7 → P8 unattended with dual provider lanes and
+ends with `specs/morning-report-<date>.md`. Skills 4b/5/6/7/8 are the
+same skills the runner's lanes load — interactive use stays supported.
 
 ## Two Tracks
 
@@ -66,6 +75,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
    - `8_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `6_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `6_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
+8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'`: `CP1:approved` → step 4a done; `P0:done` → step 4b done; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `7_progress/stop-report.md`
 9. `7_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
    - Has every wave marked complete? → step 5 done
    - Has "QA Results" section at top level? → step 6 done
@@ -115,8 +125,17 @@ Based on detected state, tell the user:
 **Architecture file exists, no wave plans:**
 > "Architecture at `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Next step: use **writing-plans** (4) to create per-wave implementation plans."
 
-**Wave plans exist, no implementation (no progress.md):**
-> "Wave plans ready in `specs/PROJ-<X>-<theme>/6_plan/`. Next step: use **executing** (5) to implement wave by wave with TDD. It continues across green wave gates without pausing, then hands the completed PROJ to QA (6); QA hands passing work to documentation (7)."
+**Wave plans exist, no state.json (CP1 not yet run):**
+> "Wave plans ready in `specs/PROJ-<X>-<theme>/6_plan/`. Next step: use **checkpoint** (4a) — Checkpoint 1 reviews architecture + plans point by point, writes the decision log, and seals `CP1:approved` in state.json. For a manual run without the framework, **executing** (5) can still be used directly."
+
+**state.json says CP1:approved, no P0:**
+> "Checkpoint 1 is approved for `PROJ-<X>-<theme>`. Next step: use **setup** (4b) — it creates the PROJ branch, runs the tool/auth preflight, and copies the framework scripts. After that, either `runner/run-phase.sh auto <X> <theme>` runs P5–P8 unattended, or continue interactively with **executing** (5)."
+
+**state.json says P0:done, no implementation:**
+> "P0 setup is complete. Next step: **executing** (5) — interactively in this session, or unattended via `runner/run-phase.sh auto <X> <theme>` (dual-lane, ends with the morning report)."
+
+**state.json says blocked:**
+> "The run for `PROJ-<X>-<theme>` is parked (stop condition). Read `7_progress/stop-report.md` — it lists what happened, the rescue branch, and the cleanup list. After fixing the cause: `bash scripts/state.sh transition <X> <theme> <phase> running`, then re-run the phase."
 
 **Progress.md exists, waves partially complete:**
 > "Implementation in progress for `PROJ-<X>-<theme>`. Wave <N> is the next one. Continue with **executing** (5)."
@@ -127,7 +146,13 @@ Based on detected state, tell the user:
 **QA passed, no docs:**
 > "QA passed for `PROJ-<X>-<theme>`. Next step: use **documentation** (7) — conditionally updates `README.md`, `docs/PROJECT.md`, `docs/TECHNICAL.md`, asks for approval on any `AGENTS.md` candidates collected during QA, and keeps `CLAUDE.md` pointer-only."
 
-**Documentation complete:**
+**Documentation complete, no PR (framework run):**
+> "Docs are committed for `PROJ-<X>-<theme>`. Next step: use **delivery** (8) — conflict probe against main, PR with a rendered body from state.json + findings.json, CI polling, then Checkpoint 2 (human PR review)."
+
+**PR open (state.json P8:done):**
+> "The PR for `PROJ-<X>-<theme>` is open and waiting on Checkpoint 2 — review and merge it. When review comments come back, **delivery** (8) reconciles them point by point (fix now / debt / reject with rationale)."
+
+**Documentation complete (interactive run, no framework):**
 > "Feature `PROJ-<X>-<theme>` is fully implemented, tested, and documented. Ready for release."
 
 **QA found bugs:**
@@ -160,9 +185,12 @@ If the user asks "what does each step do?":
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |
 | 4 | writing-plans | Wave-based implementation plans; propagates UI handoff into frontend/full-stack tasks |
+| 4a | checkpoint | Human checkpoints as structured reconcile loops: CP1 (arch + plans → decision log → seal state.json) and CP2 (PR comments, via delivery) |
+| 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight, framework scripts into the repo, state.json extended |
 | 5 | executing | Implement wave by wave with TDD, using UI handoff constraints where relevant |
-| 6 | qa | End-to-end test all PRDs, security audit, QA Results appended per PRD |
+| 6 | qa | End-to-end test all PRDs, security audit, QA Results appended per PRD; read-only finder in framework runs (P6 controller fixes) |
 | 7 | documentation | Conditionally update README.md, docs/PROJECT.md, docs/TECHNICAL.md; merge approved AGENTS.md candidates (≤40 lines) |
+| 8 | delivery | Conflict probe, PR with rendered body, CI fix loop (max 3), Checkpoint 2 comment reconcile |
 
 ## Reference Skills
 

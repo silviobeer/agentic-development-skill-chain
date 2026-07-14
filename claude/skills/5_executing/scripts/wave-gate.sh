@@ -94,7 +94,7 @@ echo "=== Wave ${WAVE} Completion Gate (PROJ-${PROJ}-${THEMA}) ==="
 echo "   advisory severities: ${ADVISORY[*]:-none}"
 
 # ─── 1. Ralph: AC checks ────────────────────────────────────────────────────
-step "1/4 Ralph: AC verification"
+step "1/5 Ralph: AC verification"
 AC_COUNT=$(jq -r "${WAVE_KEY}.ac_commands | length" "$CFG")
 if [[ "$AC_COUNT" -eq 0 ]]; then
   fail "no ac_commands defined for wave ${WAVE}"
@@ -107,14 +107,14 @@ while IFS= read -r cmd; do
 done < <(jq -r "${WAVE_KEY}.ac_commands[]" "$CFG")
 
 # ─── 2. Build ───────────────────────────────────────────────────────────────
-step "2/4 Build"
+step "2/5 Build"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG")
 [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing in config"
 echo "   $ $BUILD_CMD"
 run_with_timeout "$BUILD_TIMEOUT" "build" bash -c "$BUILD_CMD"
 
 # ─── 3. CodeRabbit ──────────────────────────────────────────────────────────
-step "3/4 CodeRabbit wave review"
+step "3/5 CodeRabbit wave review"
 command -v coderabbit >/dev/null || fail "coderabbit not installed"
   # Wave base SHA resolution (first match wins, hard-fail otherwise):
   #   1. $WAVE_BASE_SHA env override
@@ -180,6 +180,23 @@ command -v coderabbit >/dev/null || fail "coderabbit not installed"
 
   [[ "$ADVISORY_COUNT" -gt 0 ]] && echo "   ⚠ ${ADVISORY_COUNT} advisory findings (not blocking) — review at PROJ-end Quality Gate"
 
+  # Findings ledger ingest (framework runs): all CodeRabbit findings flow
+  # into findings.json via ledger.mjs — deduplicated, never re-entered by hand.
+  # No ledger.mjs in the project → plain pre-framework behavior, no-op.
+  if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then
+    grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null | jq -c '
+      { source: "coderabbit",
+        severity: ((.severity? // .priority? // .level? // "low") | tostring | ascii_downcase),
+        category: ((.category? // "review") | tostring),
+        summary: ((.message? // .description? // .title? // "coderabbit finding") | tostring),
+        file: ((.file? // .path? // empty) | tostring),
+        line: (.line? // .startLine? // empty) }
+      | with_entries(select(.value != null and .value != ""))
+    ' 2>/dev/null | node scripts/ledger.mjs add "$PROJ" "$THEMA" --wave "$WAVE" \
+      && echo "   ✓ findings ingested into ledger" \
+      || echo "   ⚠ ledger ingest skipped (no parseable findings)"
+  fi
+
   if [[ "$BLOCKING" -gt 0 ]]; then
     echo "   blocking findings:"
     grep -E '^\{.*\}$' "$CR_OUT" | jq -c --argjson adv "$(printf '%s\n' "${ADVISORY[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0))')" '
@@ -190,8 +207,26 @@ command -v coderabbit >/dev/null || fail "coderabbit not installed"
   fi
   rm -f "$CR_OUT"
 
-# ─── 4. Smoke test ──────────────────────────────────────────────────────────
-step "4/4 Browser smoke test"
+# ─── 4. Sonar local scan + secrets check ────────────────────────────────────
+# Skippable per CONCEPT.md §7: missing CLI or missing config → logged skip,
+# never a silent one. The command is config-owned (.sonar_cmd) — this script
+# does not guess CLI flags.
+step "4/5 Sonar local scan + secrets check"
+SONAR_CMD=$(jq -r '.sonar_cmd // empty' "$CFG")
+SONAR_STATUS="skipped"
+if ! command -v sonar >/dev/null; then
+  echo "   (sonar CLI not installed — SKIPPED, logged)"
+elif [[ -z "$SONAR_CMD" ]]; then
+  echo "   (no sonar_cmd in $CFG — SKIPPED, logged)"
+else
+  SONAR_TIMEOUT=$(jq -r '.timeouts.sonar_seconds // 120' "$CFG")
+  echo "   $ $SONAR_CMD"
+  run_with_timeout "$SONAR_TIMEOUT" "sonar local scan" bash -c "$SONAR_CMD"
+  SONAR_STATUS="green"
+fi
+
+# ─── 5. Smoke test ──────────────────────────────────────────────────────────
+step "5/5 Browser smoke test"
 mapfile -t ROUTES < <(jq -r "${WAVE_KEY}.frontend_routes[]? // empty" "$CFG")
 if [[ "${#ROUTES[@]}" -eq 0 ]]; then
   echo "   (backend-only wave — skipped)"
@@ -222,6 +257,7 @@ cat >> "$PROGRESS" <<EOF
 - [x] Ralph: ${AC_COUNT} AC commands green
 - [x] Build: ${BUILD_STATUS}
 - [x] CodeRabbit: 0 blocking findings (advisory: ${ADVISORY_COUNT:-0})
+- [x] Sonar: ${SONAR_STATUS}
 - [x] Smoke: ${ROUTES_STR}
 EOF
 

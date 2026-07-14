@@ -48,6 +48,13 @@ QA tests one PROJ at a time. If the concept, architecture, or plans reference si
 
 QA finds, documents, and prioritizes bugs. QA NEVER fixes bugs.
 
+**Ownership boundary (framework runs):** this skill is a strictly
+read-only FINDER. In a framework run (state.json exists) the P6 phase
+controller — a separate lane started by the phase runner — owns ledger
+triage, false-positive verification, fix dispatch, and fresh
+provider-opposite re-verification. This skill only tests and writes
+findings; it never dispatches fixes and never seals the P6 phase.
+
 ## Claude Adaptation
 
 This Claude skill uses the Codex QA skill as the behavioral source of truth. Keep the gates, persona roles, severity rules, durable-context candidate behavior, and handoff behavior aligned with the Codex copy. Claude-specific differences are limited to tool invocation:
@@ -337,6 +344,14 @@ Also document `### Sonar Quality Input`:
 - Any Sonar findings promoted to QA bugs, with BUG-IDs
 - Explicit statement when Sonar was skipped and therefore not considered release-blocking
 
+**Findings ledger (framework runs):** when `scripts/ledger.mjs` exists,
+additionally emit every bug as a ledger record — one JSON line per bug
+piped to `node scripts/ledger.mjs add <X> <theme>` with
+`source: "qa"`, the normalized severity, the file plus symbol **anchor**
+(not a line number), and the BUG-ID in the summary. The ledger is the
+single fix queue the P6 controller works from; markdown bug entries
+stay the human-readable evidence, never a second queue.
+
 ### 7.5 AGENTS.md Candidates
 
 While testing, collect project-wide rules that future agents should know. These become candidates — not direct edits — for the project-root `AGENTS.md`. Skill 7 (documentation) asks the user to approve each candidate before merging. Do not propose durable rules for `CLAUDE.md`; that file is pointer-only and must only tell Claude to read `AGENTS.md`.
@@ -380,7 +395,14 @@ Report to the user:
 
 Then ask: **"Which bugs should be fixed first?"**
 
-**Autonomous mode** (`CLAUDE_AUTONOMOUS_LEVEL=balanced` set): skip the question. Auto-fix all Critical/High bugs in order of severity, then by discovery time. Log Medium/Low to `## QA Bugs (deferred)` in progress.md — they're for the user to review post-run, not fix. After 3 failed fix attempts on the same bug, halt (hard stop). On `aggressive`, notify the user but keep running. On `conservative`, halt after any Critical/High bug (user must triage).
+**Framework run (state.json exists) — autonomy policy §8:** skip the
+question AND the fixing. This skill ends after documenting findings and
+emitting ledger records; the P6 phase controller (separate lane) owns
+verification, fix dispatch, opposite re-verification, and
+`ledger.mjs auto-defer` for Medium/Low. Do not fix, do not transition
+state — report findings in the final output and stop.
+
+**Autonomous mode, standalone (`CLAUDE_AUTONOMOUS_LEVEL=balanced`, no state.json):** skip the question. Auto-fix all Critical/High bugs in order of severity, then by discovery time. Log Medium/Low to `## QA Bugs (deferred)` in progress.md — they're for the user to review post-run, not fix. After 3 failed fix attempts on the same bug, halt (hard stop). On `aggressive`, notify the user but keep running. On `conservative`, halt after any Critical/High bug (user must triage).
 
 ## Bug Severity
 
