@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.18 — under iteration (leading version; the German
+**Status:** Draft v0.19 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -40,6 +40,12 @@ Stage 1 made dependency-complete)*
 *(v0.18: P6 ownership settled — Skill 6 remains a read-only finder;
 the P6 phase controller owns ledger triage, fix dispatch, and fresh
 provider-opposite re-verification)*
+*(v0.19: review reconcile — dual-provider is PREFERRED, not hard:
+degraded single-provider mode with model-opposite review fallback;
+cost reconciled via model tiering per role; Mode 2 restored as the
+cheap shared-checkout middle tier inside the writer lane; gotcha
+channel and gate enforcement given provider-neutral mechanisms;
+P3 authorship and state.sh sequencing specified)*
 **Date:** 2026-07-14
 **Basis:** the repository's aligned Codex + Claude SkillChain 0–7
 (`codex/skills/`, `claude/skills/`) at the current main branch
@@ -82,9 +88,10 @@ an independent proposal, test strategy, or review. User stories run in
 dependency waves; every wave is checked by a hard gate
 (ACs/tests, build, CodeRabbit review, Sonar secrets scan, browser smoke).
 Mode 1 pairs both providers concurrently around one write owner;
-parallel writer lanes are an opt-in optimization with isolated
-worktrees and a merge gate, enabled only if telemetry proves the
-nightly window overflows. All review sources flow
+file-disjoint stories may run as a shared-checkout team inside the
+writer lane (Mode 2, cheap); isolated writer processes with worktrees
+and a merge gate (Mode 3) are opt-in, enabled only if telemetry proves
+the nightly window overflows. All review sources flow
 into ONE deduplicated findings ledger with a single fix queue;
 Medium/Low findings are automatically deferred as marked debt instead
 of prompting the user. Pre-mortems and the curated docs additionally
@@ -92,14 +99,22 @@ pass provider-opposite adversarial review via `3a_cross-review`: Claude
 reviews Codex-authored artifacts and Codex reviews Claude-authored
 artifacts. Joint artifacts receive independent reviews from both lanes
 before reconciliation, so an authoring model never grades its own work
-alone.
+alone. If a provider is unavailable, the run DEGRADES instead of
+stopping: it continues single-provider, review falls back to
+MODEL-opposite (a different model of the surviving provider — e.g.
+Sonnet 5 reviewing Fable-authored artifacts), and the degradation is
+flagged in the morning report and the PR body.
 
 **Why it stays cheap:** Context is the most expensive resource. Hence:
 curated half-page docs instead of full texts, injection only by spawn
 class (micro-fixes get nothing), deterministic work runs as scripts
 rather than through the LLM, and token budgets are enforced in the
 preflight. Minimalism at code-writing time is delivered by the ponytail
-plugin (decided).
+plugin (decided). Dual lanes do NOT mean double flagship cost: every
+lane runs the cheapest model adequate for its role (model tiering in
+the role record — flagship models only for the few judgment-heavy
+roles), so the second lane buys provider diversity at a fraction of
+the writer's cost.
 
 **Brownfield-first:** After the first run the product is brownfield
 forever. A one-time intake bootstraps the curated docs (PRODUCT,
@@ -179,7 +194,10 @@ pull requests fully automatically — with exactly two human checkpoints.
    concurrent lanes, not as interchangeable host variants. Independent
    reasoning and review run in parallel by default. Writes are assigned
    to one lane per artifact/file or isolated in worktrees; two model
-   processes never write the same checkout concurrently.
+   processes never write the same checkout concurrently. Dual-provider
+   is PREFERRED, not hard: if one provider is unavailable, the run
+   degrades to single-provider with model-opposite review (§7) rather
+   than stopping.
 
 ---
 
@@ -396,9 +414,13 @@ serves the implementing agents.
    for status transitions, because …").
 3. **Pre-mortem:** automated review (the-fool modes: devil's advocate,
    pre-mortem, evidence audit) against delta + PRDs, PLUS a cross-model
-   pass via `3a_cross-review` (below). Claude and Codex start from the
-   same bounded input in parallel; the provider that did not author the
-   delta delivers the blocking critique.
+   pass via `3a_cross-review` (below). Authorship is explicit:
+   `state.json` assigns ONE provider as the delta author
+   (framework.config; alternates per PROJ by default). The non-author
+   lane starts from the same bounded input in parallel and produces an
+   independent risk-and-assumption sketch — that sketch feeds the
+   pre-mortem as input, it is not a second delta to reconcile. The
+   non-author then delivers the blocking critique.
 4. **Derive contracts:** `specs/PROJ-<X>-<theme>/api-contracts.md` — interfaces
    between soon-to-be-parallel stories are pinned down HERE, not guessed
    by implementers.
@@ -447,18 +469,28 @@ adapter normalizes its provider output into the same findings JSON-lines
 contract → `ledger.mjs`. For joint artifacts the runner invokes both
 adapters concurrently and deduplicates only after source attribution is
 preserved. No new severity rules: Critical/High block phase completion
-(fix spawn + ONE provider-opposite re-review round; still red → existing
-escalation rules §8 apply), Medium/Low auto-defer as debt. Because
-dual-model execution is a core invariant, either CLI missing or
-unauthenticated is a P0 stop condition, not a silent or advisory skip.
+(fix spawn + ONE cross-review re-review round; still red → existing
+escalation rules §8 apply), Medium/Low auto-defer as debt.
+
+**Degraded mode (provider unavailable):** provider-opposite is the
+PREFERRED reviewer, not a hard prerequisite. If the opposite provider's
+CLI is missing or unauthenticated, the review falls back to
+MODEL-opposite within the surviving provider: a DIFFERENT model than
+the author's (recorded as `author_model` in `state.json`) — e.g.
+Sonnet 5 reviewing Fable- or Opus-authored artifacts via
+`claude -p --model`. The invariant that survives degradation is: the
+gate is never satisfied by the same model that authored the artifact.
+Every degraded review is logged and flagged in the morning report and
+the PR body ("cross-review: model-opposite fallback") — never silent.
 
 ### P4 — Planning (= Skill 4, extended)
 
 - Wave plans + `wave-gate-config.json` as today.
-- NEW: execution-mode decision per wave (§6): single-writer / paired
-  writer+reviewer / parallel writers. Parallel writers require listed
-  proof that story file sets are disjoint and separate worktrees; two
-  independent CLI processes never write the shared checkout together.
+- NEW: execution-mode decision per wave (§6): Mode 1 paired lanes
+  (default) / Mode 2 shared-checkout team inside the writer lane — only
+  with listed proof that the stories' file sets are disjoint / Mode 3
+  worktree writers (only if activated, Stage 4). Two independent CLI
+  processes never write the same checkout together in any mode.
 - NEW: pre-mortem review of the wave plans (unsafe ordering, weak AC
   commands, missing contracts) — the-fool modes PLUS the cross-model
   pass via `3a_cross-review`, which makes the old vague "have another
@@ -486,8 +518,10 @@ reconcile loop (generalizing the proven pattern from
    through ALL affected artifacts and then re-runs the plan self-review
    (the consistency check from Skill 4).
 5. **Seal the approval:** create the minimal `state.json` if it does not
-   yet exist, then transition it to `approved` with a decision-log
-   reference. Only this unlocks the phase runner for P0.
+   yet exist — using the skill-shipped `state.sh` from
+   `4a_checkpoint/scripts/` (the identical helper `4b_setup` later
+   copies into the repo at P0) — then transition it to `approved` with
+   a decision-log reference. Only this unlocks the phase runner for P0.
 
 The same loop is used in three places:
 - **CP1** (arch + plan): as above — the main application.
@@ -515,9 +549,10 @@ Once per PROJ, fully automatic:
 4. **Activate provider adapters:** Claude's SubagentStart hook and
    Codex's plugin/hook adapter inject the same type-scoped bundle. The
    shared bundle is canonical; provider wrappers may differ.
-5. **Ponytail preflight on BOTH providers:** plugin installed and mode
-   `full` active for Claude and Codex? Coding-agent matcher scoped so
-   reviewer and explore lanes do not receive it?
+5. **Ponytail preflight on all ACTIVE providers:** plugin installed and
+   mode `full` active? Coding-agent matcher scoped so reviewer and
+   explore lanes do not receive it? Version/mode parity checked when
+   both providers are active.
 6. Preflights: check the CLI/tool list from §7 (including both provider
    auth states, not just `command -v`), plus `.coderabbit.yaml` and
    permissions.
@@ -531,8 +566,9 @@ for each wave N:
   1. Start Claude + Codex lanes (execution mode per wave plan, §6)
      – Mode 1 paired: one writer on the PROJ branch, the other lane
        prepares tests/risks and reviews; roles may swap by story
-     – Mode 2 parallel, file-disjoint → one isolated worktree per writer
-       lane; integration-guard observes
+     – Mode 2 parallel, file-disjoint → agent team in the writer lane's
+       SHARED checkout; integration-guard observes; the peer lane
+       stays read-only
      – Mode 3 parallel, overlap risk → own worktree + story branch each,
        then semantic merge gate
      – context arrives via hook; local knowledge via the agent.md
@@ -776,7 +812,10 @@ Skill 5 — granular `references/` instead of whole skills). New skills
 Every model-dependent phase starts Claude and Codex lanes together.
 Mode 1 keeps one write owner while the other lane independently prepares
 tests, risks, or review input. This gains provider diversity without
-checkout races. Multiple writer lanes remain evidence-gated because
+checkout races. The single-writer invariant holds at the PROCESS level:
+exactly one CLI process owns a checkout at a time — subagent teams
+INSIDE that process (Mode 2) are today's proven Skill 5 model and stay
+cheap. Multiple writer PROCESSES (Mode 3) remain evidence-gated because
 they add worktrees, merge discipline, and per-worktree infrastructure.
 
 ```
@@ -785,9 +824,12 @@ main
     ├── Mode 1 (DEFAULT): paired Claude + Codex lanes
     │                               → one writer, one read-only peer per story
     │                               → roles may swap; direct commits + wave tags
-    ├── Mode 2 (OPT-IN): parallel writers, file-disjoint stories
-    │                               → one worktree per provider/story lane
-    └── Mode 3 (OPT-IN, Stage 4): parallel writers with overlap risk
+    ├── Mode 2: parallel wave, file-disjoint stories
+    │                               → agent team in the writer lane's
+    │                                 SHARED checkout (today's Skill 5
+    │                                 model, no worktrees); peer lane
+    │                                 stays read-only
+    └── Mode 3 (OPT-IN, Stage 4): parallel writer processes, overlap risk
                                     → 1 worktree + branch per story
                                     → merge gate: merge back in dependency order
 ```
@@ -800,17 +842,21 @@ main
   peer for each story; the peer prepares test/risk input, then performs
   the provider-opposite review. Roles may swap at story boundaries. No
   worktrees or merge gate are required.
-- **Mode 2 — isolated file-disjoint writers (OPT-IN):** the planner may
-  mark stories parallel only when it lists disjoint file ownership.
-  Each provider/story writer receives its own worktree; independent CLI
-  processes never commit against the same index. A deterministic merge
-  returns both results to the PROJ branch before the wave gate.
-- **Mode 3 — isolated overlapping writers (OPT-IN, evidence-gated):**
-  built in Stage 4 only if telemetry shows Mode 1 misses the nightly
-  window and Mode 2 cannot express the dependency shape. It adds the
-  semantic merge gate and contract-driven conflict resolution below.
+- **Mode 2 — shared-checkout parallelism (cheap middle tier):** the
+  planner may mark a wave parallel ONLY if the stories' file sets are
+  disjoint (it must list them). The stories then run as an agent team
+  INSIDE the writer lane's process, in the shared checkout, with the
+  integration-guard as observer — exactly today's Skill 5 model. The
+  peer lane stays read-only for the whole wave. No branches, no merge
+  gate, near-zero extra machinery; the single-writer-process invariant
+  is untouched.
+- **Mode 3 — isolated writer processes (OPT-IN, evidence-gated):**
+  built in Stage 4 only if telemetry shows Modes 1/2 miss the nightly
+  window. One worktree + story branch per writer lane (possibly one
+  per provider). It adds the semantic merge gate and contract-driven
+  conflict resolution below.
 
-### Mode 2/3 mechanics (only when activated)
+### Mode 3 mechanics (only when activated)
 
 - No wave branches (three levels = overhead without benefit; the
   wave-gate script marks the boundary).
@@ -829,13 +875,18 @@ main
   (cwd = worktree; the code is not merged yet) → merge gate →
   wave gate (build, CodeRabbit, Sonar, smoke) ONCE on the merged PROJ
   branch.
-- In Mode 2 the integration-guard verifies the declared file sets stayed
-  disjoint and performs a deterministic merge. In Mode 3 it becomes the
-  semantic **merge gate**: merge in dependency order, fix trivial
-  conflicts, escalate semantic ones. Both modes union `agent.md` files.
+- The integration-guard (observer in Mode 2) becomes the semantic
+  **merge gate** in Mode 3: merge in dependency order, fix trivial
+  conflicts, escalate semantic ones. Additionally: **union merge of
+  the agent.md files**.
 - **Gotcha channel:** agent.md is NOT enough across worktrees (isolated
-  checkouts — invisible until merge). Immediate broadcasts run over
-  agent-team messaging; agent.md is joined at the merge gate.
+  checkouts — invisible until merge), and agent-team messaging does not
+  span separate CLI processes. Across worktree lanes, immediate
+  broadcasts therefore run over a RUNNER-OWNED shared gotcha file
+  (append-only JSONL at a path outside all worktrees, written via a
+  helper script, read by every lane before each story); agent.md is
+  joined at the merge gate. Within a Mode 2 team (one process),
+  agent-team messaging works as today.
 - Semantic conflicts between parallel stories = planning error
   (missing contract) → feedback into the P3/P4 templates.
 - **Open for Stage 4 (only if Mode 3 is activated):** DB strategy,
@@ -865,6 +916,8 @@ not the source of workflow semantics.
 | Agent role | `.claude/agents/*.md` | Codex skill/agent metadata | role, tools, write scope, budget |
 | Minimalism | Ponytail Claude plugin | Ponytail Codex plugin | same Ponytail mode and rule version |
 | Cross-review | OpenAI `codex-plugin-cc` pattern | Codex-facing `claude` skill pattern | provider opposite to `author_provider` |
+| Wave-gate enforcement | PreToolUse hook (`wave-gate-enforcer.js`) as defense-in-depth | prompt contract (no verified hook equivalent) | RUNNER-owned: the next wave/lane is not started until `wave-gate.sh` exits 0; hooks only harden this, they don't carry it |
+| Gotcha broadcast | agent-team messaging within one process | agent-team messaging within one process | across processes: runner-owned shared JSONL file (§6) |
 | Worktrees / rescue / conflict probe | plain git | plain git | runner owns all git lifecycle |
 | PR + CI polling | `gh` | `gh` | deterministic P8 scripts |
 | Morning notification | provider hook when available | provider hook when available | report file is canonical; notification is best-effort |
@@ -876,10 +929,14 @@ read-only tools, capture valid JSONL from both, attribute provider and
 author correctly, and prove cancellation/timeout kills both process
 trees. This is a release gate for Stage 1.
 
+**Mode 2 verification (at latest before the first Mode 2 wave):** does
+SubagentStart also fire for team teammates? (proven only for Task
+spawns). Fallback: put the bundle into the teammate prompt.
+
 **Stage 4 verification spike (~1h, 2 dummy stories):** direct Claude
 and Codex writer lanes into named worktrees, merge file-disjoint changes,
 then exercise one intentional semantic conflict plus npm install and
-port allocation. Modes 2/3 stay disabled until this passes.
+port allocation. Mode 3 stays disabled until this passes.
 
 ---
 
@@ -895,14 +952,14 @@ port allocation. Modes 2/3 stay disabled until this passes.
 | `node` | hooks (context injector, ponytail, wave-gate-enforcer) + scripts (ledger, rendering) | ✅ hard |
 | `jq` | wave-gate.sh, ledger scripts, state.json helpers | ✅ hard |
 | `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component) |
-| `codex` | Codex phase lane + provider-opposite review via `codex exec` | ✅ hard |
+| `codex` | Codex phase lane + provider-opposite review via `codex exec` | 🟡 preferred, degradable — missing/unauthenticated → single-provider run with model-opposite review, flagged in report + PR body, never silent |
 | `agent-browser` | smoke tests in the wave gate, browser E2E in P6 | ✅ hard for frontend waves; backend-only: unused |
 | `sonar` | local scan + secrets check in the wave gate | 🟡 skippable with log entry |
 | `sonar-scanner` | full quality gate at PROJ end (P6) | 🟡 skippable with log entry |
 | `supabase` | migrations, types, local instances (if the product uses Supabase) | 🟡 only if Supabase in the stack |
 | Jira access (Atlassian MCP or CLI/REST) | PRD intake Mode B (P2d) + status sync-back | 🟡 TODO — only for Mode B (Stage 3); Mode A (local PRDs in specs/) needs nothing |
 | `npm`/`pnpm` | build/tests; pnpm decision for worktree installs is made in Stage 4 | ✅ hard (project-dependent) |
-| Ponytail plugin | minimalism ladder through aligned Claude and Codex adapters (needs `node`) | ✅ hard for both providers (§7 below) |
+| Ponytail plugin | minimalism ladder through aligned Claude and Codex adapters (needs `node`) | ✅ hard on all ACTIVE providers (§7 below) |
 
 Preflight behavior: hard tools missing → stop condition (§8), never
 skipped silently. Skippable tools missing → skip with a log entry in
@@ -935,15 +992,18 @@ progress.md/state.json. Auth is checked too (`gh auth status`,
 - `claude -p` and `codex exec` are first-class phase lanes. The runner
   starts them concurrently with provider-specific read/write tool
   restrictions derived from the same role record.
-- Cross-review always routes to the provider opposite
-  `author_provider`; joint artifacts receive two independent read-only
-  reviews.
+- Cross-review routes to the provider opposite `author_provider` when
+  both are available; joint artifacts receive two independent read-only
+  reviews. Fallback: model-opposite within the surviving provider (§4).
 - The framework owns prompt templates, output normalization, budgets,
   timeouts, cancellation, and ledger integration. External skills and
   plugins are pattern sources or optional UX adapters, not state owners.
-- P0 checks both auth states and performs a bounded live probe. Either
-  provider missing or unauthenticated blocks the run because parallel
-  dual-model operation is a core requirement.
+- P0 checks both auth states and performs a bounded live probe. `claude`
+  is hard (it hosts the chain). `codex` missing or unauthenticated does
+  NOT block: the run enters degraded single-provider mode — Mode 1's
+  peer lane and all cross-reviews fall back to a different Claude model
+  than the author's (e.g. Sonnet 5), recorded in `state.json` and
+  flagged in the morning report and PR body.
 
 ### ponytail (ready-made plugin — DECIDED, do not rebuild ourselves)
 
@@ -960,8 +1020,8 @@ codex plugin marketplace add DietrichGebert/ponytail
 # install from Codex /plugins, then review/trust its hooks
 ```
 
-- **Mode:** persist `full` as the default on both providers and record
-  the detected plugin version/mode in P0 state.
+- **Mode:** persist `full` as the default on all active providers and
+  record the detected plugin version/mode in P0 state.
 - **Scoping:** apply Ponytail only to code-writing roles
   (`implementer|frontend-implementer|backend-implementer|micro-fixer`);
   reviewer, QA, and explore lanes do not get the ladder.
@@ -970,8 +1030,10 @@ codex plugin marketplace add DietrichGebert/ponytail
 - **Debt integration:** ponytail's `ponytail:` comment convention is
   our debt-marker convention (P6). Harvest for PR body/morning report
   via `/ponytail-debt` or our own grep script into the ledger.
-- **Parity gate:** Claude and Codex must report the same Ponytail rule
-  version and mode. A mismatch blocks P0 until versions are aligned.
+- **Parity gate:** when BOTH providers are active, Claude and Codex must
+  report the same Ponytail rule version and mode; a mismatch blocks P0
+  until versions are aligned. In degraded single-provider mode the gate
+  applies to the surviving provider alone.
 - **Update policy:** check plugin updates occasionally; pin one version
   across both providers when hook behavior changes.
 
@@ -1007,7 +1069,7 @@ silently at render time.
 | `state.sh` (4b_setup) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check; any Critical/High → exit ≠ 0 |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
-| `cross-review.sh` (3a_cross-review) | mode, artifact files, `author_provider`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; joint artifacts launch both adapters concurrently; max 2 rounds |
+| `cross-review.sh` (3a_cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
 | `review-with-claude.sh` (3a_cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes `claude -p` read-only; validates output; timeout/cancel as one process group |
 | `review-with-codex.sh` (3a_cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
@@ -1092,7 +1154,8 @@ controlled way:
 At the end of every run (successful or stopped), a report is rendered
 from `state.json` + `findings.json` by a **template script**
 (`specs/morning-report-<date>.md`): per PROJ status, PR link, gate/QA
-summary, deferred debt, known gaps, stop reports, cleanup list. It is
+summary, deferred debt, known gaps, provider/model degradations
+(cross-review fallbacks), stop reports, cleanup list. It is
 the first thing the human reads in the morning — before the PRs.
 
 **Delivery:** the report file is canonical. At run end the runner sends
@@ -1163,11 +1226,12 @@ agent-browser smoke tests.
    mechanism decision MCP vs. CLI/REST) — built only after the chain
    has been tested end-to-end in Mode A (local PRDs).
 4. **Stage 4 (OPT-IN, evidence-gated):** built only if telemetry from
-   Stages 1–3 shows paired Mode 1 missing the nightly window. Verify
-   spike (§6b) → isolated writer worktrees for Mode 2, semantic merge
-   gate for Mode 3, parallelism cap, DB/install/port strategy. Until
-   then Claude and Codex still run concurrently in paired Mode 1, with
-   only one write owner at a time.
+   Stages 1–3 shows Modes 1/2 missing the nightly window. Verify spike
+   (§6b) → worktree branching + semantic merge gate (Mode 3),
+   parallelism cap, DB/install/port strategy. Until then, Mode 2
+   (shared-checkout team inside the writer lane, file-disjoint waves)
+   is the only parallelism beyond the paired lanes — one write-owning
+   process at a time throughout.
 5. **Stage 5:** statusline, telemetry, benchmark harness.
    (Packaging/marketplace: deliberately postponed — only when
    distributability becomes a topic again.)
@@ -1183,18 +1247,18 @@ agent-browser smoke tests.
 | Distribution | private for our own product; packaging later |
 | Autonomy | maximally autonomous after CP1, overnight; stop policy §8 |
 | Bootstrap timing | now, while the codebase is small |
-| Platform | GitHub + CI given; P8 polls via `gh pr checks`; Claude and Codex are both required phase providers |
+| Platform | GitHub + CI given; P8 polls via `gh pr checks`; dual-provider (Claude + Codex) PREFERRED, degradable to single-provider with model-opposite review — `claude` hard, `codex` degradable |
 | CodeRabbit | Pro + usage add-on; review per wave, limit not a constraint |
 | Sonar | SonarQube Cloud, already set up (org/token/project) |
-| Execution mode | paired Claude + Codex lanes are the DEFAULT; one writer and one read-only peer. Modes 2/3 add isolated concurrent writers only after the Stage 4 evidence gate |
+| Execution mode | paired Claude + Codex lanes are the DEFAULT (one writer, one read-only peer); Mode 2 (shared-checkout team inside the writer lane, file-disjoint waves) as the cheap middle tier; Mode 3 (worktree writer processes + merge gate) opt-in, built only on telemetry evidence (Stage 4). Cost stays bounded via model tiering per role |
 | Parallelism cap | 3 (applies to Modes 2/3; framework.config, adjustable via telemetry) |
 | Skill numbering | dock on: `0b_intake`, `2d_prd-import`, `3a_cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
 | PRD source | TWO modes, downstream identical. Mode A (DEFAULT): PRDs written directly into the repo (existing structure) — the new chain is tested in this mode first. Mode B (TODO, Stage 3): Jira import, created/enriched via Teklens (teklens.ai); local snapshot = working truth per run; Jira keys in commits/PRs; sync-back |
 | PRD ownership | PM PRDs are raw input: developers enrich with technical stories, re-cut into buildable PRDs (in Jira for Mode B), and OWN the selection of the story set sent into the agentic loop — the framework checks AC quality, not scope |
-| Morning report | file in `specs/` + push notification at run end |
-| Minimalism ladder | Ponytail as a ready-made plugin on both Claude and Codex; same version/mode required, no own ladder, no double injection |
+| Morning report | file in `specs/` (canonical) + best-effort notification at run end |
+| Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
-| Cross-model review | symmetric provider-opposite review via our thin `3a_cross-review`: Claude-authored → Codex, Codex-authored → Claude, joint → both independently; both CLIs are hard prerequisites; findings → ledger, blocking per §8 |
+| Cross-model review | symmetric provider-opposite review via our thin `3a_cross-review`: Claude-authored → Codex, Codex-authored → Claude, joint → both independently; fallback when a provider is unavailable: MODEL-opposite within the surviving provider (e.g. Sonnet 5 reviews Fable-authored artifacts), flagged — same-model review never satisfies the gate; findings → ledger, blocking per §8 |
 | P6 QA/fix ownership | Skill 6 is a strictly read-only finder. The P6 phase controller deduplicates and verifies findings, dispatches tier-0 fix lanes, and requires fresh provider-opposite QA re-verification; three failed Critical/High repair attempts trigger the stop policy |
 
 New questions arise during the detailed planning of each stage and are

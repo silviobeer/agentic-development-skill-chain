@@ -63,9 +63,12 @@ if find "$ROOT/claude/skills" "$ROOT/codex/skills" -maxdepth 1 -type d -name aut
   fail "autonomous-execution must not be included"
 fi
 
-if grep -R -n 'autonomous-execution' "$ROOT/codex" "$ROOT/claude" "$ROOT/docs" "$ROOT/README.md" >/tmp/skill-chain-autonomous.txt; then
-  cat /tmp/skill-chain-autonomous.txt >&2
+stale_refs="$(mktemp)"
+if grep -R -n 'autonomous-execution' "$ROOT/codex" "$ROOT/claude" "$ROOT/docs" "$ROOT/README.md" >"$stale_refs"; then
+  cat "$stale_refs" >&2
+  rm -f "$stale_refs"
   fail "stale autonomous-execution reference found"
 fi
+rm -f "$stale_refs"
 
 echo "validate: ok"
