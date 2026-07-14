@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context bundle role manifest",
+  "description": "Frontmatter contract for 4b_setup/manifests/roles/<role>.md — provider-neutral role metadata following the claude-skills frontmatter taxonomy (name/description + declarative extensions). The compiler (compile-context-bundles.mjs) projects these into canonical bundles plus Claude/Codex projections; the injector (context-injector.mjs) matches spawned subagent types against `matcher`. The source-id -> path map and the hard never-inject list (whole PRDs, other stories' wave plans, progress.md, SKILL.md texts, src/**/agent.md) live in the compiler, not here: a manifest can only pick from the closed `inject` vocabulary below.",
+  "type": "object",
+  "required": ["name", "description", "tier", "scope", "inject", "budget_tokens", "matcher"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Role id, unique across manifests, e.g. frontend-implementer"
+    },
+    "description": {
+      "type": "string",
+      "description": "When this role is spawned (claude-skills style: trigger conditions, not prose)"
+    },
+    "tier": {
+      "enum": [0, 1, 2],
+      "description": "Spawn tier (CONCEPT.md §5): 0 = micro-fix, inject NOTHING; 1 = story implementer, full type-scoped pack; 2 = reviewer/QA persona, minimal pack. Explore-type roles are modeled as tier 2 with inject: []."
+    },
+    "scope": {
+      "enum": ["frontend", "backend", "any"],
+      "description": "Which side of the type-scoped injection matrix applies"
+    },
+    "inject": {
+      "type": "array",
+      "description": "Ordered source ids compiled into the canonical bundle. Empty array = no bundle is compiled and the injector emits nothing (tier 0, explore).",
+      "items": {
+        "enum": [
+          "product",
+          "architecture-overview",
+          "architecture-delta",
+          "guidelines",
+          "ground-file",
+          "test-conventions",
+          "design-system",
+          "components",
+          "api-contracts-own-wave",
+          "security-baseline",
+          "review-criteria",
+          "diff-scope"
+        ]
+      }
+    },
+    "budget_tokens": {
+      "type": "integer",
+      "description": "Hard token budget for the compiled bundle (heuristic ceil(chars/4)); compile fails and writes nothing on breach"
+    },
+    "matcher": {
+      "type": "string",
+      "description": "Regex (unanchored, case-insensitive) matched against the spawned subagent type by the injector hook"
+    },
+    "claude": {
+      "type": "object",
+      "description": "Claude projection: how this role lands in .claude/agents/skillchain-<name>.md",
+      "properties": {
+        "agent_file": { "type": "boolean", "description": "Write a .claude/agents/skillchain-<name>.md agent file" },
+        "tools": { "type": "string", "description": "Comma-separated tool allowlist for the agent file" },
+        "model": { "type": "string", "description": "Model override; empty = inherit" }
+      }
+    },
+    "codex": {
+      "type": "object",
+      "description": "Codex projection: prompt-file delivery (no SubagentStart equivalent)",
+      "properties": {
+        "delivery": { "enum": ["prompt-file"], "description": "Codex lanes read specs/.../context/bundle-<role>.codex.md before implementing" },
+        "sandbox": { "type": "string", "description": "Codex sandbox mode the role runs under, e.g. workspace-write / read-only" }
+      }
+    }
+  }
+}

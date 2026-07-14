@@ -121,8 +121,40 @@ if have sonar; then
   fi
 fi
 
-# Ponytail parity check across active providers: Stage 2 (context system).
-say "– ponytail parity check: Stage 2, not yet enforced"
+# --- ponytail install + parity gate (context system, §7) -----------------
+# Ponytail is the single source of the minimalism ladder on both providers.
+# Absence or version/mode mismatch is HARD (PONYTAIL_ENFORCE=0 is the loud,
+# recorded escape hatch — never silent). Degraded runs gate the surviving
+# provider alone.
+PONYTAIL_JSON=""
+PONYTAIL_ARGS=(--json)
+[ "$CODEX_STATE" = "ok" ] || PONYTAIL_ARGS+=(--codex-inactive)
+set +e
+PONYTAIL_JSON="$(bash "$SCRIPT_DIR/ponytail-check.sh" "${PONYTAIL_ARGS[@]}" 2>/dev/null)"
+PONYTAIL_RC=$?
+set -e
+if [ "$PONYTAIL_RC" -eq 0 ]; then
+  if [ -n "$PONYTAIL_JSON" ] && [ "$(jq -r '.parity_ok' <<<"$PONYTAIL_JSON" 2>/dev/null)" = "true" ]; then
+    say "✓ ponytail parity ($(jq -r '"claude " + .claude.version + (if .codex.active then ", codex " + .codex.version else " (codex inactive)" end) + ", mode " + .claude.mode' <<<"$PONYTAIL_JSON"))"
+  else
+    say "⚠ ponytail gate failed but PONYTAIL_ENFORCE=0 — run continues WITHOUT the ladder (recorded enforced:false; flagged)"
+  fi
+else
+  say "❌ ponytail MISSING or parity mismatch (hard) — run 'bash $SCRIPT_DIR/ponytail-check.sh' for the install commands"
+  HARD_MISSING+=("ponytail")
+fi
+
+# --- context bundles: verify when compiled (§5 budget gate is HARD) -------
+if [ -f "$BASE/context/bundles.lock.json" ]; then
+  if node "$SCRIPT_DIR/compile-context-bundles.mjs" verify "$PROJ" "$THEME" >/dev/null 2>&1; then
+    say "✓ context bundles verify (hashes match, budgets hold)"
+  else
+    say "❌ context bundles verify FAILED (budget breach or drift, hard) — condense docs/, recompile (4b_setup step 6a)"
+    HARD_MISSING+=("context-bundles")
+  fi
+else
+  say "– context bundles not compiled yet (4b_setup step 6a runs after this preflight)"
+fi
 
 # --- record + verdict ---------------------------------------------------
 OK=true
@@ -138,6 +170,10 @@ if [ -f "$BASE/state.json" ]; then
     --arg codex "$CODEX_STATE" \
     '{at: $at, ok: $ok, hard_missing: $hard, skipped: $skipped, providers: {claude: $claude, codex: $codex}}')"
   "$STATE_SH" set "$PROJ" "$THEME" .preflight "$PREFLIGHT_JSON" >/dev/null
+  if [ -n "$PONYTAIL_JSON" ]; then
+    "$STATE_SH" set "$PROJ" "$THEME" .context.ponytail "$PONYTAIL_JSON" >/dev/null \
+      || say "⚠ could not record .context.ponytail (state validation?)"
+  fi
   if [ "$CODEX_STATE" != "ok" ]; then
     "$STATE_SH" set "$PROJ" "$THEME" .degraded true >/dev/null
     "$STATE_SH" set "$PROJ" "$THEME" .degraded_reason "$DEGRADED_REASON" >/dev/null

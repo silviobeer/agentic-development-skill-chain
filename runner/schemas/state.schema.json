@@ -122,6 +122,56 @@
         "report": { "type": "string", "description": "Path to stop-report.md" }
       }
     },
+    "context": {
+      "type": "object",
+      "description": "Context system state (Stage 2): compiled bundle hashes + ponytail parity result. Written during P0 (4b_setup / preflight.sh).",
+      "properties": {
+        "bundles": {
+          "type": "object",
+          "description": "role -> compiled bundle record (from bundles.lock.json; the canonical hash is what both providers must receive)",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["hash"],
+            "properties": {
+              "hash": { "type": "string", "description": "sha256 of the canonical bundle body" },
+              "claude_hash": { "type": "string" },
+              "codex_hash": { "type": "string" },
+              "tokens": { "type": "integer" },
+              "wave": { "type": "integer", "description": "Set when compiled wave-scoped (api-contracts-own-wave)" },
+              "compiled_at": { "type": "string" }
+            }
+          }
+        },
+        "ponytail": {
+          "type": "object",
+          "description": "ponytail-check.sh result: per-provider install/version/mode + parity verdict",
+          "properties": {
+            "claude": { "type": "object" },
+            "codex": { "type": "object" },
+            "parity_ok": { "type": "boolean" },
+            "enforced": { "type": "boolean", "description": "false only via the PONYTAIL_ENFORCE=0 escape hatch — recorded, never silent" },
+            "at": { "type": "string" }
+          }
+        }
+      }
+    },
+    "cross_review": {
+      "type": "array",
+      "description": "One record per cross-review round (appended by cross-review.sh via state.sh). Every degraded_fallback=true round is flagged in the morning report and PR body.",
+      "items": {
+        "type": "object",
+        "required": ["mode", "round", "reviewer_provider"],
+        "properties": {
+          "mode": { "type": "string", "description": "Call site, e.g. docs (P7). P3/P4 modes are Stage 3." },
+          "round": { "type": "integer", "description": "1 or 2 — max 2 rounds, then §8 escalation" },
+          "reviewer_provider": { "enum": ["claude", "codex"] },
+          "reviewer_model": { "type": "string" },
+          "degraded_fallback": { "type": "boolean", "description": "true when model-opposite within the surviving provider (opposite provider unavailable)" },
+          "findings_added": { "type": "integer" },
+          "at": { "type": "string" }
+        }
+      }
+    },
     "history": {
       "type": "array",
       "description": "Append-only transition log (written by state.sh transition)",

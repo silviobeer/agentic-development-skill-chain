@@ -23,6 +23,8 @@ mkdir -p "$(dirname "$PROJECT_SETTINGS")"
 
 # Strip "_comment" + "$schema" from template, then union allow/deny arrays.
 # defaultMode: project wins if explicitly set, otherwise template supplies it.
+# hooks: per event, template entries are appended once (structural dedupe) —
+# existing project hooks are never removed. env: project values win.
 MERGED=$(jq -s '
   def union_unique: (.[0] // []) + (.[1] // []) | unique;
   (.[0] | del(._comment, ."$schema")) as $tpl
@@ -33,6 +35,13 @@ MERGED=$(jq -s '
     | (if ($proj.permissions.defaultMode // null) == null and ($tpl.permissions.defaultMode // null) != null
        then .permissions.defaultMode = $tpl.permissions.defaultMode
        else . end)
+    | .hooks = (
+        ($proj.hooks // {}) as $ph
+        | $ph + (($tpl.hooks // {}) | with_entries(.value = ((($ph[.key] // []) + .value) | unique)))
+      )
+    | .env = (($tpl.env // {}) + ($proj.env // {}))
+    | (if .hooks == {} then del(.hooks) else . end)
+    | (if .env == {} then del(.env) else . end)
 ' "$TEMPLATE" "$PROJECT_SETTINGS")
 
 if [[ "$DRY_RUN" == "1" ]]; then

@@ -1,6 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "_comment": "Project-level permissions for Skills 5/6/7. Merge into .claude/settings.json via scripts/merge-project-settings.sh. Deny list is authoritative — destructive ops stay blocked even under bypassPermissions.",
+  "_comment": "Project-level permissions for Skills 5/6/7. Merge into .claude/settings.json via scripts/merge-project-settings.sh. Deny list is authoritative — destructive ops stay blocked even under bypassPermissions. The SubagentStart hook injects the compiled context bundle per role (tier 0/explore get nothing); PONYTAIL_SUBAGENT_MATCHER scopes the minimalism ladder to code-writing roles.",
+  "hooks": {
+    "SubagentStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/context-injector.mjs claude" }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "PONYTAIL_SUBAGENT_MATCHER": "implementer|frontend-implementer|backend-implementer|micro-fixer"
+  },
   "permissions": {
     "defaultMode": "bypassPermissions",
     "allow": [

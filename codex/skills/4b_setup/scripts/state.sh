@@ -77,6 +77,8 @@ validate() {
     and (($s.stop // {}) | type == "object")
     and (($s.pr // {}) | type == "object")
     and (($s.degraded // false) | type == "boolean")
+    and (($s.context // {}) | type == "object")
+    and (($s.cross_review // []) | type == "array")
     and ([($s.lanes // [])[] | select((.provider? // "") as $p | ["claude","codex"] | index($p) | not)] | length == 0)
   ' "$1" >/dev/null 2>&1
 }
@@ -137,7 +139,8 @@ case "$CMD" in
     case "$PATH_EXPR" in
       .phase|.status) fail ".phase/.status are changed via 'transition', not 'set'" ;;
     esac
-    if jq -e . >/dev/null 2>&1 <<<"$VALUE"; then
+    # jq empty (not -e): 'false' and 'null' are valid JSON but exit 1 under -e
+    if jq empty >/dev/null 2>&1 <<<"$VALUE"; then
       write "${PATH_EXPR} = \$v" --argjson v "$VALUE"
     else
       write "${PATH_EXPR} = \$v" --arg v "$VALUE"
@@ -159,6 +162,7 @@ case "$CMD" in
       case "${FROM_STATUS}>${TO_STATUS}" in
         "pending>running") legal=1 ;;
         "running>done"|"running>blocked"|"pending>blocked") legal=1 ;;
+        "done>blocked") legal=1 ;;   # a post-seal gate (P6 ledger / P7 caps+cross-review) parks a sealed phase
         "running>approved") [ "$TO_PHASE" = "CP1" ] && legal=1 ;;
         "blocked>running") legal=1 ;;
       esac
