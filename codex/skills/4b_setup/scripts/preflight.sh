@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # preflight.sh — P0 tool/auth preflight against the CONCEPT.md §7 CLI list.
 #
-# Checks presence AND auth state (not just command -v). Behavior per §7:
-#   - HARD tool missing        -> exit 1 = stop condition, never skipped silently
-#   - skippable tool missing   -> logged skip (sonar, sonar-scanner, supabase)
-#   - codex missing/unauth     -> NOT fatal: degraded single-provider run,
-#                                 recorded in state.json and flagged in the
-#                                 morning report + PR body (never silent)
+# Checks presence AND auth state (not just command -v), including a bounded
+# live probe per provider (claude hard, codex degradable). Behavior per §7:
+#   - HARD tool missing/unauth -> exit 1 = stop condition, never skipped silently
+#     (git, gh + auth, claude + live probe, node, jq, coderabbit + auth)
+#   - skippable tool missing   -> logged skip (sonar [+ auth], sonar-scanner, supabase)
+#   - codex missing/unauth/probe-fail -> NOT fatal: degraded single-provider
+#                                 run, recorded in state.json and flagged in
+#                                 the morning report + PR body (never silent)
 #   - agent-browser            -> hard only if any wave has frontend_routes
+# Env: PREFLIGHT_PROBE_TIMEOUT (default 90) · PREFLIGHT_SKIP_LIVE_PROBE=1
+#      skips the LLM probes (test use only — never for real overnight runs)
 # Writes the preflight block into state.json via state.sh when it exists;
 # otherwise prints the report only.
 #
@@ -55,7 +59,13 @@ else
   if have agent-browser; then say "✓ agent-browser"; else say "– agent-browser missing: no frontend waves planned — skip"; SKIPPED+=("agent-browser"); fi
 fi
 
-# --- auth states --------------------------------------------------------
+# --- auth states + bounded live probes (§7: not just command -v) --------
+# The two LLM probes prove each provider can actually complete a headless
+# call before an unattended run depends on it. PREFLIGHT_SKIP_LIVE_PROBE=1
+# skips them for fast test runs only — never set it for a real overnight run.
+PROBE_TIMEOUT="${PREFLIGHT_PROBE_TIMEOUT:-90}"
+CLAUDE_STATE="ok"
+
 if have gh; then
   if gh auth status >/dev/null 2>&1; then say "✓ gh auth"; else say "❌ gh auth BROKEN (hard)"; HARD_MISSING+=("gh-auth"); fi
 fi
@@ -63,7 +73,19 @@ if have coderabbit; then
   if coderabbit auth status >/dev/null 2>&1; then
     say "✓ coderabbit auth"
   else
-    say "⚠ coderabbit auth not verifiable — will surface at the first wave gate"
+    say "❌ coderabbit auth BROKEN (hard — gate component, §7)"
+    HARD_MISSING+=("coderabbit-auth")
+  fi
+fi
+if have claude; then
+  if [ "${PREFLIGHT_SKIP_LIVE_PROBE:-0}" = "1" ]; then
+    say "– claude live probe SKIPPED (PREFLIGHT_SKIP_LIVE_PROBE=1 — test use only)"
+  elif timeout --foreground "$PROBE_TIMEOUT" claude -p "Reply with exactly: OK" </dev/null >/dev/null 2>&1; then
+    say "✓ claude live probe (bounded, ${PROBE_TIMEOUT}s)"
+  else
+    say "❌ claude live probe FAILED (hard — it hosts the chain)"
+    CLAUDE_STATE="unauthenticated"
+    HARD_MISSING+=("claude-probe")
   fi
 fi
 
@@ -74,17 +96,30 @@ if ! have codex; then
 elif ! codex login status >/dev/null 2>&1; then
   CODEX_STATE="unauthenticated"
   DEGRADED_REASON="codex CLI unauthenticated"
+elif [ "${PREFLIGHT_SKIP_LIVE_PROBE:-0}" = "1" ]; then
+  say "– codex live probe SKIPPED (PREFLIGHT_SKIP_LIVE_PROBE=1 — test use only)"
+elif ! timeout --foreground "$PROBE_TIMEOUT" codex exec --sandbox read-only --skip-git-repo-check "Reply with exactly: OK" </dev/null >/dev/null 2>&1; then
+  CODEX_STATE="unauthenticated"
+  DEGRADED_REASON="codex live probe failed"
 fi
 if [ "$CODEX_STATE" = "ok" ]; then
-  say "✓ codex (dual-provider run)"
+  say "✓ codex auth + live probe (dual-provider run)"
 else
   say "⚠ codex ${CODEX_STATE} → DEGRADED single-provider run; reviews fall back to MODEL-opposite (claude -p --model); flagged in morning report + PR body"
 fi
 
-# --- skippable tools ----------------------------------------------------
+# --- skippable tools (auth checked when present; broken auth = logged skip) --
 for tool in sonar sonar-scanner supabase; do
   if have "$tool"; then say "✓ $tool"; else say "– $tool missing: skip (logged)"; SKIPPED+=("$tool"); fi
 done
+if have sonar; then
+  if [ -n "${SONAR_TOKEN:-}" ] || sonar auth status >/dev/null 2>&1; then
+    say "✓ sonar auth (SONAR_TOKEN or auth status)"
+  else
+    say "– sonar present but auth unverified (no SONAR_TOKEN) — wave-gate sonar stage will skip with a log entry"
+    SKIPPED+=("sonar-auth")
+  fi
+fi
 
 # Ponytail parity check across active providers: Stage 2 (context system).
 say "– ponytail parity check: Stage 2, not yet enforced"
@@ -99,8 +134,9 @@ if [ -f "$BASE/state.json" ]; then
     --argjson ok "$OK" \
     --argjson hard "$(printf '%s\n' "${HARD_MISSING[@]:-}" | jq -R . | jq -s 'map(select(length > 0))')" \
     --argjson skipped "$(printf '%s\n' "${SKIPPED[@]:-}" | jq -R . | jq -s 'map(select(length > 0))')" \
+    --arg claude "$CLAUDE_STATE" \
     --arg codex "$CODEX_STATE" \
-    '{at: $at, ok: $ok, hard_missing: $hard, skipped: $skipped, providers: {claude: "ok", codex: $codex}}')"
+    '{at: $at, ok: $ok, hard_missing: $hard, skipped: $skipped, providers: {claude: $claude, codex: $codex}}')"
   "$STATE_SH" set "$PROJ" "$THEME" .preflight "$PREFLIGHT_JSON" >/dev/null
   if [ "$CODEX_STATE" != "ok" ]; then
     "$STATE_SH" set "$PROJ" "$THEME" .degraded true >/dev/null

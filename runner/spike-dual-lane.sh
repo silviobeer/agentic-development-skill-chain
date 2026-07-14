@@ -21,6 +21,8 @@ TIMEOUT=300
 [ "${1:-}" = "--timeout" ] && TIMEOUT="${2:?}"
 
 REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"
+SPIKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SPIKE_DIR/.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 PASS=0; FAIL=0
@@ -151,6 +153,98 @@ left="$( (pgrep -g "$pid1"; pgrep -g "$pid2") 2>/dev/null | wc -l | tr -d ' ')"
 [ "$left" = "0" ] && ok "cancellation killed both process trees (no survivors in either group)" \
                   || bad "$left process(es) survived cancellation"
 wait "$pid1" 2>/dev/null; wait "$pid2" 2>/dev/null
+
+# --- ledger guarantees (deterministic, no LLM) ----------------------------
+step "ledger guarantees: concurrent adds + reopen-on-re-report"
+LWORK="$(mktemp -d)"
+LEDGER="$REPO_ROOT/claude/skills/6_qa/scripts/ledger.mjs"
+mkdir -p "$LWORK/specs/PROJ-96-spike"
+(
+  cd "$LWORK"
+  for i in $(seq 1 20); do
+    echo "{\"source\":\"qa\",\"severity\":\"low\",\"summary\":\"s$i\",\"file\":\"f$i.ts\",\"line\":$i,\"category\":\"c$i\"}" \
+      | node "$LEDGER" add 96 spike >/dev/null &
+  done
+  wait
+)
+if [ "$(jq '.findings | length' "$LWORK/specs/PROJ-96-spike/findings.json")" = "20" ]; then
+  ok "20/20 concurrent ledger adds survived (locked read-modify-write)"
+else
+  bad "concurrent ledger adds lost records: $(jq '.findings | length' "$LWORK/specs/PROJ-96-spike/findings.json")/20"
+fi
+# IDs are assigned in completion order under parallel adds — resolve the
+# f1.ts record's id instead of assuming it is -001.
+REOPEN_ID="$(jq -r '.findings[] | select(.file == "f1.ts") | .id' "$LWORK/specs/PROJ-96-spike/findings.json")"
+(
+  cd "$LWORK"
+  node "$LEDGER" set-status 96 spike "$REOPEN_ID" fixed deadbee >/dev/null
+  echo '{"source":"review","severity":"high","summary":"s1","file":"f1.ts","line":1,"category":"c1"}' | node "$LEDGER" add 96 spike >/dev/null
+)
+if [ "$(jq -r --arg id "$REOPEN_ID" '.findings[] | select(.id == $id) | .status' "$LWORK/specs/PROJ-96-spike/findings.json")" = "open" ]; then
+  ok "re-reported finding REOPENED after being marked fixed"
+else
+  bad "fixed finding stayed fixed despite an open re-report"
+fi
+rm -rf "$LWORK"
+
+# --- runner mechanics with stubbed lanes (no LLM) --------------------------
+# Proves: a failed writer cancels the peer immediately, the run is parked
+# (state -> blocked, stop report, rescue of untracked lane output), and no
+# lane processes survive.
+step "runner mechanics: stubbed writer failure -> peer cancelled, run parked"
+RWORK="$(mktemp -d)"
+STUB="$RWORK/stub-bin"
+mkdir -p "$STUB" "$RWORK/repo/specs/PROJ-98-spike" "$RWORK/repo/scripts"
+cp "$REPO_ROOT/claude/skills/4b_setup/scripts/state.sh" "$RWORK/repo/scripts/state.sh"
+cp "$REPO_ROOT/claude/skills/6_qa/scripts/ledger.mjs" "$RWORK/repo/scripts/ledger.mjs"
+cat >"$STUB/claude" <<'STUBEOF'
+#!/bin/sh
+# stub writer lane: mimics a lane that starts the phase, then crashes
+bash scripts/state.sh transition 98 spike P5 running >/dev/null 2>&1
+sleep 2
+exit 1
+STUBEOF
+cat >"$STUB/codex" <<'STUBEOF'
+#!/bin/sh
+# stub peer lane: auth check ok, exec hangs until cancelled
+case "$1" in
+  login) exit 0 ;;
+  exec) sleep 300 ;;
+esac
+STUBEOF
+chmod +x "$STUB/claude" "$STUB/codex"
+(
+  cd "$RWORK/repo"
+  git init -q -b main
+  git config user.email spike@local; git config user.name spike
+  git add -A; git commit -qm base
+  bash scripts/state.sh init 98 spike >/dev/null
+  bash scripts/state.sh transition 98 spike CP1 running >/dev/null
+  bash scripts/state.sh transition 98 spike CP1 approved >/dev/null
+  bash scripts/state.sh transition 98 spike P0 running >/dev/null
+  bash scripts/state.sh transition 98 spike P0 done >/dev/null
+)
+RUN_START=$SECONDS
+set +e
+( cd "$RWORK/repo" && PATH="$STUB:$PATH" timeout --foreground 120 \
+    "$SPIKE_DIR/run-phase.sh" P5 98 spike --timeout 600 ) >"$RWORK/runner.out" 2>&1
+RUN_RC=$?
+set -e
+RUN_ELAPSED=$((SECONDS - RUN_START))
+[ "$RUN_RC" -eq 1 ] && ok "runner exited 1 (stop condition) on writer failure" \
+                    || bad "runner exited $RUN_RC (expected 1) — output: $(tail -c 400 "$RWORK/runner.out")"
+[ "$RUN_ELAPSED" -lt 60 ] && ok "peer cancelled promptly (${RUN_ELAPSED}s, peer would have slept 300s)" \
+                          || bad "runner took ${RUN_ELAPSED}s — peer was not cancelled on writer failure"
+PSTATE="$(cd "$RWORK/repo" && bash scripts/state.sh get 98 spike '.phase + ":" + .status' 2>/dev/null)"
+[ "$PSTATE" = "P5:blocked" ] && ok "state parked at P5:blocked" || bad "state is '$PSTATE' (expected P5:blocked)"
+[ -f "$RWORK/repo/specs/PROJ-98-spike/7_progress/stop-report.md" ] && ok "stop report rendered" || bad "stop report missing"
+if pgrep -f "sleep 300" >/dev/null 2>&1; then
+  bad "stub peer process survived the runner"
+  pkill -f "sleep 300" 2>/dev/null || true
+else
+  ok "no lane processes survived"
+fi
+rm -rf "$RWORK"
 
 # --- verdict --------------------------------------------------------------
 echo

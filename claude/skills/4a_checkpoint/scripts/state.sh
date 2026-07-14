@@ -57,6 +57,9 @@ phase_index() {
   return 1
 }
 
+# Validation mirrors runner/schemas/state.schema.json for the fields the
+# machine depends on — including the container types, so e.g. a string
+# written into .lanes fails at write time, not at render time.
 validate() {
   jq -e '
     . as $s
@@ -66,7 +69,23 @@ validate() {
     and (["CP1","P0","P5","P6","P7","P8","done"] | index($s.phase) != null)
     and (["pending","running","approved","blocked","done"] | index($s.status) != null)
     and (($s.status != "approved") or ($s.phase == "CP1"))
+    and (($s.lanes // []) | type == "array")
+    and (($s.history // []) | type == "array")
+    and (($s.authorship // {}) | type == "object")
+    and (($s.waves // {}) | type == "object")
+    and (($s.preflight // {}) | type == "object")
+    and (($s.stop // {}) | type == "object")
+    and (($s.pr // {}) | type == "object")
+    and (($s.degraded // false) | type == "boolean")
+    and ([($s.lanes // [])[] | select((.provider? // "") as $p | ["claude","codex"] | index($p) | not)] | length == 0)
   ' "$1" >/dev/null 2>&1
+}
+
+# Mutations serialize on a lock file: a concurrent read-modify-write from
+# two lanes must not lose either write (flock is released on process exit).
+lock_state() {
+  exec 9>"${BASE}/.state.lock" || fail "cannot create ${BASE}/.state.lock"
+  flock -w 10 9 || fail "could not acquire state lock within 10s (stale run?)"
 }
 
 # Atomic, validated write: $1 = jq filter, remaining args passed to jq.
@@ -88,6 +107,7 @@ require_state() { [ -f "$STATE" ] || { echo "state.sh: $STATE missing (create it
 case "$CMD" in
   init)
     [ -d "$BASE" ] || fail "$BASE does not exist — wrong proj/theme?"
+    lock_state
     if [ -f "$STATE" ]; then
       echo "state.sh: $STATE already exists — init is a no-op"
       exit 0
@@ -112,6 +132,7 @@ case "$CMD" in
   set)
     [ $# -eq 2 ] || usage
     require_state
+    lock_state
     PATH_EXPR="$1"; VALUE="$2"
     case "$PATH_EXPR" in
       .phase|.status) fail ".phase/.status are changed via 'transition', not 'set'" ;;
@@ -126,6 +147,7 @@ case "$CMD" in
   transition)
     [ $# -eq 2 ] || usage
     require_state
+    lock_state
     TO_PHASE="$1"; TO_STATUS="$2"
     FROM_PHASE="$(jq -r '.phase' "$STATE")"
     FROM_STATUS="$(jq -r '.status' "$STATE")"

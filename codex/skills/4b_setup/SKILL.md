@@ -68,7 +68,8 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 
 Run `bash scripts/preflight.sh <X> <theme>` (copy from
 `~/.codex/skills/4b_setup/scripts/preflight.sh` if missing). It checks
-the CONCEPT.md §7 CLI list including auth states and writes the
+the CONCEPT.md §7 CLI list including auth states and a bounded live
+probe per provider (claude hard, codex degradable) and writes the
 `preflight` block into state.json:
 
 - Exit 0 → continue. If it reports DEGRADED (codex missing or

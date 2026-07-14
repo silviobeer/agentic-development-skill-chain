@@ -36,19 +36,35 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
 
 - **Single writer:** one lane per phase may write; the peer lane runs
   with read-only tools (`--allowedTools Read,Grep,Glob` /
-  `codex exec --sandbox read-only`). Peer findings are ingested into
-  the ledger; a failed peer never stops the run.
+  `codex exec --sandbox read-only`; the P6 finder additionally gets
+  `Bash` to run tests, with a working-tree integrity check after it).
+  Peer findings are ingested into the ledger; a failed peer never stops
+  the run — but a failed or timed-out WRITER cancels the peer
+  immediately, and SIGINT/SIGTERM kill both lane process groups.
+- **P6 is sequential:** the read-only QA finder runs FIRST and its
+  findings are ingested before the P6 controller starts; the runner
+  refuses `P6:done` while the ledger has open Critical/High findings.
+- **Models are pinned:** the claude writer runs `CLAUDE_WRITER_MODEL`
+  (default `opus`), review lanes run `CLAUDE_REVIEW_MODEL` (default
+  `sonnet`); both are recorded per lane in state.json and the runner
+  refuses to start when they are equal — degraded "model-opposite" must
+  actually be a different model.
 - **Degraded mode is never silent:** codex missing or unauthenticated →
-  single-provider run; the peer/review lane uses a different Claude
-  model (`CLAUDE_REVIEW_MODEL`, default `sonnet`); `degraded` is set in
-  state.json and rendered into the morning report and PR body.
+  single-provider run with the model-opposite reviewer; `degraded` is
+  set in state.json and rendered into the morning report and PR body.
 - **Stop policy (§8):** writer failure, timeout, or an unsealed phase
-  parks the run — rescue branch for uncommitted work, state →
-  `blocked` with the exact cause, rendered stop report with a cleanup
-  list. Nothing is simply aborted.
+  parks the run — the rescue branch is built through a temporary git
+  index (the working tree, including state.json and lane outputs, is
+  never touched), state → `blocked` with the exact cause, rendered stop
+  report with a cleanup list. Nothing is simply aborted.
 - **Sealing:** the writer lane seals its phase via
   `state.sh transition <phase> done`; the runner verifies the seal and
   refuses to advance without it.
 
+Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `PEER_GRACE`
+(seconds a peer may outlive the writer, default 300).
+
 The runner never edits `state.json` or `findings.json` directly — all
-writes go through `scripts/state.sh` and `scripts/ledger.mjs`.
+writes go through `scripts/state.sh` and `scripts/ledger.mjs` (both
+serialize concurrent writes via locks and validate against the schema
+contract on every write).

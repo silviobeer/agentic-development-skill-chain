@@ -21,16 +21,23 @@ Ownership boundary — never blur it:
    weed out false positives (receiving-code-review discipline). You
    receive only verdicts. False positives →
    `node scripts/ledger.mjs set-status <id> false-positive`.
-3. **Fix spawns (tier 0)** per confirmed cluster: each fixer receives
-   ONLY the finding text, the code anchor, the relevant `agent.md`
-   excerpt, and the verification command — no context pack, no QA
-   identity. After a verified fix:
+3. **Fix spawns (tier 0)** per confirmed cluster: BEFORE dispatching a
+   fixer, count the attempt — `node scripts/ledger.mjs record-attempt <id>`
+   (this is what makes the three-attempt stop rule enforceable). Each
+   fixer receives ONLY the finding text, the code anchor, the relevant
+   `agent.md` excerpt, and the verification command — no context pack,
+   no QA identity. Only after the fix is verified:
    `node scripts/ledger.mjs set-status <id> fixed <commit-sha>`.
 4. **Fresh opposite re-verification:** after each fix batch, a NEW
    read-only QA check from the provider (or in degraded mode: model)
    opposite the fixer reruns only the affected checks. The fixer never
-   certifies its own repair.
+   certifies its own repair. If re-verification finds the problem again,
+   report it as a fresh open finding via `ledger.mjs add` — the ledger
+   REOPENS a `fixed` finding on an open re-report; never leave a failed
+   repair marked fixed.
 5. Repeat until `node scripts/ledger.mjs stats` shows `open_blocking: 0`.
+   A finding whose `fix_attempts` reaches 3 and is still open is a STOP
+   CONDITION (§8) — do not dispatch a fourth attempt.
 
 ## Exit rules (§8)
 
