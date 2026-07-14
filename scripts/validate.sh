@@ -14,9 +14,12 @@ CORE_SKILLS=(
   2c_review-reconcile
   3_architecture
   4_writing-plans
+  4a_checkpoint
+  4b_setup
   5_executing
   6_qa
   7_documentation
+  8_delivery
 )
 OPTIONAL_SKILLS=(
   refactor-dreamer
@@ -70,5 +73,40 @@ if grep -R -n 'autonomous-execution' "$ROOT/codex" "$ROOT/claude" "$ROOT/docs" "
   fail "stale autonomous-execution reference found"
 fi
 rm -f "$stale_refs"
+
+# Framework helpers must stay byte-identical across all their copies
+# (wave-gate.sh legitimately diverges per platform and is excluded).
+check_identical() {
+  local first="$1"; shift
+  [ -f "$first" ] || fail "missing $first"
+  for other in "$@"; do
+    [ -f "$other" ] || fail "missing $other"
+    cmp -s "$first" "$other" || fail "helper copies differ: $first vs $other"
+  done
+}
+check_identical "$ROOT/claude/skills/4b_setup/scripts/state.sh" \
+  "$ROOT/codex/skills/4b_setup/scripts/state.sh" \
+  "$ROOT/claude/skills/4a_checkpoint/scripts/state.sh" \
+  "$ROOT/codex/skills/4a_checkpoint/scripts/state.sh"
+for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
+         6_qa/scripts/ledger.mjs 6_qa/scripts/harvest-debt.sh \
+         8_delivery/scripts/conflict-probe.sh 8_delivery/scripts/render-pr-body.mjs \
+         8_delivery/scripts/ci-poll.sh 8_delivery/templates/pr-body.md.tmpl; do
+  check_identical "$ROOT/claude/skills/$f" "$ROOT/codex/skills/$f"
+done
+
+# Schemas must parse; every shell script must be syntactically valid;
+# every node script must compile.
+for schema in "$ROOT/runner/schemas/state.schema.json" "$ROOT/runner/schemas/findings.schema.json"; do
+  jq empty "$schema" 2>/dev/null || fail "schema does not parse: $schema"
+done
+while IFS= read -r sh; do
+  bash -n "$sh" || fail "bash syntax error: $sh"
+done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" "$ROOT/scripts" -name '*.sh' -type f)
+if command -v node >/dev/null; then
+  while IFS= read -r mjs; do
+    node --check "$mjs" 2>/dev/null || fail "node syntax error: $mjs"
+  done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" -name '*.mjs' -type f)
+fi
 
 echo "validate: ok"

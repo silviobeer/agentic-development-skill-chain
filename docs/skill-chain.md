@@ -16,9 +16,12 @@ flowchart LR
   S2 -.discovery track.-> S2B[2b handoff-package]
   S2 --> S3[3 architecture]
   S3 --> S4[4 writing-plans]
-  S4 --> S5[5 executing]
+  S4 --> S4A[4a checkpoint CP1]
+  S4A --> S4B[4b setup P0]
+  S4B --> S5[5 executing]
   S5 --> S6[6 qa]
   S6 --> S7[7 documentation]
+  S7 --> S8[8 delivery + CP2]
 ```
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
@@ -50,9 +53,24 @@ After decomposition:
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
 | 3 | architecture | Produce PM-friendly technical architecture |
 | 4 | writing-plans | Split work into wave-based implementation plans |
+| 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
+| 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight (codex degradable), framework scripts copied into the repo |
 | 5 | executing | Implement waves with TDD and quality gates |
-| 6 | qa | Run E2E QA, security, persona review, and simplicity review |
+| 6 | qa | Run E2E QA, security, persona review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
+| 8 | delivery | Conflict probe against main, PR with a body rendered from state.json + findings.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
+
+## Framework Runs (Agent Workflow, Stage 1)
+
+After `checkpoint` (4a) seals Checkpoint 1, the host-neutral phase runner
+(`runner/run-phase.sh auto <X> <theme>`) drives P0 → P5 → P6 → P7 → P8
+unattended — dual Claude + Codex lanes with a single writer per phase,
+`state.json`/`findings.json` as the only handoff, stop policy with rescue
+branch + stop report, and a rendered morning report at run end. If the
+`codex` CLI is missing or unauthenticated, the run degrades to
+single-provider with a model-opposite review lane — flagged in the
+morning report and PR body, never silent. See [runner/README.md](../runner/README.md)
+and CONCEPT.md for the full model.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 
