@@ -30,6 +30,19 @@ STATE_SH="$SCRIPT_DIR/state.sh"
 BASE="specs/PROJ-${PROJ}-${THEME}"
 GATE_CFG="$BASE/6_plan/wave-gate-config.json"
 
+# Sibling Stage 2 helpers may not be next to this script yet (preflight runs
+# BEFORE the framework copy step on a fresh target): fall back to the
+# installed skill trees so a lone repo copy of preflight.sh still works.
+resolve_helper() { # <name> -> path on stdout, or return 1
+  local n="$1" p
+  for p in "$SCRIPT_DIR/$n" \
+           "$HOME/.claude/skills/4b_setup/scripts/$n" \
+           "$HOME/.codex/skills/4b_setup/scripts/$n"; do
+    [ -f "$p" ] && { echo "$p"; return 0; }
+  done
+  return 1
+}
+
 HARD_MISSING=()
 SKIPPED=()
 DEGRADED_REASON=""
@@ -121,35 +134,72 @@ if have sonar; then
   fi
 fi
 
+# --- context injector hook (host-neutral, idempotent) ---------------------
+# Deterministic on BOTH hosts: without the SubagentStart hook + ladder-matcher
+# env in .claude/settings.json, Claude subagents silently run without their
+# bundle and reviewer/explore lanes receive the ladder. Runs BEFORE the
+# ponytail check so the matcher is verifiable from the settings file.
+INJECTOR_CMD="node scripts/context-injector.mjs claude"
+MATCHER_EXPECTED='implementer|frontend-implementer|backend-implementer|micro-fixer'
+mkdir -p .claude
+[ -f .claude/settings.json ] || echo '{}' > .claude/settings.json
+if jq -e --arg cmd "$INJECTOR_CMD" \
+     '[.hooks.SubagentStart[]?.hooks[]? | select(.command == $cmd)] | length > 0
+      and ((.env.PONYTAIL_SUBAGENT_MATCHER // "") | length > 0)' \
+     .claude/settings.json >/dev/null 2>&1; then
+  say "✓ context injector hook + ladder matcher present (.claude/settings.json)"
+else
+  TMP_SETTINGS="$(mktemp)"
+  if jq --arg cmd "$INJECTOR_CMD" --arg m "$MATCHER_EXPECTED" \
+       '.hooks.SubagentStart = (
+          (.hooks.SubagentStart // [])
+          + (if ([.hooks.SubagentStart[]?.hooks[]? | select(.command == $cmd)] | length) > 0
+             then [] else [{hooks: [{type: "command", command: $cmd}]}] end))
+        | .env.PONYTAIL_SUBAGENT_MATCHER = (.env.PONYTAIL_SUBAGENT_MATCHER // $m)' \
+       .claude/settings.json > "$TMP_SETTINGS" 2>/dev/null; then
+    mv "$TMP_SETTINGS" .claude/settings.json
+    say "✓ context injector hook merged into .claude/settings.json (SubagentStart + PONYTAIL_SUBAGENT_MATCHER)"
+  else
+    rm -f "$TMP_SETTINGS"
+    say "⚠ could not merge the injector hook (.claude/settings.json unparseable?) — merge it manually via merge-project-settings.sh"
+  fi
+fi
+
 # --- ponytail install + parity gate (context system, §7) -----------------
 # Ponytail is the single source of the minimalism ladder on both providers.
-# Absence or version/mode mismatch is HARD (PONYTAIL_ENFORCE=0 is the loud,
-# recorded escape hatch — never silent). Degraded runs gate the surviving
-# provider alone.
+# Absence, version/mode mismatch, or missing helper is HARD (PONYTAIL_ENFORCE=0
+# is the loud, recorded escape hatch — never silent). Degraded runs gate the
+# surviving provider alone.
 PONYTAIL_JSON=""
 PONYTAIL_ARGS=(--json)
 [ "$CODEX_STATE" = "ok" ] || PONYTAIL_ARGS+=(--codex-inactive)
-set +e
-PONYTAIL_JSON="$(bash "$SCRIPT_DIR/ponytail-check.sh" "${PONYTAIL_ARGS[@]}" 2>/dev/null)"
-PONYTAIL_RC=$?
-set -e
-if [ "$PONYTAIL_RC" -eq 0 ]; then
-  if [ -n "$PONYTAIL_JSON" ] && [ "$(jq -r '.parity_ok' <<<"$PONYTAIL_JSON" 2>/dev/null)" = "true" ]; then
-    say "✓ ponytail parity ($(jq -r '"claude " + .claude.version + (if .codex.active then ", codex " + .codex.version else " (codex inactive)" end) + ", mode " + .claude.mode' <<<"$PONYTAIL_JSON"))"
+if PONYTAIL_SH="$(resolve_helper ponytail-check.sh)"; then
+  set +e
+  PONYTAIL_JSON="$(bash "$PONYTAIL_SH" "${PONYTAIL_ARGS[@]}" 2>/dev/null)"
+  PONYTAIL_RC=$?
+  set -e
+  if [ "$PONYTAIL_RC" -eq 0 ]; then
+    if [ -n "$PONYTAIL_JSON" ] && [ "$(jq -r '.parity_ok' <<<"$PONYTAIL_JSON" 2>/dev/null)" = "true" ]; then
+      say "✓ ponytail parity ($(jq -r '"claude " + .claude.version + (if .codex.active then ", codex " + .codex.version else " (codex inactive)" end) + ", mode " + .claude.mode' <<<"$PONYTAIL_JSON"))"
+    else
+      say "⚠ ponytail gate failed but PONYTAIL_ENFORCE=0 — run continues WITHOUT the ladder (recorded enforced:false; flagged)"
+    fi
   else
-    say "⚠ ponytail gate failed but PONYTAIL_ENFORCE=0 — run continues WITHOUT the ladder (recorded enforced:false; flagged)"
+    say "❌ ponytail MISSING, mode not '$( echo "${PONYTAIL_REQUIRED_MODE:-full}")', or parity mismatch (hard) — run 'bash $PONYTAIL_SH' for the install commands"
+    HARD_MISSING+=("ponytail")
   fi
 else
-  say "❌ ponytail MISSING or parity mismatch (hard) — run 'bash $SCRIPT_DIR/ponytail-check.sh' for the install commands"
-  HARD_MISSING+=("ponytail")
+  say "❌ ponytail-check.sh not found (script dir or installed skill trees) — Stage 2 helpers not installed (hard)"
+  HARD_MISSING+=("ponytail-check.sh")
 fi
 
 # --- context bundles: verify when compiled (§5 budget gate is HARD) -------
 if [ -f "$BASE/context/bundles.lock.json" ]; then
-  if node "$SCRIPT_DIR/compile-context-bundles.mjs" verify "$PROJ" "$THEME" >/dev/null 2>&1; then
+  if COMPILER="$(resolve_helper compile-context-bundles.mjs)" \
+     && node "$COMPILER" verify "$PROJ" "$THEME" >/dev/null 2>&1; then
     say "✓ context bundles verify (hashes match, budgets hold)"
   else
-    say "❌ context bundles verify FAILED (budget breach or drift, hard) — condense docs/, recompile (4b_setup step 6a)"
+    say "❌ context bundles verify FAILED (budget breach, drift, or compiler missing — hard) — condense docs/, recompile (4b_setup step 6a)"
     HARD_MISSING+=("context-bundles")
   fi
 else

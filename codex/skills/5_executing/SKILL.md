@@ -307,9 +307,12 @@ One tag per (wave, PROJ) pair. Tags are local-only; do not push. If neither `WAV
 
 **For waves with 2+ parallel user stories:** Create an agent team. The lead (you) coordinates.
 
-**Choose the right implementer type per US:**
-- US touches only UI (components, pages, styling) → `frontend-implementer`
-- US touches only server-side (API, DB, server actions) → `backend-implementer`
+**Choose the right implementer type per US** (framework runs: spawn the
+`skillchain-<role>` agent types that P0 projected into `.claude/agents/` —
+the SubagentStart injector matches those names and delivers the role's
+context bundle; a generic `general-purpose` spawn gets NO bundle):
+- US touches only UI (components, pages, styling) → `frontend-implementer` (`skillchain-frontend-implementer`)
+- US touches only server-side (API, DB, server actions) → `backend-implementer` (`skillchain-backend-implementer`)
 - US is full-stack (both UI and server logic) → `implementer` (generic)
 
 **Choose the right model per US (from the wave plan's `Complexity` column):**

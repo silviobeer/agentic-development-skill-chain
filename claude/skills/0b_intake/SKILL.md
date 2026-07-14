@@ -31,6 +31,13 @@ forward. This is a collaborative session, not a batch job.
 | `docs/test-conventions.md` | test runner, layout, naming, what must be tested | — |
 | `AGENTS.md` (root) | initial durable agent rules | ≤40 non-blank lines |
 
+**Existing AGENTS.md (or other curated docs) are baseline truth, never
+overwritten.** If a file already exists, the draft is a MERGE: every
+existing rule/statement is kept unless an interview decision explicitly
+retires it (recorded in `decisions.md`); new content is appended with
+provenance markers like everything else. The drift-audit variant works
+the same way — deltas, not rewrites.
+
 ## Workflow
 
 ### 0. Precondition
@@ -104,8 +111,9 @@ every decision into the affected draft(s).
 2. `bash scripts/intake-seal-check.sh` (copy from
    `~/.claude/skills/0b_intake/scripts/` together with
    `curation-caps.sh` if missing). It verifies: all eight files exist,
-   zero residual markers, file caps hold. Red → fix, re-run; NEVER seal
-   past a red check.
+   zero residual markers, `specs/intake/decisions.md` carries
+   `D-BOOTSTRAP` reconcile decisions (undiscussed drafts never seal),
+   file caps hold. Red → fix, re-run; NEVER seal past a red check.
 3. Commit: `docs: intake baseline — initial curated docs`
    (include `specs/intake/decisions.md`).
 

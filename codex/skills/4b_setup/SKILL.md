@@ -19,10 +19,12 @@ judgment). There are no user questions in P0.
 
 This skill is aligned with the Claude variant. In Codex:
 
-- Do not require `claude --dangerously-skip-permissions`,
-  `.claude/settings.json`, or `bypassPermissions`. Use the current Codex
-  session permissions and the normal approval/sandbox policy; there is
-  no permission-merge step.
+- Do not require `claude --dangerously-skip-permissions` or
+  `bypassPermissions` for THIS session. Use the current Codex session
+  permissions and the normal approval/sandbox policy; there is no
+  permission-merge step. (The preflight still writes the context-injector
+  hook into `.claude/settings.json` — that file configures the Claude
+  LANES the runner starts, not this session.)
 - Reusable skill assets live under `~/.codex/skills/...` instead of
   `~/.claude/skills/...`.
 - The preflight itself is host-neutral: `claude` stays a HARD tool
@@ -67,8 +69,11 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 
 ### 3. Tool + auth preflight
 
-Run `bash scripts/preflight.sh <X> <theme>` (copy from
-`~/.codex/skills/4b_setup/scripts/preflight.sh` if missing). It checks
+Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
+the WHOLE 4b_setup helper set first — `preflight.sh`, `ponytail-check.sh`,
+`compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh` from
+`~/.codex/skills/4b_setup/scripts/` — preflight calls its siblings; a
+lone copy also works, it falls back to the installed skill tree). It checks
 the CONCEPT.md §7 CLI list including auth states and a bounded live
 probe per provider (claude hard, codex degradable) and writes the
 `preflight` block into state.json:
@@ -136,10 +141,10 @@ recompile (5a) so the bundles carry it.
   (`node scripts/context-injector.mjs codex <role> --path`); the
   runner's lane prompts point there. There is no hook step on this host.
 - Claude lanes (the runner starts them even when Codex hosts setup): the
-  SubagentStart hook (`node scripts/context-injector.mjs claude`) must be
-  merged into the project's `.claude/settings.json` once — run
-  `bash scripts/merge-project-settings.sh` if present, or note it in
-  progress.md for the next Claude session.
+  preflight (step 3) already merged the SubagentStart hook
+  (`node scripts/context-injector.mjs claude`) and the ladder matcher env
+  into `.claude/settings.json` — deterministic on this host too, no
+  deferral to a later Claude session.
 - Both providers receive the same canonical bundle hash (recorded in
   5a); the injector refuses a stale bundle (hash mismatch → injects
   nothing and warns).

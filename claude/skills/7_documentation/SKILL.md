@@ -411,25 +411,39 @@ statements just to fit the cap: the truth gate flags cap-gaming.
 
 **7d. TRUTH gate (BLOCKING):**
 
+The artifact list is EVERY doc-layer file this PROJ touched — curated
+baseline, generated docs, AGENTS.md, and curated agent.md files — not a
+fixed subset. Anything skipped here enters future context bundles
+unchecked.
+
 ```bash
+BASE_SHA="$(bash scripts/state.sh get <X> <theme> .base_sha)"
+ARTIFACTS="$(git diff --name-only "$BASE_SHA"..HEAD -- \
+  docs/ AGENTS.md README.md 'src/**/agent.md' | tr '\n' ' ')"
+# fallback when nothing doc-layer changed but curation ran anyway:
+[ -n "$ARTIFACTS" ] || ARTIFACTS="docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md docs/components.md"
 bash scripts/cross-review.sh docs <X> <theme> \
-  --artifacts docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md docs/components.md \
+  --artifacts $ARTIFACTS \
   --author-key docs-delta \
-  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" \
+  --diff-base "$BASE_SHA" \
   --round 1
 ```
 
 - exit 0 → proceed to section 8.
-- exit 3 → Critical/High findings are in the ledger: fix them in the
-  docs, re-run 7c, then re-run with `--round 2`. Exit 3 again → **stop
-  condition (§8)**: do NOT seal P7 — transition to blocked, write the
-  stop report. There is no round 3.
+- exit 3 → open Critical/High cross-review findings are in the ledger:
+  fix each one in the docs, mark it
+  (`node scripts/ledger.mjs set-status <X> <theme> <id> fixed <commit>`
+  — an unmarked fix keeps blocking; a false "fixed" is reopened on
+  re-report), re-run 7c, then re-run with `--round 2`. Exit 3 again →
+  **stop condition (§8)**: do NOT seal P7 — transition to blocked, write
+  the stop report. There is no round 3.
 - exit 1 → infrastructure failure: also a stop condition — the truth
   gate did not run, the phase must not seal without it.
 
 Medium/Low findings auto-defer as debt — do not chase them here. The
-runner independently re-verifies both gates after the seal; sealing past
-a red gate parks the run.
+runner independently re-verifies both gates after the seal — including
+that a docs cross-review actually RAN during this P7 (a skipped review
+is not a clean review); sealing past a red gate parks the run.
 
 ### 8. Git commit + P7 seal
 

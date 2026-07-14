@@ -34,8 +34,11 @@ kill_tree() { # whole process group, TERM then KILL (mirrors run-phase.sh kill_g
 
 MODEL_ARGS=()
 [ -n "$MODEL" ] && MODEL_ARGS=(--model "$MODEL")
+# Read-only git commands included: the docs truth-check must be able to
+# compare artifacts against the actual diff (git diff BASE..HEAD), not just
+# read the current files.
 setsid claude -p "$(cat "$PROMPT")" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
-  --allowedTools "Read,Grep,Glob" </dev/null >"$RAW" 2>&1 &
+  --allowedTools "Read,Grep,Glob,Bash(git diff*),Bash(git log*),Bash(git show*)" </dev/null >"$RAW" 2>&1 &
 PID=$!
 trap 'kill_tree "$PID"; exit 1' INT TERM
 

@@ -61,8 +61,11 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 
 ### 4. Tool + auth preflight
 
-Run `bash scripts/preflight.sh <X> <theme>` (copy from
-`~/.claude/skills/4b_setup/scripts/preflight.sh` if missing). It checks
+Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
+the WHOLE 4b_setup helper set first — `preflight.sh`, `ponytail-check.sh`,
+`compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh` from
+`~/.claude/skills/4b_setup/scripts/` — preflight calls its siblings; a
+lone copy also works, it falls back to the installed skill tree). It checks
 the CONCEPT.md §7 CLI list including auth states and a bounded live
 probe per provider (claude hard, codex degradable) and writes the
 `preflight` block into state.json:
@@ -125,11 +128,13 @@ recompile (6a) so the bundles carry it.
 
 **6c. Activate the injector adapters.**
 
-- Claude: `bash scripts/merge-project-settings.sh` merges the
-  SubagentStart hook (`node scripts/context-injector.mjs claude`) and the
-  `PONYTAIL_SUBAGENT_MATCHER` env into the project settings. Subagents
-  then receive their type-scoped bundle automatically — never paste
-  bundles into spawn prompts.
+- Claude: the preflight (step 4) already merged the SubagentStart hook
+  (`node scripts/context-injector.mjs claude`) and the
+  `PONYTAIL_SUBAGENT_MATCHER` env into `.claude/settings.json` —
+  deterministic, idempotent, host-neutral. `bash
+  scripts/merge-project-settings.sh` additionally merges the execution
+  permission allowlist. Subagents then receive their type-scoped bundle
+  automatically — never paste bundles into spawn prompts.
 - Codex: prompt-file delivery — a codex lane reads
   `specs/.../context/bundle-<role>.codex.md` before implementing
   (`node scripts/context-injector.mjs codex <role> --path`); the

@@ -85,13 +85,15 @@ if [ "$CODEX_ACTIVE" = true ]; then
   fi
 fi
 
-# --- matcher scoping (warning, not failure — the runner exports it) ----------
-if [ "${PONYTAIL_SUBAGENT_MATCHER:-}" != "$EXPECTED_MATCHER" ]; then
-  note "PONYTAIL_SUBAGENT_MATCHER is not scoped to the code-writing roles — reviewer/explore lanes would receive the ladder. Set:"
-  note "  export PONYTAIL_SUBAGENT_MATCHER='${EXPECTED_MATCHER}'"
-fi
+# --- matcher scoping (enforced): env, or the merged .claude/settings.json ----
+# Without a scoped matcher, reviewer/explore lanes receive the ladder too.
+SETTINGS_MATCHER=""
+[ -f .claude/settings.json ] && SETTINGS_MATCHER="$(jq -r '.env.PONYTAIL_SUBAGENT_MATCHER // ""' .claude/settings.json 2>/dev/null || true)"
+MATCHER_OK=false
+{ [ "${PONYTAIL_SUBAGENT_MATCHER:-}" = "$EXPECTED_MATCHER" ] || [ "$SETTINGS_MATCHER" = "$EXPECTED_MATCHER" ]; } && MATCHER_OK=true
 
 # --- parity verdict --------------------------------------------------------------
+REQUIRED_MODE="${PONYTAIL_REQUIRED_MODE:-full}"
 PROBLEMS=()
 [ "$CLAUDE_INSTALLED" = true ] || PROBLEMS+=("claude: ponytail not installed")
 if [ "$CODEX_ACTIVE" = true ]; then
@@ -99,6 +101,12 @@ if [ "$CODEX_ACTIVE" = true ]; then
   if [ "$CLAUDE_INSTALLED" = true ] && [ "$CODEX_INSTALLED" = true ] && [ "$CLAUDE_VERSION" != "$CODEX_VERSION" ]; then
     PROBLEMS+=("version mismatch: claude ${CLAUDE_VERSION} vs codex ${CODEX_VERSION} — pin ONE version on both providers")
   fi
+fi
+if [ "$MODE" != "$REQUIRED_MODE" ]; then
+  PROBLEMS+=("mode '$MODE' != required '$REQUIRED_MODE' — an off/lite ladder is a silent degradation; persist {\"defaultMode\":\"$REQUIRED_MODE\"} in $PT_CONFIG (or unset PONYTAIL_DEFAULT_MODE)")
+fi
+if [ "$MATCHER_OK" = false ]; then
+  PROBLEMS+=("ladder matcher not scoped to code-writing roles (env and .claude/settings.json both unset/different) — reviewer/explore lanes would receive the ladder. Set: export PONYTAIL_SUBAGENT_MATCHER='${EXPECTED_MATCHER}' (the preflight merges it into .claude/settings.json)")
 fi
 PARITY_OK=true
 [ ${#PROBLEMS[@]} -eq 0 ] || PARITY_OK=false

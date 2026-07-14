@@ -181,7 +181,15 @@ if [ -n "$FINDING_LINES" ]; then
   printf '%s\n' "$FINDING_LINES" | node "$LEDGER" add "$PROJ" "$THEME"
 fi
 
-BLOCKING="$(printf '%s\n' "$FINDING_LINES" | jq -s '[.[] | select((.severity // "" | ascii_downcase) as $s | ["critical","blocker","high","major"] | index($s))] | length' 2>/dev/null || echo 0)"
+# Blocking = open Critical/High cross-review findings in the LEDGER, not just
+# this round's lines — a round-1 finding that was fixed but never marked
+# `fixed` (ledger.mjs set-status) keeps blocking, and a clean round says so
+# loudly instead of leaving the P7 gate silently red.
+BLOCKING="$(jq '[.findings[]?
+    | select(.status == "open")
+    | select(.severity == "critical" or .severity == "high")
+    | select(.source == "cross-review" or ((.sources // []) | index("cross-review")))
+  ] | length' "$BASE/findings.json" 2>/dev/null || echo 0)"
 
 # --- record the round in state.json (append via read-modify-write) ------------
 REVIEWER_PROVIDER="${REVIEWERS[0]%%:*}"
@@ -199,7 +207,8 @@ UPDATED="$(jq -c --argjson rec "$RECORD" '. + [$rec]' <<<"$CURRENT")"
 bash "$STATE_SH" set "$PROJ" "$THEME" .cross_review "$UPDATED" >/dev/null
 
 if [ "$BLOCKING" -gt 0 ]; then
-  echo "cross-review (${MODE}, round ${ROUND}): ${FINDINGS_ADDED} finding(s) ingested, ${BLOCKING} Critical/High — BLOCKING. Fix, then run round $((ROUND + 1))$([ "$ROUND" -ge 2 ] && echo ' — NO: max rounds reached, stop policy §8')."
+  echo "cross-review (${MODE}, round ${ROUND}): ${BLOCKING} open Critical/High cross-review finding(s) in the ledger (${FINDINGS_ADDED} ingested this round) — BLOCKING."
+  echo "After fixing a finding, mark it: node scripts/ledger.mjs set-status ${PROJ} ${THEME} <id> fixed <commit> — an unmarked fix keeps blocking; a false 'fixed' is reopened on re-report. Then run round $((ROUND + 1))$([ "$ROUND" -ge 2 ] && echo ' — NO: max rounds reached, stop policy §8')."
   exit 3
 fi
 SUFFIX=""

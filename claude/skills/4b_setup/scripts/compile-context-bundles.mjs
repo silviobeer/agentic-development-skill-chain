@@ -160,7 +160,16 @@ function sourceContent(id) {
   switch (id) {
     case "product":              return { title: "Product (docs/PRODUCT.md)", text: readOr("docs/PRODUCT.md", "no intake baseline yet") };
     case "architecture-overview":return { title: "Architecture overview (docs/ARCHITECTURE.md)", text: readOr("docs/ARCHITECTURE.md", "no intake baseline yet") };
-    case "architecture-delta":   return { title: `Architecture delta of this PROJ (${BASE}/architecture-delta.md)`, text: readOr(join(BASE, "architecture-delta.md"), "no new decisions recorded") };
+    case "architecture-delta": {
+      // Until Stage 3 introduces the baseline/delta rework, the architecture
+      // skill writes 6_plan/PROJ-<X>-architecture.md — fall back to it so the
+      // bundle carries the PROJ's actual architecture decisions.
+      const delta = join(BASE, "architecture-delta.md");
+      if (existsSync(delta)) return { title: `Architecture delta of this PROJ (${delta})`, text: readFileSync(delta, "utf8").trim() };
+      const arch = join(BASE, "6_plan", `PROJ-${projX}-architecture.md`);
+      if (existsSync(arch)) return { title: `PROJ architecture (${arch} — architecture-delta.md ships with Stage 3)`, text: readFileSync(arch, "utf8").trim() };
+      return { title: `Architecture delta of this PROJ (${delta})`, text: `_(source missing: ${delta} and ${arch} — no new decisions recorded)_` };
+    }
     case "guidelines":           return { title: "Guidelines (docs/GUIDELINES.md)", text: readOr("docs/GUIDELINES.md", "no intake baseline yet") };
     case "ground-file":          return { title: `Validated assumptions (${BASE}/ground-file.md)`, text: readOr(join(BASE, "ground-file.md"), "generated in P0 step 6b") };
     case "test-conventions":     return { title: "Test conventions (docs/test-conventions.md)", text: readOr("docs/test-conventions.md", "no intake baseline yet") };

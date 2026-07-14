@@ -64,6 +64,10 @@ PHASES=(CP1 P0 P5 P6 P7 P8 done)
 # reviewer/QA/explore lanes must not receive it. Respect an existing override.
 export PONYTAIL_SUBAGENT_MATCHER="${PONYTAIL_SUBAGENT_MATCHER:-implementer|frontend-implementer|backend-implementer|micro-fixer}"
 
+# Pin the injector to THIS run's PROJ — without these the injector falls back
+# to guessing the most recently modified specs/PROJ-* (wrong with parallel PROJs).
+export SKILLCHAIN_PROJ="$PROJ" SKILLCHAIN_THEME="$THEME"
+
 # Model-opposite is only real if the models actually differ (review fix #4).
 if [ "$WRITER_MODEL" = "$REVIEW_MODEL" ]; then
   echo "run-phase.sh: CLAUDE_WRITER_MODEL and CLAUDE_REVIEW_MODEL are both '$WRITER_MODEL' — degraded review would be same-model. Refusing." >&2
@@ -449,15 +453,20 @@ run_generic() {
   # Hard exit rule (§8, Stage 2): P7:done is not accepted while a curation
   # gate is red — independent re-verification, mirror of the P6 gate. The
   # writer runs curation-caps.sh + cross-review.sh itself; sealing past a
-  # red gate parks the run here.
+  # red gate parks the run here. Zero findings alone is NOT enough: the
+  # truth gate demands EVIDENCE that a docs cross-review actually ran
+  # during this P7 — otherwise a skipped review looks identical to a
+  # clean one.
   if [ "$PHASE" = "P7" ]; then
-    local caps xr_blocking
+    local caps xr_blocking p7_started xr_evidence
     caps="$(curation_caps_path)"
-    if [ -n "$caps" ]; then
-      bash "$caps" >/dev/null 2>&1 || stop_run "P7 sealed done but curation caps FAIL (form gate red — run 'bash $caps' for the report)" "$writer_out"
-    else
-      step "curation-caps.sh not found (repo or skill tree) — form gate could not be re-verified (logged)"
-    fi
+    [ -n "$caps" ] || stop_run "P7 sealed done but curation-caps.sh is missing (repo and skill tree) — the form gate cannot be verified, refusing to advance" "$writer_out"
+    bash "$caps" >/dev/null 2>&1 || stop_run "P7 sealed done but curation caps FAIL (form gate red — run 'bash $caps' for the report)" "$writer_out"
+    p7_started="$(jq -r '[.history[]? | select(.to == "P7:running")] | last | .at // ""' "$BASE/state.json" 2>/dev/null || echo "")"
+    xr_evidence="$(jq --arg t "$p7_started" \
+      '[.cross_review[]? | select(.mode == "docs" and (.at // "") >= $t)] | length' \
+      "$BASE/state.json" 2>/dev/null || echo 0)"
+    [ "${xr_evidence:-0}" -ge 1 ] || stop_run "P7 sealed done but NO docs cross-review ran during this P7 (no .cross_review record since ${p7_started:-phase start}) — truth gate has no evidence" "$writer_out"
     xr_blocking="$(open_cross_review_blocking)"
     [ "$xr_blocking" = "0" ] || stop_run "P7 sealed done but ledger has ${xr_blocking} open Critical/High cross-review finding(s) (truth gate red)" "$writer_out"
   fi

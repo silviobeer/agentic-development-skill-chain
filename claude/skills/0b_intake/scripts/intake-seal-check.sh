@@ -48,7 +48,16 @@ else
   echo "OK      no residual provenance markers"
 fi
 
-# (c) file caps — delegated to the curation caps (FORM gate)
+# (c) reconcile evidence — the interview + checkpoint loop must have run;
+# never seal undiscussed drafts as a baseline
+if [ -f specs/intake/decisions.md ] && grep -q 'D-BOOTSTRAP-' specs/intake/decisions.md; then
+  echo "OK      specs/intake/decisions.md carries D-BOOTSTRAP reconcile decisions"
+else
+  echo "MISSING specs/intake/decisions.md with D-BOOTSTRAP-<NN> entries — no evidence of the interview/checkpoint reconcile"
+  FAIL=1
+fi
+
+# (d) file caps — delegated to the curation caps (FORM gate)
 if ! bash "$SCRIPT_DIR/curation-caps.sh" --require-baseline .; then
   FAIL=1
 fi

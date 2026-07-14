@@ -57,6 +57,8 @@ printf '# PRD\nNEVER-INJECT-MARKER-PRD full requirement text.\n' > specs/PROJ-96
 printf '# Progress\nNEVER-INJECT-MARKER-PROGRESS wave log.\n' > specs/PROJ-96-stage2/7_progress/PROJ-96-progress.md
 printf '## Wave 1 — queue API\nPOST /enqueue\n' > specs/PROJ-96-stage2/api-contracts.md
 printf '# Ground file\nAssumption: node 22.\n' > specs/PROJ-96-stage2/ground-file.md
+mkdir -p specs/intake
+printf '# Bootstrap decisions\n\n- D-BOOTSTRAP-01 · Point: error convention · Decision: adopt\n' > specs/intake/decisions.md
 
 for s in 4b_setup/scripts/state.sh 4b_setup/scripts/compile-context-bundles.mjs \
          4b_setup/scripts/context-injector.mjs 4b_setup/scripts/ponytail-check.sh \
@@ -134,6 +136,14 @@ grep -rq "NEVER-INJECT-MARKER" "$CTX"/bundle-*.md && bad "never-inject violated:
 echo "tamper" >> "$CTX/bundle-implementer.md"
 [ -z "$(inject implementer)" ] && ok "stale bundle (hash mismatch) injects NOTHING" || bad "stale bundle was injected"
 node scripts/compile-context-bundles.mjs compile 96 stage2 >/dev/null 2>&1
+# SKILLCHAIN_PROJ/THEME pin the injector to the run's PROJ (the runner exports
+# them) — a newer decoy PROJ must not hijack injection
+mkdir -p specs/PROJ-97-decoy/context
+echo '{}' > specs/PROJ-97-decoy/context/bundles.lock.json
+echo '{"phase":"P5"}' > specs/PROJ-97-decoy/state.json
+PIN="$(printf '{"hook_event_name":"SubagentStart","agent_type":"implementer"}' | SKILLCHAIN_PROJ=96 SKILLCHAIN_THEME=stage2 node scripts/context-injector.mjs claude 2>/dev/null)"
+[ -n "$PIN" ] && ok "SKILLCHAIN_PROJ/THEME pin the injector to the run's PROJ (decoy ignored)" || bad "project pinning failed — injector guessed wrong PROJ"
+rm -rf specs/PROJ-97-decoy
 
 # =============================================================================
 step "curation caps + intake seal"
@@ -149,6 +159,9 @@ bash scripts/intake-seal-check.sh . >/dev/null 2>&1 && ok "intake seal check pas
 echo 'claim [assumed]' >> docs/GUIDELINES.md
 bash scripts/intake-seal-check.sh . >/dev/null 2>&1 && bad "seal check missed a residual provenance marker" || ok "seal check fails on residual provenance markers"
 git checkout -q docs/GUIDELINES.md
+mv specs/intake/decisions.md specs/intake/decisions.md.bak
+bash scripts/intake-seal-check.sh . >/dev/null 2>&1 && bad "seal check missed missing reconcile evidence" || ok "seal check fails without D-BOOTSTRAP reconcile evidence (undiscussed drafts never seal)"
+mv specs/intake/decisions.md.bak specs/intake/decisions.md
 
 # =============================================================================
 step "ponytail parity gate (stubbed registries)"
@@ -172,6 +185,15 @@ PONYTAIL_ENFORCE=0 ptc --json 2>/dev/null | jq -e '.enforced == false and .parit
   && PONYTAIL_ENFORCE=0 ptc >/dev/null 2>&1 \
   && ok "PONYTAIL_ENFORCE=0: exit 0 but recorded enforced:false (loud escape hatch)" \
   || bad "enforce-off path wrong"
+echo '{"version":2,"plugins":{"ponytail@ponytail":[{"version":"4.8.4"}]}}' > "$PT/claude.json"
+echo '{"defaultMode":"off"}' > "$PT/cfg/config.json"
+ptc >/dev/null 2>&1 && bad "mode 'off' passed the gate" || ok "mode 'off' -> exit 1 (ladder disabled is a failed gate, not parity)"
+echo '{"defaultMode":"full"}' > "$PT/cfg/config.json"
+PONYTAIL_CLAUDE_REGISTRY="$PT/claude.json" PONYTAIL_CODEX_CACHE="$PT/cache" \
+  PONYTAIL_CODEX_CONFIG="$PT/codex.toml" PONYTAIL_CONFIG="$PT/cfg/config.json" \
+  PONYTAIL_SUBAGENT_MATCHER='' bash scripts/ponytail-check.sh >/dev/null 2>&1 \
+  && bad "unscoped ladder matcher passed the gate" \
+  || ok "unscoped ladder matcher (env + settings both unset) -> exit 1"
 
 # =============================================================================
 step "cross-review mechanics (PATH-shimmed CLIs, deterministic)"
@@ -238,26 +260,44 @@ step "P7 runner gate (stubbed lanes seal P7:done)"
 for t in "CP1 running" "CP1 approved" "P0 running" "P0 done" "P5 running" "P5 done" "P6 running" "P6 done"; do
   bash scripts/state.sh transition 96 stage2 $t >/dev/null
 done
-cat > "$STUB/claude" <<'EOF'
+# two writer stubs: one seals WITHOUT any cross-review evidence, one records
+# a docs cross-review round (as the real documentation skill would) first
+write_stub_writer() { # <with-evidence: 0|1>
+  if [ "$1" -eq 1 ]; then
+    cat > "$STUB/claude" <<'EOF'
 #!/bin/sh
-# stub P7 writer: seals the phase without running the curation gates
+bash scripts/state.sh transition 96 stage2 P7 running >/dev/null 2>&1
+CUR="$(bash scripts/state.sh get 96 stage2 '.cross_review // []')"
+UPD="$(printf '%s' "$CUR" | jq -c --arg at "$(date -Iseconds)" '. + [{mode:"docs",round:1,reviewer_provider:"codex",reviewer_model:"codex-default",degraded_fallback:false,findings_added:0,at:$at}]')"
+bash scripts/state.sh set 96 stage2 .cross_review "$UPD" >/dev/null 2>&1
+bash scripts/state.sh transition 96 stage2 P7 done >/dev/null 2>&1
+exit 0
+EOF
+  else
+    cat > "$STUB/claude" <<'EOF'
+#!/bin/sh
+# stub P7 writer: seals the phase without running any curation gate
 bash scripts/state.sh transition 96 stage2 P7 running >/dev/null 2>&1
 bash scripts/state.sh transition 96 stage2 P7 done >/dev/null 2>&1
 exit 0
 EOF
+  fi
+  chmod +x "$STUB/claude"
+}
 cat > "$STUB/codex" <<'EOF'
 #!/bin/sh
 case "$1" in login) exit 0 ;; esac
 echo '{"source":"review","severity":"low","category":"note","summary":"stub peer note"}'
 EOF
-chmod +x "$STUB/claude" "$STUB/codex"
+chmod +x "$STUB/codex"
 mark_open_xr_fixed() {
   for id in $(jq -r '.findings[] | select(.status=="open" and (.source=="cross-review" or ((.sources // []) | index("cross-review")))) | .id' specs/PROJ-96-stage2/findings.json); do
     node scripts/ledger.mjs set-status 96 stage2 "$id" fixed deadbeef >/dev/null 2>&1
   done
 }
 
-# gate 1: caps red -> parked
+# gate 1: caps red -> parked (checked before evidence and findings)
+write_stub_writer 0
 seq 1 31 > docs/PRODUCT.md
 mark_open_xr_fixed
 PATH="$STUB:$PATH" timeout --foreground 120 "$SPIKE_DIR/run-phase.sh" P7 96 stage2 --timeout 60 >"$WORK/p7a.out" 2>&1
@@ -268,24 +308,35 @@ ST="$(bash scripts/state.sh get 96 stage2 '.phase + ":" + .status')"
   || bad "caps gate: rc=$RC state=$ST"
 git checkout -q docs/PRODUCT.md
 
-# gate 2: caps green, open Critical/High cross-review finding -> parked
-printf '{"source":"cross-review","severity":"critical","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"provider":"codex","summary":"spike blocking finding"}\n' \
-  | node scripts/ledger.mjs add 96 stage2 >/dev/null 2>&1
+# gate 2: caps green but NO cross-review ever ran -> parked (a skipped review
+# must not look like a clean one)
 bash scripts/state.sh transition 96 stage2 P7 running >/dev/null
 PATH="$STUB:$PATH" timeout --foreground 120 "$SPIKE_DIR/run-phase.sh" P7 96 stage2 --timeout 60 >"$WORK/p7b.out" 2>&1
 RC=$?
 ST="$(bash scripts/state.sh get 96 stage2 '.phase + ":" + .status')"
-{ [ "$RC" -eq 1 ] && [ "$ST" = "P7:blocked" ] && grep -q "cross-review finding" "$WORK/p7b.out"; } \
-  && ok "P7 sealed with an open Critical/High cross-review finding -> runner parks (truth gate)" \
-  || bad "truth gate: rc=$RC state=$ST"
+{ [ "$RC" -eq 1 ] && [ "$ST" = "P7:blocked" ] && grep -q "NO docs cross-review" "$WORK/p7b.out"; } \
+  && ok "P7 sealed with zero findings but NO review evidence -> runner parks (evidence gate)" \
+  || bad "evidence gate: rc=$RC state=$ST"
 
-# gate 3: both gates green -> phase completes
-mark_open_xr_fixed
+# gate 3: evidence present, open Critical/High cross-review finding -> parked
+write_stub_writer 1
+printf '{"source":"cross-review","severity":"critical","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"provider":"codex","summary":"spike blocking finding"}\n' \
+  | node scripts/ledger.mjs add 96 stage2 >/dev/null 2>&1
 bash scripts/state.sh transition 96 stage2 P7 running >/dev/null
 PATH="$STUB:$PATH" timeout --foreground 120 "$SPIKE_DIR/run-phase.sh" P7 96 stage2 --timeout 60 >"$WORK/p7c.out" 2>&1
 RC=$?
 ST="$(bash scripts/state.sh get 96 stage2 '.phase + ":" + .status')"
-[ "$RC" -eq 0 ] && [ "$ST" = "P7:done" ] && ok "green gates -> P7 completes normally" || bad "green path: rc=$RC state=$ST"
+{ [ "$RC" -eq 1 ] && [ "$ST" = "P7:blocked" ] && grep -q "cross-review finding" "$WORK/p7c.out"; } \
+  && ok "P7 sealed with an open Critical/High cross-review finding -> runner parks (truth gate)" \
+  || bad "truth gate: rc=$RC state=$ST"
+
+# gate 4: evidence + clean ledger + caps green -> phase completes
+mark_open_xr_fixed
+bash scripts/state.sh transition 96 stage2 P7 running >/dev/null
+PATH="$STUB:$PATH" timeout --foreground 120 "$SPIKE_DIR/run-phase.sh" P7 96 stage2 --timeout 60 >"$WORK/p7d.out" 2>&1
+RC=$?
+ST="$(bash scripts/state.sh get 96 stage2 '.phase + ":" + .status')"
+[ "$RC" -eq 0 ] && [ "$ST" = "P7:done" ] && ok "green gates + evidence -> P7 completes normally" || bad "green path: rc=$RC state=$ST"
 
 # =============================================================================
 if [ "$SKIP_LIVE" -eq 1 ]; then
