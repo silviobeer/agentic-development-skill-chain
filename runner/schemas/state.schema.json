@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillChain run state",
+  "description": "State machine for one PROJ run, at specs/PROJ-<X>-<theme>/state.json. Written ONLY via state.sh (skill 4b_setup / 4a_checkpoint). progress.md stays the human-readable view; this file is the machine-readable truth for resume, gating, and rendering.",
+  "type": "object",
+  "required": ["proj", "theme", "phase", "status", "updated_at"],
+  "properties": {
+    "proj": {
+      "type": "string",
+      "pattern": "^PROJ-[0-9]+$",
+      "description": "PROJ id, e.g. PROJ-3"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Theme slug from the specs folder name, e.g. payments"
+    },
+    "phase": {
+      "enum": ["CP1", "P0", "P5", "P6", "P7", "P8", "done"],
+      "description": "Current phase. state.json is created at CP1 (4a_checkpoint); P2d/P3/P4 run before it exists."
+    },
+    "status": {
+      "enum": ["pending", "running", "approved", "blocked", "done"],
+      "description": "Status within the current phase. 'approved' is legal only in CP1; 'blocked' parks the run (stop policy CONCEPT.md §8)."
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp of the last write (set by state.sh)"
+    },
+    "base_sha": {
+      "type": "string",
+      "description": "Commit the PROJ branch was cut from (set by 4b_setup)"
+    },
+    "branch": {
+      "type": "string",
+      "description": "PROJ branch name, e.g. proj/PROJ-3"
+    },
+    "decision_log": {
+      "type": "string",
+      "description": "Path to decisions.md written by 4a_checkpoint"
+    },
+    "degraded": {
+      "type": "boolean",
+      "description": "true when running single-provider (codex missing/unauthenticated); reviews fall back to MODEL-opposite. Never silent: rendered into morning report and PR body."
+    },
+    "degraded_reason": {
+      "type": "string"
+    },
+    "waves": {
+      "type": "object",
+      "description": "Execution progress (maintained during P5)",
+      "properties": {
+        "current": { "type": "integer" },
+        "total": { "type": "integer" },
+        "stories": {
+          "type": "object",
+          "description": "US id -> status (pending|in_progress|done|gap)",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "lanes": {
+      "type": "array",
+      "description": "One entry per provider lane launch (appended by run-phase.sh)",
+      "items": {
+        "type": "object",
+        "required": ["provider", "role", "phase", "started_at"],
+        "properties": {
+          "provider": { "enum": ["claude", "codex"] },
+          "model": { "type": "string" },
+          "role": { "enum": ["writer", "peer", "reviewer", "controller"] },
+          "phase": { "type": "string" },
+          "started_at": { "type": "string" },
+          "ended_at": { "type": "string" },
+          "exit_code": { "type": "integer" },
+          "output_file": { "type": "string" }
+        }
+      }
+    },
+    "authorship": {
+      "type": "object",
+      "description": "Artifact path -> authoring lane; a review from the same model never satisfies a review gate",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["author_provider"],
+        "properties": {
+          "author_provider": { "enum": ["claude", "codex"] },
+          "author_model": { "type": "string" }
+        }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "description": "Result block written by preflight.sh (4b_setup)",
+      "properties": {
+        "at": { "type": "string" },
+        "ok": { "type": "boolean" },
+        "hard_missing": { "type": "array", "items": { "type": "string" } },
+        "skipped": { "type": "array", "items": { "type": "string" } },
+        "providers": {
+          "type": "object",
+          "additionalProperties": { "enum": ["ok", "missing", "unauthenticated"] }
+        }
+      }
+    },
+    "pr": {
+      "type": "object",
+      "description": "Delivery result (written during P8)",
+      "properties": {
+        "number": { "type": "integer" },
+        "url": { "type": "string" },
+        "ci": { "enum": ["pending", "green", "red", "timeout"] }
+      }
+    },
+    "stop": {
+      "type": "object",
+      "description": "Set when status=blocked (stop policy §8)",
+      "required": ["reason"],
+      "properties": {
+        "reason": { "type": "string" },
+        "at": { "type": "string" },
+        "rescue_branch": { "type": "string" },
+        "report": { "type": "string", "description": "Path to stop-report.md" }
+      }
+    },
+    "history": {
+      "type": "array",
+      "description": "Append-only transition log (written by state.sh transition)",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "at"],
+        "properties": {
+          "from": { "type": "string", "description": "phase:status" },
+          "to": { "type": "string", "description": "phase:status" },
+          "at": { "type": "string" }
+        }
+      }
+    }
+  }
+}

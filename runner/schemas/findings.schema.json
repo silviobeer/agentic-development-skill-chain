@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillChain findings ledger",
+  "description": "The ONE deduplicated findings ledger per PROJ, at specs/PROJ-<X>-<theme>/findings.json. All review sources flow into it (CONCEPT.md §7); written ONLY via ledger.mjs (skill 6_qa). PR body, debt section, and reports are rendered FROM this file, never maintained by hand.",
+  "type": "object",
+  "required": ["proj", "updated_at", "findings"],
+  "properties": {
+    "proj": { "type": "string", "pattern": "^PROJ-[0-9]+$" },
+    "updated_at": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source", "severity", "status", "category", "summary", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^F-PROJ-[0-9]+-[0-9]{3}$",
+            "description": "Stable sequential id, e.g. F-PROJ-3-007"
+          },
+          "source": {
+            "enum": ["coderabbit", "sonar", "review", "qa", "merge-gate", "cross-review", "ci", "debt"],
+            "description": "Origin of the FIRST report; later duplicate reports append to sources[]"
+          },
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "All sources that reported this finding (dedup preserves attribution)"
+          },
+          "severity": {
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Normalized severity (mapping table embedded in ledger.mjs). Critical/High block; Medium/Low auto-defer as debt (§8)."
+          },
+          "status": {
+            "enum": ["open", "fixed", "deferred", "false-positive"]
+          },
+          "category": { "type": "string" },
+          "summary": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "anchor": {
+            "type": "string",
+            "description": "Symbol/regex anchor (preferred over line numbers — parallel fixers shift lines)"
+          },
+          "wave": { "type": "integer" },
+          "provider": {
+            "enum": ["claude", "codex"],
+            "description": "Reviewing provider, for cross-review attribution"
+          },
+          "fix_commit": { "type": "string" },
+          "fix_attempts": { "type": "integer" },
+          "debt_marker": {
+            "type": "string",
+            "description": "ponytail: marker text when deferred as debt"
+          },
+          "created_at": { "type": "string" },
+          "updated_at": { "type": "string" }
+        }
+      }
+    }
+  }
+}

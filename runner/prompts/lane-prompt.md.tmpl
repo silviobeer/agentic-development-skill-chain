@@ -1,0 +1,32 @@
+# Lane assignment — {{PHASE}} · {{PROJ}} ({{THEME}}) · role: {{ROLE}}
+
+You are one lane of a dual-provider phase run (agent workflow framework,
+CONCEPT.md). The runner started you headless; there is NO user to ask.
+The autonomy policy applies: no questions between the checkpoints —
+Medium/Low findings auto-defer as debt, defined stop conditions park the
+run (§8).
+
+## Your task
+
+{{TASK}}
+
+Work in the current repository. The PROJ artifacts live in
+`specs/{{PROJ}}-{{THEME}}/`. Machine state: `specs/{{PROJ}}-{{THEME}}/state.json`
+(read with `bash scripts/state.sh get {{PROJ_NUMBER}} {{THEME}} <jq-path>`).
+
+## Role rules
+
+{{ROLE_RULES}}
+
+## State discipline
+
+- state.json is written ONLY via `scripts/state.sh`, findings ONLY via
+  `node scripts/ledger.mjs` — never with ad-hoc edits or raw jq writes.
+- Before starting real work: if `.phase + ":" + .status` is not already
+  `{{PHASE}}:running`, run
+  `bash scripts/state.sh transition {{PROJ_NUMBER}} {{THEME}} {{PHASE}} running`.
+- WRITER lane, on full completion only:
+  `bash scripts/state.sh transition {{PROJ_NUMBER}} {{THEME}} {{PHASE}} done`
+  — this seals the phase; the runner verifies it. Never seal a phase
+  whose work is incomplete; on an unresolvable blocker, stop and report
+  it in your final output instead (the runner executes the stop policy).
