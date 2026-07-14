@@ -32,6 +32,16 @@ Step  Skill                  Output
 
 Each PROJ has its own folder `specs/PROJ-<X>-<theme>/` with numbered subfolders per step. Architecture and plans are siblings in `6_plan/`. Progress is a single file in `7_progress/` tracking all waves. Framework runs additionally keep machine state in `state.json` (written only via `scripts/state.sh`) and the findings ledger in `findings.json` (written only via `scripts/ledger.mjs`).
 
+**Once per repo, before the first PROJ:** `intake` (0b) bootstraps the
+curated context baseline — docs/PRODUCT.md, ARCHITECTURE.md, GUIDELINES.md,
+DESIGN-SYSTEM.md, components.md, security-baseline.md, test-conventions.md,
+root AGENTS.md — from a code scan (provenance-marked drafts) plus a
+developer interview, reconciled via the checkpoint (4a) bootstrap variant
+and sealed as a baseline commit (no state.json — that is born at CP1).
+`cross-review` (3a) is the opposite-provider review mechanism; it is
+invoked INSIDE P7 by the documentation skill (docs truth-check), never
+routed to directly by users.
+
 **Autonomous full-chain runs** go through the phase runner: after
 `checkpoint` (4a) seals `CP1:approved`, `runner/run-phase.sh auto <X> <theme>`
 drives P0 → P5 → P6 → P7 → P8 unattended with dual provider lanes and
@@ -61,6 +71,10 @@ Discovery-track notes:
 - **Handoff packages are generated snapshots.** Existing `8_handoff/YYYY-MM-DD-handoff*/` runs are immutable; only `handoff-package` (2b) may create or update files under `8_handoff/`. If `review-reconcile` or another skill changes source artifacts, recommend a new `handoff-package` run instead of editing a prior package.
 
 ## Detect Current State
+
+**Rule 0 (baseline):** if the repo has code but no `docs/PRODUCT.md`, the
+curated context baseline is missing — route to **intake** (0b) before any
+further chain step (framework runs need it for the P0 context bundles).
 
 Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
@@ -176,6 +190,7 @@ If the user asks "what does each step do?":
 
 | Step | Skill | What it does |
 |------|-------|-------------|
+| 0b | intake (once per repo) | Bootstrap the curated docs baseline: scan + provenance-marked drafts, developer interview, checkpoint reconcile, seal commit |
 | 1 | brainstorming | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
@@ -184,6 +199,7 @@ If the user asks "what does each step do?":
 | 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces `linear-import.md` |
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |
+| 3a | cross-review (internal) | Opposite-provider review gate; active call site: P7 docs truth-check (invoked by documentation, findings → ledger) |
 | 4 | writing-plans | Wave-based implementation plans; propagates UI handoff into frontend/full-stack tasks |
 | 4a | checkpoint | Human checkpoints as structured reconcile loops: CP1 (arch + plans → decision log → seal state.json) and CP2 (PR comments, via delivery) |
 | 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight, framework scripts into the repo, state.json extended |

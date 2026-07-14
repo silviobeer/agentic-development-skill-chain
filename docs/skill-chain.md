@@ -60,7 +60,7 @@ After decomposition:
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR with a body rendered from state.json + findings.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 
-## Framework Runs (Agent Workflow, Stage 1)
+## Framework Runs (Agent Workflow, Stage 1 + Stage 2)
 
 After `checkpoint` (4a) seals Checkpoint 1, the host-neutral phase runner
 (`runner/run-phase.sh auto <X> <theme>`) drives P0 → P5 → P6 → P7 → P8
@@ -71,6 +71,34 @@ branch + stop report, and a rendered morning report at run end. If the
 single-provider with a model-opposite review lane — flagged in the
 morning report and PR body, never silent. See [runner/README.md](../runner/README.md)
 and CONCEPT.md for the full model.
+
+Stage 2 adds the bootstrap and the full context system:
+
+- **`intake` (0b), once per repo:** scan → provenance-marked drafts of the
+  curated docs baseline (PRODUCT, ARCHITECTURE, GUIDELINES, DESIGN-SYSTEM,
+  components, security-baseline, test-conventions, root AGENTS.md) →
+  developer interview → checkpoint (4a) bootstrap reconcile → sealed
+  baseline commit (`intake-seal-check.sh`; no state.json — that is born
+  at CP1).
+- **Context bundles:** P0 compiles one canonical bundle per role from the
+  baseline (`compile-context-bundles.mjs`, per-role token budgets — a
+  breach FAILS P0) plus Claude/Codex projections with the same canonical
+  hash. Claude subagents get their bundle via the SubagentStart hook
+  (`context-injector.mjs`), codex lanes read `bundle-<role>.codex.md`;
+  micro-fixer and explore spawns get nothing by design.
+- **Ponytail parity:** the minimalism ladder comes from the Ponytail
+  plugin on both providers — same version and mode, gated in the P0
+  preflight, scoped to code-writing roles only.
+- **P7 curation + gates:** `documentation` (7) curates docs/ and
+  `src/**/agent.md`, then must pass FORM (`curation-caps.sh`: PRODUCT
+  ≤30 non-blank lines, ARCHITECTURE ≤200 lines, agent.md ≤100 lines) and
+  TRUTH (`cross-review` (3a): the provider opposite the curation author
+  reviews the docs delta against the PROJ diff; Critical/High block the
+  phase, max 2 rounds). The runner re-verifies both gates after the seal.
+- **`cross-review` (3a):** symmetric opposite-provider review mechanism
+  (Claude-authored → `codex exec`, Codex-authored → `claude -p`;
+  degraded fallback = model-opposite, always flagged). Active call site:
+  P7 docs. P3 pre-mortem / P4 plan review call sites are Stage 3.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 

@@ -283,10 +283,20 @@ Wave 3: US-3                    → 1 teammate
 ...
 ```
 
-### 2. Before each wave: read `agent.md`
+### 2. Before each wave: read `agent.md`, refresh the context bundles
 
 If `agent.md` exists in the source folder, read it before spawning teammates.
 Include relevant sections in the teammate prompt so they don't repeat known dead ends.
+(Implementers additionally follow the agent.md read/write protocol in `references/implementer.md`;
+entries are rendered with `templates/agent-md-entry.md.tmpl`.)
+
+When `specs/.../api-contracts.md` has entries for this wave, recompile the bundles
+wave-scoped so `api-contracts-own-wave` is real, and record the new hashes:
+
+```bash
+node scripts/compile-context-bundles.mjs compile <X> <theme> --wave <N>
+bash scripts/state.sh set <X> <theme> .context.bundles "$(jq -c . specs/PROJ-<X>-<theme>/context/bundles.lock.json)"
+```
 
 ### 2a. Mark wave start with a git tag
 

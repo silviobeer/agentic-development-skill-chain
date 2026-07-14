@@ -60,6 +60,10 @@ REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"
 PEER_GRACE="${PEER_GRACE:-300}"
 PHASES=(CP1 P0 P5 P6 P7 P8 done)
 
+# Ponytail's minimalism ladder goes ONLY to code-writing roles (§7) —
+# reviewer/QA/explore lanes must not receive it. Respect an existing override.
+export PONYTAIL_SUBAGENT_MATCHER="${PONYTAIL_SUBAGENT_MATCHER:-implementer|frontend-implementer|backend-implementer|micro-fixer}"
+
 # Model-opposite is only real if the models actually differ (review fix #4).
 if [ "$WRITER_MODEL" = "$REVIEW_MODEL" ]; then
   echo "run-phase.sh: CLAUDE_WRITER_MODEL and CLAUDE_REVIEW_MODEL are both '$WRITER_MODEL' — degraded review would be same-model. Refusing." >&2
@@ -146,6 +150,27 @@ render_prompt() { # role task_text out_var — writes prompt file, sets $out_var
   {\"source\":\"review\",\"severity\":\"critical|high|medium|low\",\"category\":\"...\",\"summary\":\"...\",\"file\":\"...\",\"line\":N}
 - The runner feeds your lines into the findings ledger; invalid lines are dropped."
   fi
+  # Context bundles (Stage 2): P5/P7 writer lanes get a POINTER to the
+  # compiled bundles — never the bundle text itself (the SubagentStart hook
+  # injects it into Claude subagents; codex lanes read their projection file).
+  local ctx=""
+  if [ -f "$BASE/context/bundles.lock.json" ] && { [ "$PHASE" = "P5" ] || [ "$PHASE" = "P7" ]; } && [ "$role" = "writer" ]; then
+    ctx="
+## Context bundles
+
+Compiled role bundles live in \`$BASE/context/\` (hashes in
+\`bundles.lock.json\` — the canonical hash is identical for both
+providers). Rules:
+- Claude subagents receive their type-scoped bundle automatically via the
+  SubagentStart hook — NEVER paste bundle contents into spawn prompts.
+- A Codex lane reads \`$BASE/context/bundle-<role>.codex.md\` before
+  implementing.
+- Micro-fixer spawns receive NOTHING beyond the finding, file paths, and
+  an optional agent.md pointer (tier 0).
+- If a bundle is missing or stale, recompile via
+  \`node scripts/compile-context-bundles.mjs compile $PROJ $THEME\` —
+  do not hand-assemble context."
+  fi
   tpl="$(cat "$RUNNER_DIR/prompts/lane-prompt.md.tmpl")"
   tpl="${tpl//'{{PROJ_NUMBER}}'/$PROJ}"
   tpl="${tpl//'{{PROJ}}'/PROJ-$PROJ}"
@@ -154,6 +179,7 @@ render_prompt() { # role task_text out_var — writes prompt file, sets $out_var
   tpl="${tpl//'{{ROLE}}'/$role}"
   tpl="${tpl//'{{TASK}}'/$task}"
   tpl="${tpl//'{{ROLE_RULES}}'/$rules}"
+  tpl="${tpl//'{{CONTEXT_BUNDLES}}'/$ctx}"
   printf '%s\n' "$tpl" >"$out"
   printf -v "$out_var" '%s' "$out"
 }
@@ -245,6 +271,25 @@ open_blocking_count() {
   node "$LEDGER" stats "$PROJ" "$THEME" 2>/dev/null | jq -r '.open_blocking // 0' || echo 0
 }
 
+# P7 gate helpers (Stage 2). Reading findings.json is legal — only WRITES
+# must go through ledger.mjs.
+open_cross_review_blocking() {
+  if [ ! -f "$BASE/findings.json" ]; then echo 0; return; fi
+  jq '[.findings[]
+       | select(.status == "open")
+       | select(.severity == "critical" or .severity == "high")
+       | select(.source == "cross-review" or ((.sources // []) | index("cross-review")))
+      ] | length' "$BASE/findings.json" 2>/dev/null || echo 0
+}
+
+curation_caps_path() { # repo copy first (4b_setup installs it), then skill tree
+  if [ -f scripts/curation-caps.sh ]; then
+    echo "scripts/curation-caps.sh"
+  elif [ -f "$RUNNER_DIR/../claude/skills/7_documentation/scripts/curation-caps.sh" ]; then
+    echo "$RUNNER_DIR/../claude/skills/7_documentation/scripts/curation-caps.sh"
+  fi
+}
+
 stop_run() { # reason error_file
   local reason="$1" err="${2:-}"
   step "STOP CONDITION: $reason"
@@ -291,7 +336,10 @@ check_precondition() { # sets SKIP_PHASE=1 when the phase is already done
   cur_phase="$(state_get .phase)"; cur_status="$(state_get .status)"
   ci="$(phase_index "$cur_phase")"; ti="$(phase_index "$PHASE")"
   if [ "$ci" -eq "$ti" ]; then
-    [ "$cur_status" = "done" ] && { step "$PHASE already done — skipping"; SKIP_PHASE=1; }
+    # plain `if` (not `[..] && {..}`): under set -e the failed test as the
+    # function's last command would kill the runner when resuming a phase
+    # that is already <phase>:running
+    if [ "$cur_status" = "done" ]; then step "$PHASE already done — skipping"; SKIP_PHASE=1; fi
   elif [ "$ti" -eq $((ci + 1)) ]; then
     case "$cur_status" in done|approved) : ;; *) stop_run "phase $PHASE requested but state is ${cur_phase}:${cur_status}" ;; esac
   else
@@ -397,6 +445,22 @@ run_generic() {
   [ "$TIMED_OUT" -eq 1 ] && stop_run "$PHASE writer timed out after ${TIMEOUT}s (peer cancelled)" "$writer_out"
   [ "$WRITER_RC" -ne 0 ] && stop_run "$PHASE writer lane ($WRITER) exited $WRITER_RC (peer cancelled)" "$writer_out"
   verify_sealed "$writer_out"
+
+  # Hard exit rule (§8, Stage 2): P7:done is not accepted while a curation
+  # gate is red — independent re-verification, mirror of the P6 gate. The
+  # writer runs curation-caps.sh + cross-review.sh itself; sealing past a
+  # red gate parks the run here.
+  if [ "$PHASE" = "P7" ]; then
+    local caps xr_blocking
+    caps="$(curation_caps_path)"
+    if [ -n "$caps" ]; then
+      bash "$caps" >/dev/null 2>&1 || stop_run "P7 sealed done but curation caps FAIL (form gate red — run 'bash $caps' for the report)" "$writer_out"
+    else
+      step "curation-caps.sh not found (repo or skill tree) — form gate could not be re-verified (logged)"
+    fi
+    xr_blocking="$(open_cross_review_blocking)"
+    [ "$xr_blocking" = "0" ] || stop_run "P7 sealed done but ledger has ${xr_blocking} open Critical/High cross-review finding(s) (truth gate red)" "$writer_out"
+  fi
 }
 
 run_one_phase() {

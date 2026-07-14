@@ -11,8 +11,9 @@ Skill 5: setup happens ONCE per PROJ, before any execution session,
 so implementer lanes start with a clean branch, verified tools, and a
 machine-readable state file.
 
-Everything here is deterministic — run the scripts, record the results.
-There are no judgment calls and no user questions in P0.
+P0 is script-driven — run the scripts, record the results — with exactly
+ONE bounded judgment step: the ground file (step 5b, context-curator
+judgment). There are no user questions in P0.
 
 ## Codex Adaptation
 
@@ -89,29 +90,71 @@ files; overwrite older copies and note it in the commit):
 
 | From (installed skill) | To |
 |---|---|
-| `4b_setup/scripts/state.sh`, `preflight.sh` | `scripts/` |
+| `4b_setup/scripts/state.sh`, `preflight.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs` | `scripts/` |
+| `4b_setup/manifests/roles/*.md` | `templates/roles/` |
 | `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
+| `3a_cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
+| `3a_cross-review/templates/cross-review-prompt.md.tmpl` | `templates/` |
 | `6_qa/scripts/ledger.mjs`, `harvest-debt.sh` | `scripts/` |
+| `7_documentation/scripts/curation-caps.sh` | `scripts/` |
+| `0b_intake/scripts/intake-seal-check.sh` | `scripts/` |
+| `5_executing/templates/agent-md-entry.md.tmpl` | `templates/` |
 | `8_delivery/scripts/conflict-probe.sh`, `render-pr-body.mjs`, `ci-poll.sh` | `scripts/` |
 | `8_delivery/templates/pr-body.md.tmpl` | `templates/` |
 | `5_executing/scripts/wave-gate.sh` | `scripts/` (as today) |
 
 `chmod +x` the shell scripts.
 
-### 5. Stage 2 items (not yet active — do NOT improvise them)
+### 5. Context system (compile bundles, ground file, injectors)
 
-- Context pack check + bundle compilation (`compile-context-bundles.mjs`)
-- Ground file generation (`ground-file.md`)
-- Provider context-injector adapters (SubagentStart hook / Codex hook)
-- Ponytail install + parity check across active providers
+**5a. Compile the context bundles.**
 
-Log one line in progress.md that these were skipped as Stage 2.
+```bash
+node scripts/compile-context-bundles.mjs compile <X> <theme>
+```
+
+- Exit != 0 = budget breach = **stop condition (§8)** — NOTHING was
+  written. Condense `docs/` (move detail into `docs/architecture/`),
+  then recompile. Never raise the budget to make it fit.
+- Record the hashes in state:
+  `bash scripts/state.sh set <X> <theme> .context.bundles "$(jq -c . specs/PROJ-<X>-<theme>/context/bundles.lock.json)"`
+- The compiler also projects `.claude/agents/skillchain-<role>.md` agent
+  files for the Claude lanes the runner will start — only `skillchain-*`
+  files are ever written, existing agents are never touched.
+
+**5b. Generate the ground file** — the one bounded judgment step in P0.
+Write `specs/PROJ-<X>-<theme>/ground-file.md`: assumptions the plans rely
+on (stack versions, conventions, data-model facts), each VALIDATED
+against the codebase, and ONLY what `docs/` does not already state (§5
+redundancy rule — the ground file never duplicates curated docs). Then
+recompile (5a) so the bundles carry it.
+
+**5c. Activate the injector adapters.**
+
+- Codex: prompt-file delivery — a codex lane reads
+  `specs/.../context/bundle-<role>.codex.md` before implementing
+  (`node scripts/context-injector.mjs codex <role> --path`); the
+  runner's lane prompts point there. There is no hook step on this host.
+- Claude lanes (the runner starts them even when Codex hosts setup): the
+  SubagentStart hook (`node scripts/context-injector.mjs claude`) must be
+  merged into the project's `.claude/settings.json` once — run
+  `bash scripts/merge-project-settings.sh` if present, or note it in
+  progress.md for the next Claude session.
+- Both providers receive the same canonical bundle hash (recorded in
+  5a); the injector refuses a stale bundle (hash mismatch → injects
+  nothing and warns).
+
+**5d. Ponytail parity** is already gated inside step 3's preflight
+(`ponytail-check.sh`: absence or version/mode mismatch across active
+providers blocks P0). Never work around a red gate; `PONYTAIL_ENFORCE=0`
+is the loud, recorded escape hatch — it lands in state.json and the
+reports, never silent.
 
 ### 6. Seal P0
 
 1. `bash scripts/state.sh transition <X> <theme> P0 done`
-2. Commit everything from steps 1–4 on the PROJ branch:
-   `chore(PROJ-<X>): P0 setup — branch, preflight, framework scripts`
+2. Commit everything from steps 1–5 on the PROJ branch:
+   `chore(PROJ-<X>): P0 setup — branch, preflight, framework scripts, context bundles`
 
 → NEXT ACTION: start execution — either the phase runner
 (`runner/run-phase.sh P5 <X> <theme>`, autonomous dual-lane) or the
@@ -122,6 +165,10 @@ Log one line in progress.md that these were skipped as Stage 2.
 - [ ] state.json was `CP1:approved` before starting; now `P0:done`
 - [ ] `proj/PROJ-<X>` branch exists; `base_sha` + `branch` in state.json
 - [ ] `preflight` block in state.json; `degraded` set truthfully
+- [ ] `.context.ponytail` in state.json (parity gate result, enforced truthfully)
+- [ ] `specs/.../context/` has canonical + claude/codex bundles; `.context.bundles` hashes in state.json
+- [ ] `ground-file.md` written (only assumptions docs/ does not state)
+- [ ] Claude injector hook merged (or noted in progress.md for the next Claude session)
 - [ ] `scripts/` + `templates/` contain the framework copies, executable
 - [ ] `.coderabbit.yaml` present at repo root
 - [ ] One setup commit on the PROJ branch

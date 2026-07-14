@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CORE_SKILLS=(
   0_chain-guide
+  0b_intake
   1_brainstorming
   1b_visual-companion
   2_requirements-engineer
@@ -13,6 +14,7 @@ CORE_SKILLS=(
   2b_handoff-package
   2c_review-reconcile
   3_architecture
+  3a_cross-review
   4_writing-plans
   4a_checkpoint
   4b_setup
@@ -88,7 +90,20 @@ check_identical "$ROOT/claude/skills/4b_setup/scripts/state.sh" \
   "$ROOT/codex/skills/4b_setup/scripts/state.sh" \
   "$ROOT/claude/skills/4a_checkpoint/scripts/state.sh" \
   "$ROOT/codex/skills/4a_checkpoint/scripts/state.sh"
+check_identical "$ROOT/claude/skills/7_documentation/scripts/curation-caps.sh" \
+  "$ROOT/codex/skills/7_documentation/scripts/curation-caps.sh" \
+  "$ROOT/claude/skills/0b_intake/scripts/curation-caps.sh" \
+  "$ROOT/codex/skills/0b_intake/scripts/curation-caps.sh"
 for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
+         4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
+         4b_setup/scripts/context-injector.mjs \
+         4b_setup/manifests/roles/micro-fixer.md 4b_setup/manifests/roles/implementer.md \
+         4b_setup/manifests/roles/frontend-implementer.md 4b_setup/manifests/roles/backend-implementer.md \
+         4b_setup/manifests/roles/reviewer.md 4b_setup/manifests/roles/explore.md \
+         0b_intake/scripts/intake-seal-check.sh \
+         3a_cross-review/scripts/cross-review.sh 3a_cross-review/scripts/review-with-claude.sh \
+         3a_cross-review/scripts/review-with-codex.sh 3a_cross-review/templates/cross-review-prompt.md.tmpl \
+         5_executing/templates/agent-md-entry.md.tmpl \
          6_qa/scripts/ledger.mjs 6_qa/scripts/harvest-debt.sh \
          8_delivery/scripts/conflict-probe.sh 8_delivery/scripts/render-pr-body.mjs \
          8_delivery/scripts/ci-poll.sh 8_delivery/templates/pr-body.md.tmpl; do
@@ -97,7 +112,7 @@ done
 
 # Schemas must parse; every shell script must be syntactically valid;
 # every node script must compile.
-for schema in "$ROOT/runner/schemas/state.schema.json" "$ROOT/runner/schemas/findings.schema.json"; do
+for schema in "$ROOT/runner/schemas/state.schema.json" "$ROOT/runner/schemas/findings.schema.json" "$ROOT/runner/schemas/context-manifest.schema.json"; do
   jq empty "$schema" 2>/dev/null || fail "schema does not parse: $schema"
 done
 while IFS= read -r sh; do
