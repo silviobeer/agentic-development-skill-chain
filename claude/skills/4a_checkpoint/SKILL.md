@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: "Run a human checkpoint as a structured reconcile loop: present a compact review package, collect feedback point by point (adopt/change/reject/defer), write the decision log, cascade every change through all affected planning artifacts, and seal the result in state.json. Use when: (1) architecture + wave plans are ready for Checkpoint 1 approval before any execution, (2) PR review comments need reconciling at Checkpoint 2 (invoked via delivery), (3) intake bootstrap drafts need validation (Stage 2). Not for: producing the plans themselves (use writing-plans), resolving PRD reviews on the discovery track (use review-reconcile), P0 setup (use setup)."
+description: "Run a human checkpoint as a structured reconcile loop: present a compact review package, collect feedback point by point (adopt/change/reject/defer), write the decision log, cascade every change through all affected planning artifacts, and seal the result in state.json. Use when: (1) architecture + wave plans are ready for Checkpoint 1 approval before any execution, (2) PR review comments need reconciling at Checkpoint 2 (invoked via delivery), (3) intake bootstrap drafts need validation (via the intake skill, 0b). Not for: producing the plans themselves (use writing-plans), resolving PRD reviews on the discovery track (use review-reconcile), P0 setup (use setup)."
 ---
 
 # Checkpoint — Structured Reconcile Loop For CP1, Bootstrap, CP2
@@ -18,7 +18,7 @@ Three call sites, one loop:
 | Call site | Reviewed | Seal |
 |---|---|---|
 | **CP1** (main) | architecture-delta + wave plans + gate config + api-contracts | `state.json` → `CP1:approved` — the ONLY thing that unlocks P0 |
-| **Bootstrap** (Stage 2, via 0b_intake) | intake first drafts (PRODUCT/ARCHITECTURE/GUIDELINES) | curated baseline commit |
+| **Bootstrap** (via 0b_intake) | intake first drafts (all eight baseline files) | curated baseline commit — no state.json |
 | **CP2** (via delivery, 8) | PR review comments | classified comments: fix now / debt / reject |
 
 ## Core Principle
@@ -114,11 +114,31 @@ link. Principle-level feedback ("I never want to see this again") is
 harvested as an AGENTS.md/GUIDELINES candidate through the existing
 approval pipeline — not silently applied.
 
-## Bootstrap Variant (Stage 2 — not yet active)
+## Bootstrap Variant (via 0b_intake)
 
-Validation of `0b_intake` first drafts with the same point-by-point
-pattern; generated docs are hypotheses, not truth. Do not improvise
-this before the intake skill exists.
+Validation of the intake first drafts with the same point-by-point
+pattern. Generated docs are HYPOTHESES, not truth — the loop exists to
+turn them into a baseline the developer actually stands behind.
+
+- **Input:** the provenance-marked drafts in `specs/intake/` (all eight
+  baseline files: PRODUCT, ARCHITECTURE, GUIDELINES, DESIGN-SYSTEM,
+  components, security-baseline, test-conventions, root AGENTS.md).
+- **Review queue:** every `[gap: ...]`, every `[assumed]`, every
+  inconsistency the scan flagged — plus anything the developer wants to
+  challenge in the `[extracted: ...]` statements.
+- **Loop:** identical to CP1 — present point by point, each point ends
+  in exactly one of adopt / change (how) / reject (why) / defer,
+  recorded BEFORE the next point.
+- **Decision log:** `specs/intake/decisions.md`, ids `D-BOOTSTRAP-<NN>`,
+  same `templates/decisions.md.tmpl` frame (checkpoint name:
+  `Bootstrap`).
+- **Cascade:** every decision is applied to the affected draft(s) —
+  a GUIDELINES ruling may also touch ARCHITECTURE or add a Known Debt
+  note.
+- **Seal:** a git COMMIT of the curated baseline (done by the intake
+  skill after `intake-seal-check.sh` passes) — explicitly NO
+  `state.sh init` and NO phase transition. The bootstrap is pre-PROJ:
+  state.json is born at CP1 of the first PROJ.
 
 ## Completion Checklist
 

@@ -33,8 +33,9 @@ Task tool:
      The subagent MUST use existing components — never create one-off styled elements.]
 
     ## Agent Notes (long-term memory)
-    [Paste relevant sections from `agent.md` in the source folder — gotchas, dead ends,
-     known workarounds. Omit if no agent.md exists yet.]
+    [Optionally paste known-relevant sections from `agent.md` in the source folder.
+     Regardless of what is pasted, the subagent follows the agent.md READ rule below —
+     the paste is a convenience, not a substitute.]
 
     ## Your Job
     For each task (in order):
@@ -65,11 +66,24 @@ Task tool:
     - UI: Follow border-radius, spacing, and component rules from the design system reference
     - UI: Use project-specific shared components (see design-system.md Custom Components table)
 
-    ## Walls & Workarounds
-    If you hit a wall and find a workaround, document it immediately:
-    - Write it to `agent.md` in the feature source folder
-    - Include it in your report so the main agent can update progress.md
-    Format: what failed, why, what you did instead.
+    ## agent.md Protocol (long-term local memory)
+    READ (mandatory): before your FIRST edit in any folder, read that folder's
+    `agent.md` and the nearest feature-level ancestor's — max 2 files, never
+    every parent up to the repo root. Entries are hints, not rules: verify
+    before you rely on them. Rules come from docs/ and AGENTS.md.
+
+    WRITE: the moment a learning occurs (a wall + workaround, a dead end, a
+    pattern that worked) — immediately, not at wrap-up — at the DEEPEST
+    applicable level:
+    - applies only to one folder    -> that folder's `agent.md`
+    - applies to the whole feature  -> the feature folder's `agent.md`
+    - applies project-wide          -> `## AGENTS.md Candidates` in progress.md
+    - it is a defect                -> ledger (`node scripts/ledger.mjs add`), never agent.md
+    Render entries with `templates/agent-md-entry.md.tmpl`: dated + commit SHA,
+    under exactly one of `## Gotchas` / `## Patterns That Work Well` /
+    `## Dead Ends`. Max 100 lines per agent.md (curation-caps.sh gates P7) —
+    beyond that, curate first, then append. Include every new entry in your
+    report so the main agent can update progress.md.
 
     ## Components — reuse before create (UI tasks only, HARD RULE)
     Before creating any component file in `src/components/` or `src/features/*/components/`:
@@ -83,9 +97,9 @@ Task tool:
     ## agent.md Criteria (strict)
     Only add an `agent.md` entry if ALL three hold:
     1. **Non-obvious:** Not derivable from reading the code or docs.
-    2. **Project-wide:** Relevant outside this one feature (future devs in other modules would trip over it too).
-    3. **Compact:** ≤ 2 lines.
-    Skip the entry if any criterion fails — noise in `agent.md` poisons future agents. Feature-specific idiosyncrasies belong in the code's own comments, not here. Skill 7 (documentation) later harvests `agent.md` entries into `docs/TECHNICAL.md`.
+    2. **Durable:** Future agents working here would trip over it too — not a one-off state of this task.
+    3. **Compact:** ≤ 2 lines of entry text.
+    Skip the entry if any criterion fails — noise in `agent.md` poisons future agents. One-off idiosyncrasies belong in the code's own comments, not here. P7 curation later keeps what is confirmed, deletes what is outdated, and promotes project-wide entries to AGENTS.md candidates.
 
     ## Report Format
     - US implemented: [US-N title]

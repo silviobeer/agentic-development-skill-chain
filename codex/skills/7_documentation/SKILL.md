@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: "Create and curate human-readable project documentation after QA passes. Produces README.md, docs/PROJECT.md, docs/TECHNICAL.md, conditionally merges approved AGENTS.md candidates, and keeps CLAUDE.md pointer-only when present. Use when: (1) a feature has passed QA, (2) the user asks for app documentation, feature documentation, technical documentation, diagrams, data model notes, or data-flow explanation, (3) before handoff. Not for: writing PRDs, API reference generation, or first-run onboarding flows."
+description: "Create and curate human-readable project documentation after QA passes. Produces README.md, docs/PROJECT.md, docs/TECHNICAL.md, conditionally merges approved AGENTS.md candidates, keeps CLAUDE.md pointer-only when present, and in framework runs curates the long-lived docs/ baseline behind the P7 gates (curation-caps.sh for form, cross-review for truth). Use when: (1) a feature has passed QA, (2) the user asks for app documentation, feature documentation, technical documentation, diagrams, data model notes, or data-flow explanation, (3) before handoff. Not for: writing PRDs, API reference generation, or first-run onboarding flows."
 ---
 
 # Documentation
@@ -365,7 +365,74 @@ Must read and follow [AGENTS.md](./AGENTS.md) before making changes. All durable
 
 If an existing `CLAUDE.md` contains additional durable rules, move proposed durable rules through the normal `AGENTS.md` candidate flow instead of preserving them in `CLAUDE.md`.
 
-### 7. Git commit
+### 7. Curated-context curation + P7 gates (framework runs)
+
+Runs only in framework runs — `specs/PROJ-<X>-<theme>/state.json` exists
+and P7 is the running phase. Standalone documentation requests skip this
+section and the seal in section 8.
+
+This is the curation step of CONCEPT.md §4 P7: the curated docs under
+`docs/` (PRODUCT, ARCHITECTURE, GUIDELINES, DESIGN-SYSTEM, components —
+created by the intake baseline) are injected into every future
+implementer. They are updated HERE, gated on form and truth, and nowhere
+else. If no intake baseline exists yet, curate only the files that do
+exist — `curation-caps.sh` warns on missing baseline files instead of
+failing.
+
+**7a. Curate the long-lived docs** (judgment first, gates after):
+
+1. Merge surviving decisions from `specs/.../architecture-delta.md` and
+   `decisions.md` entries with lasting value into `docs/ARCHITECTURE.md`.
+   Document deviations as "planned X, built Y, because ..." — never
+   silently overwrite the baseline.
+2. Migrate ground-file assumptions this PROJ validated into
+   `docs/ARCHITECTURE.md`/`docs/GUIDELINES.md` and DELETE them from
+   `ground-file.md` — the ground file holds ONLY what docs/ does not
+   (redundancy rule §5).
+3. Update `docs/PRODUCT.md` for new user-facing scope or terms.
+4. Update `docs/GUIDELINES.md`; durable project-wide rules still go
+   through the AGENTS.md candidate pipeline (section 5), never directly.
+5. Register new components in `docs/components.md`.
+6. Curate `src/**/agent.md`: keep what this PROJ confirmed, delete what
+   it outdated, promote project-wide entries to AGENTS.md candidates.
+
+**7b. Record authorship** — the truth gate must know who curated:
+
+```bash
+bash scripts/state.sh set <X> <theme> '.authorship["docs-delta"]' \
+  '{"author_provider":"<claude|codex>","author_model":"<model>"}'
+```
+
+**7c. FORM gate:** `bash scripts/curation-caps.sh` — exit != 0 means a
+cap is breached (PRODUCT <= 30 non-blank lines, ARCHITECTURE <= 200
+lines, each agent.md <= 100 lines, AGENTS.md <= 40 non-blank lines).
+Shrink by curating — move detail into `docs/architecture/`, delete stale
+statements — and re-run until exit 0. Never delete true load-bearing
+statements just to fit the cap: the truth gate flags cap-gaming.
+
+**7d. TRUTH gate (BLOCKING):**
+
+```bash
+bash scripts/cross-review.sh docs <X> <theme> \
+  --artifacts docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md docs/components.md \
+  --author-key docs-delta \
+  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" \
+  --round 1
+```
+
+- exit 0 → proceed to section 8.
+- exit 3 → Critical/High findings are in the ledger: fix them in the
+  docs, re-run 7c, then re-run with `--round 2`. Exit 3 again → **stop
+  condition (§8)**: do NOT seal P7 — transition to blocked, write the
+  stop report. There is no round 3.
+- exit 1 → infrastructure failure: also a stop condition — the truth
+  gate did not run, the phase must not seal without it.
+
+Medium/Low findings auto-defer as debt — do not chase them here. The
+runner independently re-verifies both gates after the seal; sealing past
+a red gate parks the run.
+
+### 8. Git commit + P7 seal
 
 One commit for the documentation update:
 
@@ -373,7 +440,9 @@ One commit for the documentation update:
 docs(PROJ-<X>): Update project documentation
 ```
 
-If `AGENTS.md` was merged or `CLAUDE.md` was normalized to the pointer, include those changes in the same commit.
+If `AGENTS.md` was merged or `CLAUDE.md` was normalized to the pointer, include those changes in the same commit. Curated `docs/` changes from section 7 belong in the same commit — they are part of the PR's "doc changes" section.
+
+Framework runs: seal the phase afterwards — `bash scripts/state.sh transition <X> <theme> P7 done`. Never seal while 7c or 7d is red.
 
 ## Content Ownership
 
