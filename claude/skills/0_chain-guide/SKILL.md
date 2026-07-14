@@ -116,7 +116,7 @@ Based on detected state, tell the user:
 > "Architecture at `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Next step: use **writing-plans** (4) to create per-wave implementation plans."
 
 **Wave plans exist, no implementation (no progress.md):**
-> "Wave plans ready in `specs/PROJ-<X>-<theme>/6_plan/`. Next step: use **executing** (5) to implement wave by wave with TDD — or **autonomous-execution** to run 5 → 6 → 7 end-to-end without prompts (balanced policy by default)."
+> "Wave plans ready in `specs/PROJ-<X>-<theme>/6_plan/`. Next step: use **executing** (5) to implement wave by wave with TDD. It continues across green wave gates without pausing, then hands the completed PROJ to QA (6); QA hands passing work to documentation (7)."
 
 **Progress.md exists, waves partially complete:**
 > "Implementation in progress for `PROJ-<X>-<theme>`. Wave <N> is the next one. Continue with **executing** (5)."

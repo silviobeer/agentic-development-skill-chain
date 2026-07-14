@@ -579,7 +579,7 @@ Before invoking Skill 6:
 1. Verify wave plans, Ralph iterations, and Quality-Gate review output are all summarized in `progress.md`.
 2. Verify `progress.md` Quality-Gate section is complete (code review + build + Sonar findings or explicit Sonar skip reason logged).
 3. Suggest that the user run QA with a different model than the one that executed the implementation, for example GPT reviewing Claude-built work or Claude reviewing GPT-built work.
-4. Invoke Skill 6: `/6_qa` (interactive) or — in `autonomous-execution` mode — the orchestrator invokes it directly with `CODEX_AUTONOMOUS_LEVEL` still set.
+4. Invoke Skill 6: `/6_qa`. Skill 6 follows its own release gate and hands passing or Medium/Low-only work directly to Skill 7.
 
 **Do NOT skip Skill 6** even if Step 10 reported zero bugs. The persona panel and PROJ retrospectives produce `AGENTS.md` candidates and `## PROJ Retrospective` notes that Skill 7 consumes — skipping them means docs are incomplete.
 </HARD-GATE>
