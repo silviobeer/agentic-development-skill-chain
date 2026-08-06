@@ -115,7 +115,7 @@ If unsure, ask the user.
 
 After approval, recommend `requirements-engineer` (2):
 
-- For the **discovery track**, tell `requirements-engineer` to run in **Linear handoff mode**: PRDs plus a paste-ready `linear-import.md`, no in-repo implementation notes.
+- For the **discovery track**, tell `requirements-engineer` to run in **Linear handoff mode**: PRDs with no in-repo implementation notes.
 - For the **full chain**, hand off normally.
 
 The reconciled concept, the current mockups, and the implementation handoff are the inputs to requirements.

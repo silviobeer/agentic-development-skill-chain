@@ -36,7 +36,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
         ├── 2_visual-companion/     # layout-decision.md + layout-exploration.html
         ├── 4_design/               # design-language.md (only if a design system is defined)
         ├── 5_mockups/              # mockups + sitemap + implementation-handoff.md + iteration-log.md
-        ├── 3_PRDs/                 # PRDs + linear-import.md
+        ├── 3_PRDs/                 # PRDs
         └── 8_handoff/              # optional standalone package runs
 ```
 
@@ -53,7 +53,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the HTML; every concept-affecting change is recorded in `iteration-log.md` |
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
-| 2 | requirements-engineer | Produce PRDs plus a paste-ready `linear-import.md` for the developer |
+| 2 | requirements-engineer | Produce developer-ready PRDs for the handoff |
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
 | 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
 
@@ -91,7 +91,7 @@ Stakeholder agreement is reached *on the mockups*. Because changes are prompted 
 
 ## Linear handoff
 
-In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories, acceptance criteria, edge cases) but omits in-repo implementation detail and adds `3_PRDs/linear-import.md`, structured so each PRD becomes a Linear issue and each user story a checklist item. Export the mockups (HTML → images or PDF) and attach them to the issues. The developer who picks up the work owns architecture and implementation.
+In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories, acceptance criteria, edge cases) but omits in-repo implementation detail. The developer who picks up the work owns architecture and implementation.
 
 ## Standalone handoff package
 
@@ -108,9 +108,8 @@ When the work goes to people outside the repo — an external UI/UX expert (e.g.
 - `06-mockups/` — a standalone copy of the mockups, design language, sitemap, and iteration log (reference only).
 - `07-review-changelog.md` — when `review-reconcile` (2c) has run: the audience-facing record of what changed across review rounds, so downstream readers see the delta since the version they reviewed.
 - `08-review-decisions/` — when per-round `*-review-decisions.md` files exist: detailed rationale and follow-up audit trail, included as an appendix rather than primary reading path.
-- `linear-import.md` — paste-ready Linear issues when developers are an audience.
 
-Use it for external/standalone handoffs. Skip it when a quick PRD→Linear handoff (`linear-import.md` from Step 2) is enough.
+Use it for external/standalone handoffs.
 
 ## Detection
 

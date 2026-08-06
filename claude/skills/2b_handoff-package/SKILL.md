@@ -18,7 +18,6 @@ This is the terminal step of the product discovery track. It does not invent pro
 ## When To Skip
 
 - The team continues into the full in-repo build (Steps 3–7) — the in-repo artifacts already suffice.
-- Only a quick PRD→Linear handoff is needed with no external UI expert — `requirements-engineer`'s `linear-import.md` already covers that minimal path.
 
 ## Design Principles
 
@@ -37,7 +36,6 @@ Read these inputs (discovery-track locations):
 
 1. Reconciled concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (with `Concept Sync Log` / `Handoff Readiness`)
 2. PRDs: `specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-*.md`
-3. Linear import (if present): `specs/PROJ-<X>-<theme>/3_PRDs/linear-import.md`
 4. Review changelog (if present): `specs/PROJ-<X>-<theme>/3_PRDs/review-changelog.md`
 5. Review decision records (if present): `specs/PROJ-<X>-<theme>/3_PRDs/*-review-decisions.md`
 6. Mockups + sitemap + UI handoff: `specs/PROJ-<X>-<theme>/5_mockups/*.html`, `sitemap.html`, `implementation-handoff.md`
@@ -56,7 +54,7 @@ If the concept lacks a `Handoff Readiness` section, run `concept-sync` (1e) firs
 Ask the user which audiences the package targets:
 
 - **UI/UX expert** (e.g. Figma assignment) — include the UI handoff and the assignment brief.
-- **Developers** (e.g. Linear) — include the developer handoff and the Linear import.
+- **Developers** — include the developer handoff.
 - **Both** (default for greenfield discovery where a designer refines visuals and developers build).
 
 Confirm the delivery phasing if the concept defines phases, and whether the design assignment is the full target product or only the first phase.
@@ -79,12 +77,11 @@ specs/PROJ-<X>-<theme>/8_handoff/
     06-mockups/                 # standalone copy of mockups, design-language, sitemap, implementation-handoff, iteration-log
     07-review-changelog.md      # what changed across review rounds (only when review-reconcile has run)
     08-review-decisions/        # internal/audit appendix: copied *-review-decisions.md files, if present
-    linear-import.md            # paste-ready Linear issues (only when developers are an audience)
 ```
 
 Use the local current date for `YYYY-MM-DD`. If `YYYY-MM-DD-handoff/` already exists, create the next unused suffix (`YYYY-MM-DD-handoff-02/`, then `-03/`, etc.) so each handoff run remains independently reviewable and shareable.
 
-Copy mockups, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `3_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `3_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` and `linear-import.md` if developers are not.
+Copy mockups, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `3_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `3_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
 
 ### 3. Write `00-what-changed-since-last-handoff.md`
 
@@ -227,7 +224,6 @@ Be clear that the mockups communicate structure and flows, not final visual desi
 
 For engineering. Include: the functional contract they must preserve (domain rules, multi-tenant/permission invariants, lifecycle rules), implementation phasing if any, and an explicit **out-of-scope** list so scope can't expand silently. State plainly that architecture, schema, framework, and sequencing are the developer's decisions; this package owns product behavior, not technical design.
 
-If developers are an audience, regenerate or copy `linear-import.md` into the package root so each PRD maps to a Linear issue. Do not maintain Linear content in two places — the package copy is canonical once the package exists.
 
 ### 10. Self-Contained Check
 
@@ -273,7 +269,6 @@ Ask the user to spot-check that an outside reader could act on it without furthe
 - [ ] Mockups, design language, sitemap, and iteration log copied into `06-mockups/`
 - [ ] Review changelog copied to `07-review-changelog.md` when present
 - [ ] Review decision records copied to `08-review-decisions/` when present and summarized into `02`
-- [ ] `linear-import.md` present when developers are an audience
 - [ ] Self-contained check passed (no external links)
 - [ ] User reviewed; ZIP offered
 

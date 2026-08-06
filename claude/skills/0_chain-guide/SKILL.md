@@ -17,7 +17,7 @@ Step  Skill                  Output
  1c   frontend-design (opt)  specs/PROJ-<X>-<theme>/4_design/design-language.md
  1d   ui-mockup (UI req.)    specs/PROJ-<X>-<theme>/5_mockups/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
  1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
-  2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md (+ linear-import.md on discovery track)
+  2   requirements-engineer  specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md
  2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/8_handoff/YYYY-MM-DD-handoff*/ standalone package (+ zip) — discovery track only
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/3_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md
@@ -61,7 +61,7 @@ Detect the discovery track when any of these hold:
 - A `5_mockups/iteration-log.md` exists with stakeholder iterations but the repo has no application code (no `package.json`/`src/` app, only `specs/` and `docs/`).
 - The user states they are doing discovery/PM only and will hand off to developers.
 
-On the discovery track, do not recommend Steps 3–7. The chain ends at `requirements-engineer` with `3_PRDs/linear-import.md`, optionally followed by `handoff-package` (2b) when a standalone deliverable for external UI/UX experts or developers is needed. When a developer or stakeholder reviews the PRDs and returns gaps, recommend `review-reconcile` (2c) to resolve them point by point and update the artifacts before the next review cycle.
+On the discovery track, do not recommend Steps 3–7. The chain ends at `requirements-engineer`, optionally followed by `handoff-package` (2b) when a standalone deliverable for external UI/UX experts or developers is needed. When a developer or stakeholder reviews the PRDs and returns gaps, recommend `review-reconcile` (2c) to resolve them point by point and update the artifacts before the next review cycle.
 
 Discovery-track notes:
 
@@ -85,7 +85,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 5. `5_mockups/*.html` + `5_mockups/implementation-handoff.md` — mockups and UI handoff present? → step 1d done
    - `5_mockups/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
    - Concept contains `Concept Sync Log` / `Handoff Readiness` → step 1e done.
-6. `3_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `3_PRDs/linear-import.md` exists or `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
+6. `3_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
    - `8_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `6_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `6_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
@@ -127,8 +127,8 @@ Based on detected state, tell the user:
 **Mockups exist, concept in sync (or no concept-affecting iterations), no PRDs:**
 > "Mockups and UI implementation handoff are ready at `specs/PROJ-<X>-<theme>/5_mockups/`. Next step: use **requirements-engineer** (2); the mockups and handoff are required input for user stories, acceptance criteria, component reuse, and UI implementation notes. For a discovery/Linear handoff, requirements-engineer runs in Linear handoff mode and the chain ends there."
 
-**Discovery track, PRDs + linear-import.md exist, no package:**
-> "`PROJ-<X>-<theme>` is a product-discovery PROJ. PRDs and `3_PRDs/linear-import.md` are ready to hand to a developer in Linear. Attach exported mockups to each issue. For a single standalone deliverable to share with an external UI/UX expert or dev team, optionally run **handoff-package** (2b). Otherwise the chain is complete — Steps 3–7 don't apply."
+**Discovery track, PRDs exist, no package:**
+> "`PROJ-<X>-<theme>` is a product-discovery PROJ. The PRDs are ready to hand to a developer in Linear. For a single standalone deliverable to share with an external UI/UX expert or dev team, optionally run **handoff-package** (2b). Otherwise the chain is complete — Steps 3–7 don't apply."
 
 **Discovery track, handoff package assembled:**
 > "The standalone handoff package for `PROJ-<X>-<theme>` is ready in the latest dated run folder under `specs/PROJ-<X>-<theme>/8_handoff/`. Zip that run folder and share it with the UI/UX expert and/or developers. This chain is complete — Steps 3–7 don't apply."
@@ -196,7 +196,7 @@ If the user asks "what does each step do?":
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
 | 1d | ui-mockup (UI required) | HTML sitemap + per-screen mockups + `implementation-handoff.md` + `iteration-log.md`; greyscale-wireframe or design-system fidelity |
 | 1e | concept-sync (optional) | Reconcile iterated mockup changes back into the concept; set delivery track (full chain vs. Linear handoff) |
-| 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces `linear-import.md` |
+| 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces developer-ready PRDs |
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |
 | 3a | cross-review (internal) | Opposite-provider review gate; active call site: P7 docs truth-check (invoked by documentation, findings → ledger) |
