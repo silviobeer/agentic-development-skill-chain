@@ -72,6 +72,7 @@ Load design references:
 - If `4_design/design-language.md` exists, use it as the primary design reference.
 - If the concept or layout decision references a canonical sibling design language, load it too and apply only local `design-delta.md` differences.
 - Check `docs/DESIGN-SYSTEM.md` (the curated design system baseline). If present, reuse its tokens, scales, patterns, and do/don't rules, and read `docs/components.md` for the component inventory.
+- For composed layouts — form, empty/loading/error state, page shell — open the showcase (`/dev/components#pattern-<name>`, or `4_design/component-showcase.html` before the scaffold) and copy the rendered pattern. Do not invent a layout that a pattern already fixes; that is how two screens end up with two different forms.
 
 If no design reference exists, scan:
 
@@ -117,7 +118,7 @@ Do not silently invent UI pieces. If no existing component fits, mark `New candi
 
 1. Re-check `docs/components.md`: can an existing component cover it as a new **variant** (size, tone, state)? Variant beats new component.
 2. Ask the user to confirm the gap and the choice (variant vs. new component).
-3. Run the extension procedure from `1c_frontend-design` → *Extending The Design System* for that one piece: define it, implement it in the chosen stack, register it in `docs/components.md`, and add it to the showcase page.
+3. Run the extension procedure from `1c_frontend-design` → *Extending The Design System* for that one piece: define it, implement it in the chosen stack, register it in `docs/components.md`, and add its showcase section under `id="<kebab-name>"`.
 4. Then use it in the mockup by its registered name.
 
 Keep the excursion narrow: one component, no revisiting of tokens or unrelated catalog entries. In **wireframe (greyscale)** mode there is no catalog yet — keep marking candidates and let `1c_frontend-design` or `5_executing` build them later.

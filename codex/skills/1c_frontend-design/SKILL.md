@@ -246,10 +246,22 @@ Write the doc block while you write the component, then run `node scripts/gen-co
 
 **Showcase page** — the one artifact that carries the detail, because it costs no context budget and cannot lie: every component with all variants, sizes, and states, in light and dark mode.
 
-- If an app scaffold exists, add it as the route `/dev/components` (the path `6_qa` visits). Keep it out of production navigation.
-- If the repo has no scaffold yet, write `specs/PROJ-<X>-<theme>/4_design/component-showcase.html` and note in the design language that P5 ports it to `/dev/components` with the first UI story.
-- Structure: token section first (color swatches, type scale, spacing, radius), then one anchored section per component (`#button`), then composed pattern examples. Each anchor matches its `docs/components.md` name so the registry can link into it.
-- Static examples, no props playground. Include a light/dark toggle — dark-mode breakage found in P6 is found too late.
+Where it lives:
+
+- **App scaffold exists** → the route `/dev/components` (the path `6_qa` visits). Out of production navigation, no auth, no data fetching — it must render without a backend, or it is worthless in the P6 audit.
+- **No scaffold yet** (discovery track, pre-scaffold greenfield) → `specs/PROJ-<X>-<theme>/4_design/component-showcase.html`, plain HTML+CSS with the components rebuilt by hand. **Same structure, same anchors** — P5 ports it to the route with the first UI story, and porting is then mechanical: keep the sections, replace each rebuild with the real import. Only the import line differs: it names the planned path, `→ @/components/ui/button (after scaffold)`.
+
+Structure — three sections, in this order:
+
+1. **`#tokens` — Foundations.** `#colors` (swatch grid: token · class · hex, light and dark **side by side** — contrast breaks are only visible in comparison), `#typography` (every step rendered at size with its class next to it), `#spacing`, `#radius`, `#shadow`.
+2. **Components.** One section per registry entry, in **registry order (alphabetical)**, so a missing component is a visual diff and not a search. Each section carries: the purpose line verbatim from the doc block · the import line · one row per variant · one row per size · one row per state (incl. disabled, loading, error) · a `Don't:` example only where a real trap exists.
+3. **Patterns.** One section per entry under `## Patterns` in `docs/DESIGN-SYSTEM.md` — no more, no less, so the list stays self-limiting. Anchors `#pattern-<name>`. A one-line rule ("label above field, error below, submit bottom-right") does not produce identical screens; the rendered composition does. This is what stops `1d_ui-mockup` and P5 from inventing their own form layout per screen.
+
+**Anchors are the contract:** `id` = kebab-case of the registry name (`BulkBar` → `#bulk-bar`; patterns `#pattern-form`). Mockups, PRDs, and wave plans link straight to `/dev/components#bulk-bar`, so the registry needs no link column. `gen-component-registry.mjs --check` fails when a registered component has no section on the page — the showcase is the only one of the three artifacts that could otherwise rot in silence.
+
+A sticky header carries: project · stack · links to `docs/DESIGN-SYSTEM.md` and `docs/components.md` · the light/dark toggle.
+
+Static examples only — no props playground.
 
 ### 5. Verify
 
@@ -257,7 +269,8 @@ Write the doc block while you write the component, then run `node scripts/gen-co
 - Check that shadcn/ui theming will pick up the custom colors
 - Verify font imports are added (Google Fonts link or next/font)
 - Open the showcase page and check every component in light and dark mode
-- Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block or the registry is stale
+- Every `## Patterns` entry in `docs/DESIGN-SYSTEM.md` has a `#pattern-<name>` section on the page
+- Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block, the registry is stale, or a component has no showcase section
 - Run `curation-caps.sh` (or count lines): `docs/DESIGN-SYSTEM.md` must fit its 80-line cap. If it does not, move detail to the showcase page — never to a second markdown file
 
 ## Extending The Design System
@@ -267,7 +280,7 @@ The design system is not sealed after this skill. When a later step needs a UI p
 1. Check `docs/components.md`: does an existing component cover it, possibly as a new variant?
 2. If a variant suffices, add the variant — do not add a component.
 3. If a genuinely new component is needed, ask the user to confirm, then define it (anatomy, variants, states, tokens) with the same rules as step 3.
-4. Implement it with its doc block, regenerate `docs/components.md`, and add it to the showcase page. Touch `docs/DESIGN-SYSTEM.md` only if a *rule* changed — a new component is not a rule change.
+4. Implement it with its doc block, regenerate `docs/components.md`, and add its showcase section under `id="<kebab-name>"` — the registry check fails without it. Touch `docs/DESIGN-SYSTEM.md` only if a *rule* changed — a new component is not a rule change; a new pattern is, and then it also needs its `#pattern-<name>` section.
 5. Only then use it in the mockup, plan, or implementation.
 
 Callers: `1d_ui-mockup` when a screen needs a `New candidate:` piece, and `5_executing` when a user story needs a component that does not exist. Both must extend the system rather than work around it.

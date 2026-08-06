@@ -199,7 +199,7 @@ The script validates:
 - CodeRabbit reports no non-advisory findings for the wave diff.
 - The `sonar` local scan and secrets check report nothing blocking.
 - `agent-browser` smoke tests pass for configured frontend routes.
-- `gen-component-registry.mjs --check` passes: `docs/components.md` is current and every component carries its doc block.
+- `gen-component-registry.mjs --check` passes: `docs/components.md` is current, every component carries its doc block, and every component has its `id="<kebab-name>"` section on the showcase page.
 
 If the script exits non-zero, execution stops at that gate, fixes the failure, and reruns the script. Only a passing script allows the next wave to start.
 

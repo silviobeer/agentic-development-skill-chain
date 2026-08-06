@@ -168,7 +168,7 @@ Scale checks to the feature — not every feature needs all of these:
 **Component Registry hard check (ui-auditor):**
 - Run `node scripts/gen-component-registry.mjs --check`. Non-zero exit → file a Critical bug: either a component lacks its doc block or `docs/components.md` was not regenerated (registry desynced is a process failure). Do not fix it — report it.
 - For every new component, search the registry for semantically similar existing components (Button/PrimaryButton, Card/Panel, Badge/Chip/Tag). Flag any that should have been reused instead.
-- Visit `/dev/components` showcase route via Playwright or the active agent browser: does every registered component render? Any new component not registered?
+- Visit `/dev/components` showcase route via Playwright or the active agent browser: does every registered component render, in **both** light and dark mode? Does every `## Patterns` entry of `docs/DESIGN-SYSTEM.md` have its `#pattern-<name>` section? Any new component not registered?
 
 Look for the design system baseline at `docs/DESIGN-SYSTEM.md` (rules) plus `docs/components.md` (inventory). If found, audit the implemented UI for violations:
 
