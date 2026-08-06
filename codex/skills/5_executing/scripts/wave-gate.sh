@@ -233,8 +233,17 @@ step "6/6 Component registry"
 # undocumented component blocks the wave — this replaces the per-edit hook.
 if [[ -f scripts/gen-component-registry.mjs ]]; then
   if [[ -d src/components || -d src/features ]]; then
-    node scripts/gen-component-registry.mjs --check \
-      || fail "component registry out of date or component missing its doc block"
+    set +e
+    node scripts/gen-component-registry.mjs --check
+    REG_RC=$?
+    set -e
+    case "$REG_RC" in
+      0) ;;
+      # exit 3 = registry still hand-written; the migration is a human call and
+      # must not block waves. Reported every gate so it stays visible.
+      3) echo "   (registry not migrated yet — reported, not blocking)" ;;
+      *) fail "component registry out of date or component missing its doc block" ;;
+    esac
   else
     echo "   (no component directories — skipped)"
   fi

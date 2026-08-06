@@ -86,6 +86,25 @@ probe per provider (claude hard, codex degradable) and writes the
   blocked (`bash scripts/state.sh transition <X> <theme> P0 blocked`),
   write the stop report, do not continue.
 
+Preflight also reports the repo's **structure state** — a missing
+`docs/components.md`, a still hand-written one, a missing or oversized
+`docs/DESIGN-SYSTEM.md`. This is a backstop: the decision belongs to
+`1b_visual-companion`, which records it under `## Design System State` in
+`layout-decision.md`. If that record exists, honour it and do not re-ask.
+None of these is a stop condition — repos predating the design system, and
+backend-only repos, run unchanged. Only for a repo that never went through UI
+discovery, put it to the user as a decision instead of acting on it:
+
+> "This chain expects `docs/DESIGN-SYSTEM.md` (design rules, ≤80 lines) —
+> this repo has none. Create it now via `1c_frontend-design`, or skip and
+> proceed without design rules?"
+
+Skipping is a valid answer; record it and continue. Only the hand-written
+registry needs a real migration (move the purpose texts into doc blocks above
+the exports, then `--force`), and even that is optional — the generator
+refuses to overwrite the file, and the wave gate reports the pending
+migration without blocking.
+
 ### 4. Copy framework scripts + templates into the repo
 
 The repo copy is canonical for the run — versioned, testable outside
