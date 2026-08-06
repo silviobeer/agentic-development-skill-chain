@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.19 — under iteration (leading version; the German
+**Status:** Draft v0.20 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -61,6 +61,13 @@ P3 authorship and state.sh sequencing specified)*
   cheap; context budgets and curation are designed for growth.
 
 ---
+
+*(v0.20: product level above the PROJ — `0a_product-vision`
+(docs/PRODUCT.md + numbered PROJ map in specs/product-roadmap.md) and
+`0c_bootstrap` (stack into docs/ARCHITECTURE.md § Stack as the single
+source of truth, real scaffold verified green, root AGENTS.md +
+CLAUDE.md pointer); the design-system showcase gets a fixed structure
+and a drift gate)*
 
 ## Executive Summary
 
@@ -203,6 +210,13 @@ pull requests fully automatically — with exactly two human checkpoints.
 
 ## 2. Process Overview
 
+Once per product, before any PROJ: a new build runs `0a_product-vision`
+(what the product is and is not, plus the numbered PROJ map that allocates
+PROJ numbers and their order) and then `0c_bootstrap` (stack decided into
+`docs/ARCHITECTURE.md` § Stack, real scaffold, agent files). An existing
+codebase runs `0b_intake` instead — the same curated baseline, extracted
+rather than decided. Exactly one of the two paths.
+
 The repository's existing pre-PRD flow is preserved unchanged. A PROJ
 starts with `1_brainstorming`, optionally follows the UI branch
 (`1b_visual-companion` → optional `1c_frontend-design` →
@@ -214,6 +228,10 @@ never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
 `8_delivery` skill.
 
 ```
+        ONCE PER PRODUCT (new build)     |  ONCE PER REPO (existing code)
+        0a product-vision                |  0b intake
+        0c bootstrap (stack + scaffold)  |  (same curated baseline)
+              │
         EXISTING PRE-PRD FLOW (preserved)
         brainstorm → UI exploration/mockups when needed → requirements
               │
@@ -726,11 +744,15 @@ AGENTS.md                      ← ROOT-ONLY durable agent rules
 
 docs/                          ← LONG-LIVED, curated, injectable
 ├── PRODUCT.md                 ← "what am I even building" (½ page, hard cap)
-├── ARCHITECTURE.md            ← overarching architecture (≤200 lines, hard cap)
+├── ARCHITECTURE.md            ← § Stack (THE stack source of truth) +
+│                                overarching architecture (≤200 lines, hard cap)
 ├── architecture/…             ← details/ADRs, referenced only
 ├── GUIDELINES.md              ← code conventions, error handling, naming
 ├── DESIGN-SYSTEM.md           ← tokens, scales, patterns, do/don't (≤80 lines, hard cap)
 └── components.md              ← component registry (GENERATED from the code)
+
+specs/product-roadmap.md       ← PROJ map: outcome, Depends on, Status
+                                 (NOT injected — costs no context budget)
 
 specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 0_context/                 ← existing-state inputs when applicable

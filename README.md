@@ -13,6 +13,12 @@ documentation, and delivers a PR. Two human checkpoints frame the
 autonomous middle: plan approval before execution starts (CP1) and PR
 review after delivery (CP2).
 
+Before the first PROJ it runs once at the product level: a new build goes
+through `product-vision` (what the product is and is not, plus a numbered
+PROJ map) and `bootstrap` (the stack decided into one table, the real
+scaffold stood up, agent files written); an existing codebase goes through
+`intake`, which reaches the same curated baseline by extraction.
+
 ## The Chain
 
 | Step | Skill | What it does |

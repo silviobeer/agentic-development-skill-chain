@@ -4,7 +4,12 @@
 
 ```mermaid
 flowchart LR
-  S0[0 chain-guide] --> S1[1 brainstorming]
+  S0[0 chain-guide] --> S0A[0a product-vision · new product]
+  S0 --> S0B[0b intake · existing codebase]
+  S0A --> S0C[0c bootstrap · stack + scaffold]
+  S0C --> S1[1 brainstorming]
+  S0B --> S1
+  S0 --> S1
   S1 --> S1B[1b visual-companion]
   S1 --> S2[2 requirements-engineer]
   S1B --> S1C[1c frontend-design]
@@ -23,6 +28,14 @@ flowchart LR
   S6 --> S7[7 documentation]
   S7 --> S8[8 delivery + CP2]
 ```
+
+**Before the first PROJ, once.** A new product runs `product-vision` (0a) —
+`docs/PRODUCT.md` plus the numbered PROJ map in `specs/product-roadmap.md` —
+then `bootstrap` (0c), which decides the stack into `docs/ARCHITECTURE.md`
+§ Stack, runs the real scaffold, and writes root `AGENTS.md` + the
+`CLAUDE.md` pointer. An existing codebase runs `intake` (0b) instead, which
+reaches the same curated baseline by extraction. Run one path, not both;
+the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
@@ -44,14 +57,19 @@ After decomposition:
 | Step | Skill | Purpose |
 |---|---|---|
 | 0 | chain-guide | Detect current PROJ state and recommend the next step |
+| 0a | product-vision | New product: `docs/PRODUCT.md` (what/who/non-goals) + the numbered PROJ map with dependencies |
+| 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
+| 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1 | brainstorming | Turn an idea into a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
-| 1c | frontend-design | Define visual language for greenfield or hybrid UI work |
+| 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | ui-mockup | Create lightweight mockups and implementation handoff; track stakeholder iterations |
 | 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; Linear handoff mode for discovery |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
+| 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery track) |
 | 3 | architecture | Produce PM-friendly technical architecture |
+| 3a | cross-review | Opposite-provider review gate; active call site is the P7 docs truth-check |
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
 | 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight (codex degradable), framework scripts copied into the repo |
