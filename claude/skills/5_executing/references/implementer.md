@@ -62,7 +62,7 @@ Task tool:
     - If stuck after 3 attempts, escalate to main agent instead of guessing
     - Do NOT verify acceptance criteria — that is the main agent's job
     - UI: Use existing components from `@/components/ui/` — never create one-off styled elements
-    - UI: Never hardcode hex colors — use Tailwind semantic classes (bg-primary, text-muted-foreground)
+    - UI: Never hardcode hex colors or arbitrary sizes — use the token classes named in `docs/DESIGN-SYSTEM.md`
     - UI: Follow the radius, spacing, and pattern rules in `docs/DESIGN-SYSTEM.md`
     - UI: Use project-specific shared components (see the `docs/components.md` registry)
     - UI: If no registered component fits, do NOT style a one-off — escalate to the main agent

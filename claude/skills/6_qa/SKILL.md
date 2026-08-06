@@ -172,10 +172,10 @@ Scale checks to the feature — not every feature needs all of these:
 Look for the design system baseline at `docs/DESIGN-SYSTEM.md` (rules) plus `docs/components.md` (inventory). If found, audit the implemented UI for violations:
 
 - **Components:** Are existing components used? Check `docs/components.md` for the project-specific component inventory. Flag any one-off styled `<div>` that duplicates a registered component.
-- **Colors:** Grep changed files for hardcoded hex values in TSX (`#[0-9A-Fa-f]{3,8}` in className or style). All colors must use Tailwind semantic classes.
+- **Colors:** Grep changed files for hardcoded hex values (`#[0-9A-Fa-f]{3,8}` in class names or inline styles). All colors must use the token classes listed in `docs/DESIGN-SYSTEM.md` § Tokens.
 - **Radius:** Check border-radius usage matches `docs/DESIGN-SYSTEM.md`. Flag inconsistencies with the project's radius tokens.
-- **Typography:** Verify text sizes follow the scale (text-2xl/xl/lg/base/sm/xs, not arbitrary `text-[17px]`).
-- **Spacing:** Check for consistent spacing (Tailwind scale, not arbitrary pixel values).
+- **Typography:** Verify text sizes follow the type scale in `docs/DESIGN-SYSTEM.md` § Scales — no size outside it, no arbitrary values.
+- **Spacing:** Check spacing against the scale in `docs/DESIGN-SYSTEM.md` § Scales, not arbitrary pixel values.
 - **Focus states:** Tab through interactive elements — verify focus states match `docs/DESIGN-SYSTEM.md`.
 
 Compare against the Component Showcase at `/dev/components` using Playwright or the active agent browser if needed.

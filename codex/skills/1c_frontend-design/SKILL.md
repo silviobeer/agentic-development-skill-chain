@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: "Define the design system — visual design language plus the component catalog and a running showcase page — before UI mockups and before requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no tailwind.config theme or CSS variables exist yet. Skip for brownfield projects with an established design system."
+description: "Define the design system — visual design language plus the component catalog and a running showcase page — before UI mockups and before requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no theme tokens or CSS variables exist yet. Skip for brownfield projects with an established design system."
 ---
 
 # Frontend Design — Design System Definition
@@ -21,7 +21,7 @@ The PROJ-scoped `1c_design/design-language.md` keeps the **why** (audience, tone
 
 - **Greenfield project** with no existing design system
 - **Hybrid project** where Visual Companion found meaningful design-language gaps
-- No custom theme in `tailwind.config` (only defaults)
+- No custom theme in the stack's styling config (only defaults)
 - No CSS variables in `globals.css` beyond basics
 - The user explicitly wants a distinctive visual identity
 
@@ -188,9 +188,7 @@ Include a short implementation-facing section:
 - Existing app design takes precedence over exact mockup CSS: yes/no
 ```
 
-**`tailwind.config.ts` updates** — Extend the Tailwind config with the design tokens (colors, fonts, spacing). Don't overwrite existing config — extend it.
-
-**`src/app/globals.css` updates** — Add CSS variables for the color palette so shadcn/ui components inherit them.
+**Theme configuration** — write the tokens into whatever the chosen stack themes with: the styling config named in `docs/ARCHITECTURE.md` § Stack (a Tailwind config, a UnoCSS preset, a theme file) plus the global stylesheet holding the CSS custom properties. Extend the existing config, never overwrite it, and make sure the component library picks the variables up.
 
 **The components themselves** — implement each catalog entry in the chosen stack, in the project's component directory (for example `src/components/ui/`). Tokens only: no hardcoded hex values, no arbitrary pixel sizes. Every component must be usable without further styling by the consumer.
 
@@ -265,9 +263,9 @@ Static examples only — no props playground.
 
 ### 5. Verify
 
-- Ensure CSS variables map correctly to Tailwind config
-- Check that shadcn/ui theming will pick up the custom colors
-- Verify font imports are added (Google Fonts link or next/font)
+- Ensure the CSS custom properties map correctly onto the theme configuration
+- Check that the chosen component library actually inherits the custom colors
+- Verify the fonts are loaded the way the stack loads fonts
 - Open the showcase page and check every component in light and dark mode
 - Every `## Patterns` entry in `docs/DESIGN-SYSTEM.md` has a `#pattern-<name>` section on the page
 - Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block, the registry is stale, or a component has no showcase section
@@ -301,7 +299,7 @@ After the design language is approved, invoke `ui-mockup`. Do not invoke `requir
 
 - **Ask before deciding** — don't assume the user wants bold if they haven't said so
 - **Commit to a direction** — wishy-washy "a bit of everything" designs fail. Pick a lane.
-- **Respect shadcn/ui** — the tokens should work WITH shadcn's theming, not fight it
+- **Respect the component library** — the tokens must work WITH its theming mechanism, not fight it
 - **No feature code** — this step builds tokens, catalog components, and the showcase. No screens, no business logic, no data fetching.
 - **Registered components must be real** — the registry is generated from code, so a paper component is impossible by construction. Keep it that way: never hand-edit `docs/components.md`.
 - **One writer per artifact** — never copy the component inventory into `docs/DESIGN-SYSTEM.md`. Two lists drift, and both are paid for in every agent's context budget.
