@@ -18,6 +18,7 @@ review after delivery (CP2).
 | Step | Skill | What it does |
 |------|-------|--------------|
 | 0 | `chain-guide` | Detect project state, route to the right next step |
+| 0a | `product-vision` | Once per product, new build: interview into `docs/PRODUCT.md` (what/who/non-goals) and cut the product into a numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 1 | `brainstorming` | Explore the idea, allocate PROJ-X, write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |

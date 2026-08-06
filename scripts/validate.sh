@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CORE_SKILLS=(
   0_chain-guide
+  0a_product-vision
   0b_intake
   1_brainstorming
   1b_visual-companion

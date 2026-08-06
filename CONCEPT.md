@@ -267,6 +267,23 @@ telemetry (Ralph iterations, gate failures, fix spawns), statusline
 
 ## 3. Brownfield Model
 
+### Greenfield Counterpart — Skill `0a_product-vision`
+
+The baseline below is reached by extraction because code exists. On a NEW
+product there is nothing to extract, so the same `docs/PRODUCT.md` slot is
+reached by decision instead: `0a_product-vision` interviews the product
+owner (what it is, who uses it, what it deliberately is NOT, when it is a
+success, what is fixed) and cuts the product into a numbered PROJ map in
+`specs/product-roadmap.md` — one sentence of user outcome per PROJ, plus
+`Depends on` and `Status`. That map is where PROJ numbers are allocated,
+where `chain-guide` reads the ordering, and where `1_brainstorming` takes
+its scope boundary from. It is NOT injected into context bundles, so it
+costs no token budget; `docs/PRODUCT.md` keeps its 30-line cap.
+
+Run exactly one of the two — `0a` for a new build, `0b` for an existing
+codebase. Neither overwrites the other's output: if `docs/PRODUCT.md`
+already exists, both merge and record retirements.
+
 ### First Run (Bootstrap) — Skill `0b_intake`
 
 The first run on an existing product starts with a one-time intake,
@@ -1256,7 +1273,7 @@ agent-browser smoke tests.
 | Sonar | SonarQube Cloud, already set up (org/token/project) |
 | Execution mode | paired Claude + Codex lanes are the DEFAULT (one writer, one read-only peer); Mode 2 (shared-checkout team inside the writer lane, file-disjoint waves) as the cheap middle tier; Mode 3 (worktree writer processes + merge gate) opt-in, built only on telemetry evidence (Stage 4). Cost stays bounded via model tiering per role |
 | Parallelism cap | 3 (applies to Modes 2/3; framework.config, adjustable via telemetry) |
-| Skill numbering | dock on: `0b_intake`, `2d_prd-import`, `3a_cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
+| Skill numbering | dock on: `0a_product-vision`, `0b_intake`, `2d_prd-import`, `3a_cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
 | PRD source | TWO modes, downstream identical. Mode A (DEFAULT): PRDs written directly into the repo (existing structure) — the new chain is tested in this mode first. Mode B (TODO, Stage 3): Jira import, created/enriched via Teklens (teklens.ai); local snapshot = working truth per run; Jira keys in commits/PRs; sync-back |
 | PRD ownership | PM PRDs are raw input: developers enrich with technical stories, re-cut into buildable PRDs (in Jira for Mode B), and OWN the selection of the story set sent into the agentic loop — the framework checks AC quality, not scope |
 | Morning report | file in `specs/` (canonical) + best-effort notification at run end |

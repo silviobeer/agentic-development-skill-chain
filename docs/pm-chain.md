@@ -6,7 +6,8 @@ A track for pure product management: brainstorm, wireframe, mockup, iterate with
 
 ```mermaid
 flowchart LR
-  S1[1 brainstorming] --> S1B[1b visual-companion]
+  S0A[0a product-vision · new product only] --> S1[1 brainstorming]
+  S1 --> S1B[1b visual-companion]
   S1B --> S1C[1c frontend-design optional]
   S1B --> S1D[1d ui-mockup]
   S1C --> S1D
@@ -29,7 +30,9 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 
 ```text
 <your-discovery-folder>/            git optional
+├── docs/PRODUCT.md                 # only if product-vision (0a) ran
 └── specs/
+    ├── product-roadmap.md          # only if product-vision (0a) ran
     └── PROJ-1-<theme>/
         ├── 0_context/              # brownfield: existing-state.md + references/ (only if something already exists)
         ├── 1_brainstorm/           # PROJ-1-concept.md
@@ -48,6 +51,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 
 | Step | Skill | Purpose on this track |
 |---|---|---|
+| 0a | product-vision (new product only) | Establish what the product is — `docs/PRODUCT.md` (purpose, users, non-goals, success) — and cut it into a numbered PROJ map in `specs/product-roadmap.md`. Skip when the engagement is a single feature inside an existing product |
 | 1 | brainstorming | Turn stakeholder input and requirements into a first concept; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |

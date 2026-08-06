@@ -267,7 +267,7 @@ If the user rejects decomposition, document the conscious decision in the concep
 Create a task for each item and complete them in order:
 
 1. **Explore project context** - inspect docs, specs, routes, components, APIs, recent commits, and relevant agent instructions. On the discovery track with no codebase, run the **Brownfield Context Intake** instead/in addition: capture existing surfaces, design system, vocabulary, and constraints into `0_context/`.
-2. **Run project decomposition gate** - if the idea spans multiple independent user goals, subsystems, risks, rollout paths, or audiences, stop detailed questioning and propose a multi-PROJ split.
+2. **Run project decomposition gate** - if the idea spans multiple independent user goals, subsystems, risks, rollout paths, or audiences, stop detailed questioning and propose a multi-PROJ split. If `specs/product-roadmap.md` exists, the cut and the PROJ number are already decided there: take the entry's user outcome, `Depends on`, and boundaries as given, and set its `Status` to `concept`. Only decompose further if this single entry turns out to be more than one PROJ — then split it in the roadmap too, with a changelog line.
 3. **Approve project boundary** - get explicit user approval for one PROJ or an approved multi-PROJ map before feature intake.
 4. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or write all concepts in dependency order.
 5. **Collect feature-concept intake** - gather required inputs for the current PROJ, using project discovery where possible.

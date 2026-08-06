@@ -85,7 +85,10 @@ report picks the PR up from state.json; nothing further happens
 autonomously.
 
 → NEXT ACTION: human reviews and merges the PR (Checkpoint 2 — for
-overnight runs, in the morning via the morning report).
+overnight runs, in the morning via the morning report). After the merge,
+set this PROJ's `Status` to `shipped` in `specs/product-roadmap.md` if that
+file exists — it is what tells `chain-guide` (0) that dependent PROJs are
+unblocked.
 
 ### 6. Checkpoint 2 — reconcile PR review comments (when they arrive)
 

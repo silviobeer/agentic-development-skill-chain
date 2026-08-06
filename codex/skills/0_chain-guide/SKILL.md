@@ -32,6 +32,15 @@ Step  Skill                  Output
 
 Each PROJ has its own folder `specs/PROJ-<X>-<theme>/` with numbered subfolders per step. Architecture and plans are siblings in `6_plan/`. Progress is a single file in `7_progress/` tracking all waves. Framework runs additionally keep machine state in `state.json` (written only via `scripts/state.sh`) and the findings ledger in `findings.json` (written only via `scripts/ledger.mjs`).
 
+**Once per product, before the first PROJ:** on a NEW build with no code
+yet, `product-vision` (0a) establishes what the product is —
+`docs/PRODUCT.md` (purpose, users, non-goals, success) plus the numbered
+PROJ map in `specs/product-roadmap.md`, which is where PROJ numbers and
+their `Depends on` ordering are allocated. Route to it when a new product
+starts and `docs/PRODUCT.md` does not exist. On an EXISTING codebase the
+counterpart is `intake` (0b) — same baseline, extracted instead of decided;
+run one of the two, not both.
+
 **Once per repo, before the first PROJ:** `intake` (0b) bootstraps the
 curated context baseline — docs/PRODUCT.md, ARCHITECTURE.md, GUIDELINES.md,
 DESIGN-SYSTEM.md, components.md, security-baseline.md, test-conventions.md,
@@ -72,9 +81,22 @@ Discovery-track notes:
 
 ## Detect Current State
 
-**Rule 0 (baseline):** if the repo has code but no `docs/PRODUCT.md`, the
-curated context baseline is missing — route to **intake** (0b) before any
-further chain step (framework runs need it for the P0 context bundles).
+**Rule 0 (baseline):** `docs/PRODUCT.md` missing → the curated context
+baseline is missing, and the next step depends on whether code exists:
+
+- **Code exists** → **intake** (0b): extract the baseline from the codebase.
+- **No code** (empty workspace, or specs only) → **product-vision** (0a):
+  decide the baseline and cut the product into the numbered PROJ map.
+
+Either way this comes before any further chain step — framework runs need
+the baseline for the P0 context bundles. Run one of the two, not both.
+
+**Rule 0b (roadmap):** if `specs/product-roadmap.md` exists, read it before
+recommending anything. It carries the PROJ numbers, the `Depends on`
+ordering, and each entry's `Status`. A PROJ whose dependency is not
+`shipped` waits — recommend the dependency instead. `planned` entries with
+no `specs/PROJ-<X>-<theme>/` folder yet are the natural candidates for
+**brainstorming** (1).
 
 Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
@@ -190,6 +212,7 @@ If the user asks "what does each step do?":
 
 | Step | Skill | What it does |
 |------|-------|-------------|
+| 0a | product-vision (once per product) | New build: `docs/PRODUCT.md` (what/who/non-goals) + numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | intake (once per repo) | Bootstrap the curated docs baseline: scan + provenance-marked drafts, developer interview, checkpoint reconcile, seal commit |
 | 1 | brainstorming | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
