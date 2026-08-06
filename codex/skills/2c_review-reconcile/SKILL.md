@@ -12,7 +12,7 @@ It is the post-requirements counterpart of `concept-sync`:
 - `concept-sync` (1e): mockup iterations → concept, **before** requirements.
 - `review-reconcile` (2c): review feedback → PRDs/concept/mockups, **after** requirements.
 
-It produces a durable decision record, an explicit agenda of items that still need a developer meeting, and a handoff-facing changelog so downstream UI/UX experts and developers can trace what changed since the version they reviewed. It does **not** edit existing `8_handoff/` package runs.
+It produces a durable decision record, an explicit agenda of items that still need a developer meeting, and a handoff-facing changelog so downstream UI/UX experts and developers can trace what changed since the version they reviewed. It does **not** edit existing `2b_handoff/` package runs.
 
 ## When To Use
 
@@ -33,7 +33,7 @@ Decide before you edit. Capture every decision in a record **before** touching t
 
 Not every gap is the product owner's to decide. Some require engineering input (architecture, feasibility, effort, security). Those are **deferred to a developer meeting**, not force-decided — they stay open with a clear status and land on an agenda.
 
-`specs/PROJ-<X>-<theme>/8_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `3_PRDs/`, `5_mockups/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
+`specs/PROJ-<X>-<theme>/2b_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `2_PRDs/`, `1d_mockups/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
 
 ## Decomposed PROJ Handling
 
@@ -44,10 +44,10 @@ Work one PROJ at a time. A review usually targets one PROJ's PRDs. If the review
 Read these inputs:
 
 1. The review itself — pasted text or a file the user provides (gaps, questions, suggested updates).
-2. Target PRDs: `specs/PROJ-<X>-<theme>/3_PRDs/*.md`.
+2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md`.
 3. The canonical scope/decisions source if one exists (e.g. `2_scope-open-decisions.md` or the concept's decisions register) — **read it first** so no decision contradicts a canonical rule.
 4. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (if it exists).
-5. Mockups: `specs/PROJ-<X>-<theme>/5_mockups/*.html` + `iteration-log.md`.
+5. Mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html` + `iteration-log.md`.
 
 If the review references decision IDs, rules, or sections, resolve them in the source documents before interpreting the gap — an answer that violates a canonical rule is wrong even if it closes the gap.
 
@@ -57,7 +57,7 @@ If the review references decision IDs, rules, or sections, resolve them in the s
 
 Before editing any binding artifact, create a decision record for this review round:
 
-`specs/PROJ-<X>-<theme>/3_PRDs/<prd-stem>-review-decisions.md`
+`specs/PROJ-<X>-<theme>/2_PRDs/<prd-stem>-review-decisions.md`
 (or `PROJ-<X>-review-<NN>-decisions.md` when the review spans several PRDs).
 
 Seed it with one entry per raised gap, each marked `Open`, plus a `Decision Summary` table and a `Developer Meeting Agenda` section (initially empty). Per entry, reserve fields: **Gap**, **Decision**, **Artifact follow-up** (per layer).
@@ -93,13 +93,13 @@ Apply only **decided** items (deferred ones change nothing yet):
 
 - **PRDs are binding** — make the agreed edits precisely; align any contradicting lines (rules, open-decisions registers) in the same pass.
 - **Concept** — if one exists, reconcile scope/behavior changes (do not invent a concept if none exists; note that the future concept should carry the decision).
-- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `5_mockups/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only.
+- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `1d_mockups/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only.
 
 ### 5. Maintain The Handoff-Facing Changelog
 
 So external teams (UI/UX expert, developers) can trace what changed since the version they reviewed, maintain a running, audience-facing changelog:
 
-`specs/PROJ-<X>-<theme>/3_PRDs/review-changelog.md`
+`specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
 
 Append one round section per review:
 
@@ -113,7 +113,7 @@ Deferred to developer meeting: <Qn list, or none>
 
 This is distinct from the internal decision record: the changelog is the short, reader-facing "what changed and why" that flows into the handoff. `handoff-package` (2b) folds it into the standalone deliverable as the primary review-delta artifact. The per-round `*-review-decisions.md` files may also be copied into the handoff as an audit appendix, but readers should not need them to understand current scope, decisions, or blockers.
 
-Do not write this changelog into `8_handoff/`, and do not patch any existing packaged `07-review-changelog.md`. Maintain only `3_PRDs/review-changelog.md`; `handoff-package` copies it into the next generated package run.
+Do not write this changelog into `2b_handoff/`, and do not patch any existing packaged `07-review-changelog.md`. Maintain only `2_PRDs/review-changelog.md`; `handoff-package` copies it into the next generated package run.
 
 ### 6. Review With The User
 
@@ -142,7 +142,7 @@ Confirm before finalizing. Update each decided entry's status to `Decided and ap
 - [ ] PRD edits applied; contradicting canonical lines aligned in the same pass
 - [ ] Mockup changes limited to real contradictions; logged in `iteration-log.md`
 - [ ] `review-changelog.md` updated for this round (handoff-facing)
-- [ ] No existing `8_handoff/` package run edited
+- [ ] No existing `2b_handoff/` package run edited
 - [ ] User reviewed the summary and approved
 - [ ] Decided items marked applied; deferred items left open for the next round
 
@@ -153,3 +153,24 @@ docs(PROJ-<X>): Reconcile <review> feedback into PRDs and mockups for <theme>
 ```
 
 Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the decision record, updated PRDs, and changelog are the durable artifacts.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

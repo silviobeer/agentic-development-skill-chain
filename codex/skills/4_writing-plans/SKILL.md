@@ -12,9 +12,9 @@ DRY. YAGNI. TDD. Frequent commits.
 ## Input
 
 Read both sources:
-- Architecture: `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
-- All PRDs: `specs/PROJ-<X>-<theme>/3_PRDs/*.md` (requirements per feature)
-- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`
+- Architecture: `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
+- All PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (requirements per feature)
+- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
 
 The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance.
 
@@ -33,8 +33,8 @@ Plans are written one PROJ at a time. If the architecture or concept references 
 ### 1. Analyse inputs
 
 - Read architecture file
-- Read every PRD in `3_PRDs/`
-- If UI work exists, read `5_mockups/implementation-handoff.md` and extract the implementation-facing UI constraints.
+- Read every PRD in `2_PRDs/`
+- If UI work exists, read `1d_mockups/implementation-handoff.md` and extract the implementation-facing UI constraints.
 - Extract **all** user stories and acceptance criteria verbatim, prefixing with `PROJ-<X>-PRD-<Y>-US-<Z>` for uniqueness
 - Check existing codebase for relevant files, patterns, and conventions
 - **Check for `agent.md`** in the feature's source folder (e.g., `src/features/[feature]/agent.md`). If it exists, read it — incorporate known gotchas into the relevant tasks as warnings.
@@ -74,7 +74,7 @@ For each user story in a wave:
 
 ### 4. Write one plan file per wave
 
-Save each wave to `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md`.
+Save each wave to `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`.
 
 **Template for wave plan file:**
 
@@ -82,7 +82,7 @@ Save each wave to `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md`.
 # PROJ-<X> Wave <N> Implementation Plan
 
 **Goal:** [One sentence describing what this wave delivers]
-**Architecture Reference:** `6_plan/PROJ-<X>-architecture.md`
+**Architecture Reference:** `3-4_plan/PROJ-<X>-architecture.md`
 **PRDs involved:** PROJ-<X>-PRD-1, PROJ-<X>-PRD-2, …
 
 ---
@@ -122,7 +122,7 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 **UI Implementation Notes:** (only for frontend or full-stack scope)
 - Project mode: greenfield | brownfield | hybrid
-- Mockup reference: `5_mockups/<file>.html`
+- Mockup reference: `1d_mockups/<file>.html`
 - Selected direction: [from Visual Companion / implementation handoff]
 - Reuse: [existing components from handoff and `docs/components.md`]
 - Create new: [component candidates + one-line justification]
@@ -178,7 +178,7 @@ The `Post-Wave Notes` block is a **placeholder the planner reserves** for Skill 
 
 ### 5. Write `wave-gate-config.json`
 
-Alongside the wave plans, write `specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json`. This config feeds the `wave-gate.sh` script (Skill 5) — machine-readable source of truth for each wave's completion checks.
+Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`. This config feeds the `wave-gate.sh` script (Skill 5) — machine-readable source of truth for each wave's completion checks.
 
 **Schema:**
 
@@ -246,7 +246,7 @@ After writing all wave files, review them with fresh eyes:
 7. **Cross-PRD consistency:** If two user stories in the same wave touch the same file/module, is that flagged?
 8. **Post-Wave Notes placeholder:** Every US has the empty `### Post-Wave Notes` block for Skill 7's documentation harvest.
 9. **Components-section complete:** every UI task declares `Reuse:` and `Create new:`. Registry `docs/components.md` is freshly generated (`node scripts/gen-component-registry.mjs`), and every `Create new:` names the semantic neighbours checked against it (Badge/Chip/Tag, Card/Panel, Drawer/Sheet) and why none fit. A new component without that comparison is an unreviewed duplicate risk — the cheapest place to catch it is here, before anyone writes code.
-10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `5_mockups/implementation-handoff.md`; every UI task carries the relevant constraints.
+10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `1d_mockups/implementation-handoff.md`; every UI task carries the relevant constraints.
 
 Fix issues inline. Move on.
 
@@ -275,7 +275,7 @@ Ask the user to review the wave-plan artifacts with a different model before exe
 
 After saving all wave plans + the gate config:
 
-> "Plans complete. Files in `specs/PROJ-<X>-<theme>/6_plan/`:
+> "Plans complete. Files in `specs/PROJ-<X>-<theme>/3-4_plan/`:
 > - `PROJ-<X>-architecture.md`
 > - `PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …
 > - `wave-gate-config.json` (machine-readable Wave Gate)
@@ -283,7 +283,7 @@ After saving all wave plans + the gate config:
 > **Before executing:** ensure `scripts/wave-gate.sh` exists in the project root. If missing, copy from `~/.codex/skills/5_executing/scripts/wave-gate.sh` and commit (`chmod +x` required). Also install `jq`, `coderabbit`, `agent-browser` if missing — the script needs them.
 >
 > Ready to execute! Use the **executing skill** (`/5_executing`) to implement wave by wave.
-> It will read wave plans in order, spawn subagents per US, verify ACs with Ralph loops, run `wave-gate.sh` between waves, and track progress in a single `7_progress/PROJ-<X>-progress.md`.
+> It will read wave plans in order, spawn subagents per US, verify ACs with Ralph loops, run `wave-gate.sh` between waves, and track progress in a single `5_progress/PROJ-<X>-progress.md`.
 >
 > **After the last wave:** Skill 5 Step 9 (Quality Gate: code-reviewer-gate + optional sonar-cli stream) runs automatically, then hands off to Skill 6 (QA: six-persona panel + browser testing). No Quality Gate / QA text needs to live in the wave plans — the skills own those stages."
 
@@ -294,3 +294,24 @@ docs(PROJ-<X>): Add wave-<N> implementation plan
 ```
 
 One commit per wave file. All wave files for a PROJ can be committed together or individually — your choice.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

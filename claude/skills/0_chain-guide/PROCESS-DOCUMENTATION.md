@@ -1,4 +1,4 @@
-# 0-to-7 Skill Chain Process Documentation
+# 0-to-8 Skill Chain Process Documentation
 
 This document is the expanded process reference for `chain-guide`. The executable skill instructions live in `SKILL.md`; this file explains the full chain, artifact map, and handoff rules in English.
 
@@ -26,32 +26,49 @@ Each PROJ uses:
 
 ```text
 specs/PROJ-<X>-<theme>/
-  1_brainstorm/                 Step 1 concept
-  2_visual-companion/            Step 1b layout exploration and decision
-  3_PRDs/                        Step 2 PRDs
-  4_design/                      Step 1c design language or design delta
-  5_mockups/                     Step 1d sitemap, mockups, implementation handoff
-  6_plan/                        Step 3 architecture and Step 4 wave plans
-  7_progress/                    Step 5 progress tracking
+  0_context/            existing-state capture, brownfield only
+  1_brainstorm/         Step 1  concept
+  1b_visual-companion/  Step 1b layout exploration and decision
+  1c_design/            Step 1c design language or design delta
+  1d_mockups/           Step 1d sitemap, mockups, implementation handoff
+  2_PRDs/               Step 2  PRDs
+  2b_handoff/           Step 2b standalone handoff package runs
+  3-4_plan/             Steps 3+4 architecture and wave plans
+  5_progress/           Step 5  progress tracking
 ```
 
-The output folder numbers are artifact locations. They do not always match the skill number because UI discovery artifacts were added before requirements.
+Each folder prefix is the number of the skill that writes it. `3-4_plan/`
+is the one shared folder: architecture (3) and wave plans (4) belong
+together. Product-level artifacts live outside the PROJ folder —
+`docs/PRODUCT.md` and `specs/product-roadmap.md`.
 
 ## Step Responsibilities
 
 | Step | Skill | Required? | Output |
 |---|---|---|---|
 | 0 | `chain-guide` | As needed | Next-step recommendation |
+| 0a | `product-vision` | New product | `docs/PRODUCT.md`, `specs/product-roadmap.md` |
+| 0b | `intake` | Existing codebase | the curated `docs/` baseline, extracted |
+| 0c | `bootstrap` | New build | `docs/ARCHITECTURE.md` § Stack, scaffold, `AGENTS.md` + `CLAUDE.md` |
 | 1 | `brainstorming` | Required | `1_brainstorm/PROJ-<X>-concept.md` |
-| 1b | `visual-companion` | UI only | `2_visual-companion/layout-exploration.html` and `layout-decision.md` |
-| 1c | `frontend-design` | Greenfield or hybrid UI gaps | `4_design/design-language.md` or `design-delta.md` |
-| 1d | `ui-mockup` | UI only | `5_mockups/sitemap.html`, screen mockups, `implementation-handoff.md` |
-| 2 | `requirements-engineer` | Required | `3_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
-| 3 | `architecture` | Required | `6_plan/PROJ-<X>-architecture.md` |
-| 4 | `writing-plans` | Required | `6_plan/PROJ-<X>-wave-<N>-plan.md` |
-| 5 | `executing` | Required | Code, tests, `7_progress/PROJ-<X>-progress.md` |
+| 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
+| 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
+| 1d | `ui-mockup` | UI only | `1d_mockups/sitemap.html`, screen mockups, `implementation-handoff.md` |
+| 1e | `concept-sync` | After mockup iterations | reconciled `1_brainstorm/PROJ-<X>-concept.md` |
+| 2 | `requirements-engineer` | Required | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
+| 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
+| 2c | `review-reconcile` | PRD review returned gaps | `2_PRDs/*-review-decisions.md`, `review-changelog.md` |
+| 3 | `architecture` | Required | `3-4_plan/PROJ-<X>-architecture.md` |
+| 4 | `writing-plans` | Required | `3-4_plan/PROJ-<X>-wave-<N>-plan.md` |
+| 4a | `checkpoint` | Required | `decisions.md`, `state.json` sealed `CP1:approved` |
+| 4b | `setup` | Required | PROJ branch, preflight, framework scripts, context bundles |
+| 5 | `executing` | Required | Code, tests, `5_progress/PROJ-<X>-progress.md` |
 | 6 | `qa` | Required before release | QA results appended to PRDs/progress |
 | 7 | `documentation` | Required before closeout | `docs/PROJECT.md` and related docs |
+| 8 | `delivery` | Required to ship | PR with rendered body, CI green, CP2 reconcile |
+
+`cross-review` carries no number: it is a mechanism invoked inside P7, not a
+step anyone routes to.
 
 ## UI Branch Rules
 

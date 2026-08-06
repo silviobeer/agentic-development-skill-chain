@@ -42,7 +42,7 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
    - Re-run all tests after fixes
    - Re-review the fix diff to ensure no regressions
 
-5. Log P2/P3 to `7_progress/PROJ-<X>-progress.md` under the Quality Gate section.
+5. Log P2/P3 to `5_progress/PROJ-<X>-progress.md` under the Quality Gate section.
 
 ---
 
@@ -51,7 +51,7 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
 Run the full project build once after all waves have passed:
 
 ```bash
-# Use build_cmd from specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json
+# Use build_cmd from specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json
 npm run build
 ```
 
@@ -70,7 +70,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
 ```
 
 - If both commands exist, run this gate using the `sonar-cli` skill guidance.
-- If either command is missing, skip this gate and record `SonarCloud: skipped (sonar CLI unavailable)` in `7_progress/PROJ-<X>-progress.md`.
+- If either command is missing, skip this gate and record `SonarCloud: skipped (sonar CLI unavailable)` in `5_progress/PROJ-<X>-progress.md`.
 - If both commands exist but the project has no Sonar config and no explicit user/plan requirement to create one, skip this gate and record `SonarCloud: skipped (project not configured)`.
 - A skipped Sonar gate does not block QA handoff.
 
@@ -108,7 +108,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
    - Re-run tests after fixes
    - Update `scripts/sonar-tracker.md` if it exists (mark fixed items `[x]`)
 
-7. Log MINOR/INFO to `7_progress/PROJ-<X>-progress.md`.
+7. Log MINOR/INFO to `5_progress/PROJ-<X>-progress.md`.
 
 ---
 
@@ -129,7 +129,7 @@ If the gate cannot pass after 3 fix iterations on the same issue, escalate to us
 
 ## Progress Tracking
 
-Update `7_progress/PROJ-<X>-progress.md` with a Quality Gate section after running:
+Update `5_progress/PROJ-<X>-progress.md` with a Quality Gate section after running:
 
 ```markdown
 ## Quality Gate — PROJ-X

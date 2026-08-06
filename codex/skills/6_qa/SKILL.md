@@ -27,10 +27,10 @@ You are a QA Engineer and Red-Team Pen-Tester. Your mindset is adversarial — y
 ## Input
 
 Read the following for the PROJ under test:
-- All PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/*.md` — user stories, acceptance criteria, edge cases
-- Architecture in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md` — tech design context
-- Progress in `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` — implementation status, Ralph results
-- Wave plans in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-*-plan.md` — what was built
+- All PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md` — user stories, acceptance criteria, edge cases
+- Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` — tech design context
+- Progress in `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` — implementation status, Ralph results
+- Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md` — what was built
 
 QA runs across all PRDs of the PROJ. Each PRD's acceptance criteria become tests.
 
@@ -102,7 +102,7 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 
 ### 1. Read PRDs + Progress
 
-- Read every PRD in `specs/PROJ-<X>-<theme>/3_PRDs/` and `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`
+- Read every PRD in `specs/PROJ-<X>-<theme>/2_PRDs/` and `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`
 - ACs are already verified by skill 5's outer Ralph loop — do not re-test them in code
 - Focus on: browser E2E validation, edge cases, adversarial scenarios, security, regression
 - Also inspect implementation shape for unnecessary complexity. QA must surface complexity that makes the feature harder to fix, test, or extend.
@@ -110,7 +110,7 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 
 ### 1b. Sonar Quality-Gate Input
 
-Read the `### SonarCloud` block in `7_progress/PROJ-<X>-progress.md`.
+Read the `### SonarCloud` block in `5_progress/PROJ-<X>-progress.md`.
 
 - If Skill 5 logged Sonar findings, treat confirmed BLOCKER/CRITICAL/MAJOR issues in touched files as QA bugs and include them in the severity merge.
 - If Skill 5 logged `SonarCloud: skipped (sonar CLI unavailable)` or `skipped (project not configured)`, record Sonar as skipped in the QA summary and continue. Missing Sonar tooling/config is not a QA blocker.
@@ -238,7 +238,7 @@ Note: Ken Takahashi does **not** run per wave. CodeRabbit is the only per-wave r
 
 5. **Elena Rodriguez — Principal Architect, PROJ Retrospective (20y)**
    *Focus:* **Cross-wave, PROJ-level patterns** that per-wave reviews can't catch. Did the waves add up to a coherent feature, or did they silt up into tech debt? Which abstractions emerged that should have been planned? Which features grew faster than the PRD promised (scope creep)? Are we building on a foundation that will hold the next PROJ, or painted ourselves into a corner? Elena does not redesign the architecture during QA; she reports coherence risks and next-PROJ lessons.
-   *Deliverable:* two parts — (a) findings like the others (Critical/High/Medium/Low), and (b) a **PROJ Retrospective** narrative: "Given what we learned building PROJ-X, what should change for PROJ-X+1?" Appends to `7_progress/PROJ-<X>-progress.md` under a new `## PROJ Retrospective` section (not a AGENTS.md candidate — too long-form for one line).
+   *Deliverable:* two parts — (a) findings like the others (Critical/High/Medium/Low), and (b) a **PROJ Retrospective** narrative: "Given what we learned building PROJ-X, what should change for PROJ-X+1?" Appends to `5_progress/PROJ-<X>-progress.md` under a new `## PROJ Retrospective` section (not a AGENTS.md candidate — too long-form for one line).
 
 6. **Ken Takahashi — Minimalism Engineer (20y)**
    *Focus:* Primary reviewer for the Simplicity Gate: PROJ-level YAGNI, premature abstraction, layers with one caller, duplicate utilities/components, feature flags/options that the PRD did not require, dead paths, and code that could be deleted because the assembled feature found a simpler shape. Ken must turn meaningful over-complexity into concrete QA bugs with simplification sketches, not only retrospective advice.
@@ -295,12 +295,12 @@ After all six persona reviews complete:
    - **Repro:** …
    - **Fix sketch:** …
    ```
-4. **AGENTS.md candidates:** Append to `## AGENTS.md Candidates` in `7_progress/PROJ-<X>-progress.md`:
+4. **AGENTS.md candidates:** Append to `## AGENTS.md Candidates` in `5_progress/PROJ-<X>-progress.md`:
    ```markdown
    - [PROPOSED] AGENTS-PROJ1-QA-003: <one-liner rule> — source: Priya Sharma (Performance)
    ```
    Skill 7 flips `[PROPOSED]` → `[MERGED]` or `[REJECTED]` by ID, preserving the line. No deletions — the log is append-only.
-5. **PROJ Retrospective (Elena + Ken):** Append Elena's and Ken's narratives verbatim to `7_progress/PROJ-<X>-progress.md` under `## PROJ Retrospective` (no IDs — long-form). Prefix each subsection with the persona name.
+5. **PROJ Retrospective (Elena + Ken):** Append Elena's and Ken's narratives verbatim to `5_progress/PROJ-<X>-progress.md` under `## PROJ Retrospective` (no IDs — long-form). Prefix each subsection with the persona name.
 
 **Why anchors, not line numbers:** parallel fixers on the same file shift line numbers. An anchor (`export function validateSession` or regex) stays stable because fixers re-lookup before editing.
 
@@ -325,9 +325,9 @@ Persona retrospectives are **advisory**. Persona bug findings are normal QA find
 
 ### 7. Document Results
 
-For each PRD tested: append a `## QA Test Results` section to that PRD file (`specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`) using `references/test-template.md` as the format.
+For each PRD tested: append a `## QA Test Results` section to that PRD file (`specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`) using `references/test-template.md` as the format.
 
-Also update `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` with a top-level QA summary across all PRDs.
+Also update `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` with a top-level QA summary across all PRDs.
 
 Include for each tested AC:
 - What was done in the browser (steps)
@@ -368,7 +368,7 @@ Typical sources during QA:
 - A convention QA discovered the implementation violated repeatedly (e.g. missing RLS on new tables)
 - A platform quirk that tripped red-team-tester or ui-auditor (e.g. `bcrypt` salt-rounds threshold)
 
-**Append candidates to the `## AGENTS.md Candidates` section** of `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`. If the section does not exist yet, create it. Do NOT write to `AGENTS.md` directly — Skill 7 does the merge after user approval.
+**Append candidates to the `## AGENTS.md Candidates` section** of `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`. If the section does not exist yet, create it. Do NOT write to `AGENTS.md` directly — Skill 7 does the merge after user approval.
 
 Format:
 
@@ -441,3 +441,24 @@ Handoff message to the user (right before invoking Skill 7):
 ```
 test(PROJ-<X>): Add QA test results for <theme>
 ```
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

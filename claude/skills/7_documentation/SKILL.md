@@ -25,7 +25,7 @@ Update only what needs updating, but do not keep the docs shallow when the featu
 | `AGENTS.md` | Durable agent context for all future coding sessions | >= 1 approved candidate from progress.md | <= 40 non-blank lines hard cap |
 | `CLAUDE.md` | Pointer-only Claude entry file; must tell Claude to read `AGENTS.md` | Missing, or contains durable rules instead of only a pointer | <= 5 lines; no curated rules |
 
-No per-feature documentation files by default. The PRDs under `specs/PROJ-<X>-<theme>/3_PRDs/` remain the detailed requirement source; link to them instead of copying acceptance criteria.
+No per-feature documentation files by default. The PRDs under `specs/PROJ-<X>-<theme>/2_PRDs/` remain the detailed requirement source; link to them instead of copying acceptance criteria.
 
 ## Decomposed PROJ Handling
 
@@ -43,18 +43,18 @@ Read in this priority order. Structured data first; raw reconstruction only as f
 
 **Structured inputs, filled by Skills 4/5/6:**
 
-1. `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`
+1. `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`
    - `### Wave N Gate - PASSED` blocks: authoritative wave completion proof
    - `## QA Results`: QA summary and residual risk
    - `## PROJ Retrospective`: implementation lessons and durable observations
    - `## AGENTS.md Candidates`: proposed durable agent rules awaiting approval
 2. `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
    - app/feature purpose, target user, in-scope/out-of-scope boundaries
-3. `specs/PROJ-<X>-<theme>/3_PRDs/*.md`
+3. `specs/PROJ-<X>-<theme>/2_PRDs/*.md`
    - user stories, feature names, acceptance criteria, edge cases
-4. `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`
+4. `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
    - architecture, data model, data flows, cross-cutting decisions
-5. `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-*-plan.md`
+5. `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md`
    - shipped user-story scope per wave
 6. `src/features/*/agent.md`
    - non-obvious gotchas surfaced during implementation
@@ -102,10 +102,10 @@ Documentation arrives late in the chain. Keep the main context focused on `progr
 
 ### 1. Collect documentation inputs
 
-Start with `7_progress/PROJ-<X>-progress.md`. Then collect only the extra inputs needed for triggered outputs:
+Start with `5_progress/PROJ-<X>-progress.md`. Then collect only the extra inputs needed for triggered outputs:
 
 1. **Feature purpose and boundaries:** read the concept file if `PROJECT.md` or `README.md` needs human-facing purpose/scope text.
-2. **Shipped stories:** parse Wave PASSED blocks first; fall back to `6_plan/PROJ-<X>-wave-*-plan.md` headings matching `## PROJ-<X>-PRD-<Y>-US-<Z>:`.
+2. **Shipped stories:** parse Wave PASSED blocks first; fall back to `3-4_plan/PROJ-<X>-wave-*-plan.md` headings matching `## PROJ-<X>-PRD-<Y>-US-<Z>:`.
 3. **Feature behavior:** read PRDs only to summarize capabilities, user workflows, edge cases, and links. Do not paste acceptance criteria.
 4. **Technical structure:** read architecture and relevant `agent.md` files when `TECHNICAL.md` triggers.
 5. **Dependency delta:** compare `package.json` at `BASE_SHA` to `HEAD` using structured JSON over `dependencies` and `devDependencies`.
@@ -168,7 +168,7 @@ flowchart LR
 
 ### Notes
 
-- **PRDs:** [PRD-1](../specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-1-<desc>.md)
+- **PRDs:** [PRD-1](../specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-1-<desc>.md)
 - **QA:** <pass/bugs/residual-risk summary from QA Results>
 - **Known limits:** <only if source-backed>
 ````
@@ -346,7 +346,7 @@ Never edit `AGENTS.md` without explicit approval per entry. The user owns this f
 - `conservative`: reject all candidates for later user review.
 - `aggressive`: auto-merge everything.
 
-On 40-line overflow, `balanced` and `aggressive` evict oldest merged entries until within cap; `conservative` halts for user pruning. Log every auto-decision to `7_progress/PROJ-<X>-autonomous-log.md`.
+On 40-line overflow, `balanced` and `aggressive` evict oldest merged entries until within cap; `conservative` halts for user pruning. Log every auto-decision to `5_progress/PROJ-<X>-autonomous-log.md`.
 
 ### 6. CLAUDE.md pointer
 
@@ -486,3 +486,24 @@ Framework runs: seal the phase afterwards — `bash scripts/state.sh transition 
 
 - After Step 6 QA passes for a PROJ-X.
 - When the user explicitly asks for documentation, feature docs, technical docs, diagrams, data model explanation, or data-flow explanation.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

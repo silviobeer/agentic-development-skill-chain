@@ -54,7 +54,7 @@ while [ $# -gt 0 ]; do
 done
 
 BASE="specs/PROJ-${PROJ}-${THEME}"
-LANE_DIR="$BASE/7_progress/lanes"
+LANE_DIR="$BASE/5_progress/lanes"
 WRITER_MODEL="${CLAUDE_WRITER_MODEL:-opus}"
 REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"
 PEER_GRACE="${PEER_GRACE:-300}"
@@ -330,7 +330,7 @@ stop_run() { # reason error_file
     step "WARNING: could not transition ${cur_ph}:${cur_st} -> blocked — state remains '${cur_st}'; the stop cause is recorded in .stop and the stop report. Do NOT trust '${cur_st}' for this phase."
   fi
   node "$RUNNER_DIR/render-report.mjs" stop "$PROJ" "$THEME" --reason "$reason" ${err:+--error-file "$err"} || true
-  "$STATE_SH" set "$PROJ" "$THEME" .stop.report "$BASE/7_progress/stop-report.md" >/dev/null 2>&1 || true
+  "$STATE_SH" set "$PROJ" "$THEME" .stop.report "$BASE/5_progress/stop-report.md" >/dev/null 2>&1 || true
   exit 1
 }
 

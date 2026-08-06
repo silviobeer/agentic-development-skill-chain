@@ -39,7 +39,18 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-`refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
+`cross-review`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P7 by the documentation skill and never routed to directly, which is why it carries no chain number. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
+
+## Legacy PROJ Folders
+
+PROJ folders created before the layout rename use the old subfolder names
+(`2_visual-companion/` → `1b_visual-companion/`, `4_design/` → `1c_design/`,
+`5_mockups/` → `1d_mockups/`, `3_PRDs/` → `2_PRDs/`, `8_handoff/` →
+`2b_handoff/`, `6_plan/` → `3-4_plan/`, `7_progress/` → `5_progress/`).
+Every skill reads the legacy name when the current one is missing, keeps
+writing where the files already are, and offers the rename once. Nothing
+blocks on it — a `git mv` per folder plus a path search inside the PROJ's
+own documents is the whole migration, and skipping it is a valid answer.
 
 ## Decomposed Ideas
 
@@ -49,7 +60,7 @@ After decomposition:
 
 - Each PROJ gets its own concept, PRDs, architecture, plans, execution, QA, and docs.
 - Downstream skills work one PROJ at a time and treat sibling PROJs as dependencies, context, or future scope.
-- `frontend-design` may be shared across tightly linked UI PROJs through one canonical `4_design/design-language.md` with an `Applies To` section.
+- `frontend-design` may be shared across tightly linked UI PROJs through one canonical `1c_design/design-language.md` with an `Applies To` section.
 - `visual-companion` and `ui-mockup` stay scoped to the current PROJ unless the user explicitly requests a combined UI review.
 
 ## Step Roles
@@ -69,7 +80,6 @@ After decomposition:
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery track) |
 | 3 | architecture | Produce PM-friendly technical architecture |
-| 3a | cross-review | Opposite-provider review gate; active call site is the P7 docs truth-check |
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
 | 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight (codex degradable), framework scripts copied into the repo |
@@ -110,10 +120,10 @@ Stage 2 adds the bootstrap and the full context system:
 - **P7 curation + gates:** `documentation` (7) curates docs/ and
   `src/**/agent.md`, then must pass FORM (`curation-caps.sh`: PRODUCT
   ≤30 non-blank lines, ARCHITECTURE ≤200 lines, agent.md ≤100 lines) and
-  TRUTH (`cross-review` (3a): the provider opposite the curation author
+  TRUTH (`cross-review`: the provider opposite the curation author
   reviews the docs delta against the PROJ diff; Critical/High block the
   phase, max 2 rounds). The runner re-verifies both gates after the seal.
-- **`cross-review` (3a):** symmetric opposite-provider review mechanism
+- **`cross-review`:** symmetric opposite-provider review mechanism
   (Claude-authored → `codex exec`, Codex-authored → `claude -p`;
   degraded fallback = model-opposite, always flagged). Active call site:
   P7 docs. P3 pre-mortem / P4 plan review call sites are Stage 3.

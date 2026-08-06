@@ -29,7 +29,7 @@ inventory, JSON schemas validated on write)*
 *(v0.15: `0b_intake` fully specified as a collaborative skill —
 extraction with provenance markers + developer interview for gaps,
 assumptions, and code inconsistencies; near-greenfield variant)*
-*(v0.16: cross-model review — skill `3a_cross-review`: Codex CLI as an
+*(v0.16: cross-model review — skill `cross-review`: Codex CLI as an
 adversarial SECOND model for the P3/P4 pre-mortems and the P7
 curated-docs review; pattern borrowed from grill-me-codex, not adopted
 as a plugin; findings → ledger, blocking per §8)*
@@ -102,7 +102,7 @@ the nightly window overflows. All review sources flow
 into ONE deduplicated findings ledger with a single fix queue;
 Medium/Low findings are automatically deferred as marked debt instead
 of prompting the user. Pre-mortems and the curated docs additionally
-pass provider-opposite adversarial review via `3a_cross-review`: Claude
+pass provider-opposite adversarial review via `cross-review`: Claude
 reviews Codex-authored artifacts and Codex reviews Claude-authored
 artifacts. Joint artifacts receive independent reviews from both lanes
 before reconciliation, so an authoring model never grades its own work
@@ -224,7 +224,7 @@ starts with `1_brainstorming`, optionally follows the UI branch
 `2_requirements-engineer`. On the product-discovery track it may continue
 through `2b_handoff-package` and `2c_review-reconcile`, then stops; P3–P8
 never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
-`8_handoff/` package runs remain immutable and are unrelated to the
+`2b_handoff/` package runs remain immutable and are unrelated to the
 `8_delivery` skill.
 
 ```
@@ -235,7 +235,7 @@ never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
         EXISTING PRE-PRD FLOW (preserved)
         brainstorm → UI exploration/mockups when needed → requirements
               │
-              ├── discovery track → Linear / 8_handoff package → STOP
+              ├── discovery track → Linear / 2b_handoff package → STOP
               │
               └── full-chain track
               ▼
@@ -394,14 +394,14 @@ executable input for the agentic loop. Before intake:
 
 **Both intake paths are supported; everything downstream of the snapshot
 is identical**, because both modes produce the same artifact: PRDs in
-the chain format at `specs/PROJ-<X>-<theme>/3_PRDs/*.md` (user stories with
+the chain format at `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (user stories with
 Given/When/Then + ACs). P3 onward never knows or cares where a PRD came
 from.
 
 **Mode A — local repo PRDs (DEFAULT for now):** PRDs are written
 directly into the repo, as today — via Skill 2
 (`2_requirements-engineer`) or by hand. No import step, no sync-back;
-the files in `specs/PROJ-<X>-<theme>/3_PRDs/` simply ARE the snapshot. **The new
+the files in `specs/PROJ-<X>-<theme>/2_PRDs/` simply ARE the snapshot. **The new
 chain is tested in this mode first.**
 
 **Mode B — Jira import (TODO, not needed for the first runs):** PRDs
@@ -414,7 +414,7 @@ The import skill `2d_prd-import` (build in Stage 3):
    (mechanism: Atlassian MCP or Jira CLI/REST — decided at build time,
    Stage 3).
 2. **Normalize the snapshot:** convert into the chain PRD format
-   (`specs/PROJ-<X>-<theme>/3_PRDs/*.md`, user stories with Given/When/Then +
+   (`specs/PROJ-<X>-<theme>/2_PRDs/*.md`, user stories with Given/When/Then +
    ACs). **The local snapshot is the working truth for the entire run**
    — gates and Ralph need stable AC texts; Jira is not re-read mid-run
    (context economy + determinism). If the ticket changes during the
@@ -458,7 +458,7 @@ serves the implementing agents.
    for status transitions, because …").
 3. **Pre-mortem:** automated review (the-fool modes: devil's advocate,
    pre-mortem, evidence audit) against delta + PRDs, PLUS a cross-model
-   pass via `3a_cross-review` (below). Authorship is explicit:
+   pass via `cross-review` (below). Authorship is explicit:
    `state.json` assigns ONE provider as the delta author
    (framework.config; alternates per PROJ by default). The non-author
    lane starts from the same bounded input in parallel and produces an
@@ -469,7 +469,7 @@ serves the implementing agents.
    between soon-to-be-parallel stories are pinned down HERE, not guessed
    by implementers.
 
-### Cross-Model Review Skill `3a_cross-review` (new)
+### Cross-Model Review Skill `cross-review` (new)
 
 Same-model review is an echo chamber: the model that made the
 decisions, wrote the code, and curated the docs will grade its own
@@ -537,7 +537,7 @@ the PR body ("cross-review: model-opposite fallback") — never silent.
   processes never write the same checkout together in any mode.
 - NEW: pre-mortem review of the wave plans (unsafe ordering, weak AC
   commands, missing contracts) — the-fool modes PLUS the cross-model
-  pass via `3a_cross-review`, which makes the old vague "have another
+  pass via `cross-review`, which makes the old vague "have another
   model look it over" literal and structured.
 - Then ◇ Checkpoint 1 — handled by the checkpoint skill (below).
 
@@ -682,7 +682,7 @@ debt section in the PR — not mid-run.
      curate the purpose lines in the components, never the table
    - **Curate folder agent.md files:** keep what is confirmed, delete
      what is outdated, promote what is project-wide
-3. **Cross-model docs review (`3a_cross-review`, §4):** the provider
+3. **Cross-model docs review (`cross-review`, §4):** the provider
    opposite the curation writer reviews the curated delta against the
    PROJ diff; jointly curated artifacts receive independent Claude and
    Codex passes. Review focus: factual accuracy, stale claims,
@@ -757,13 +757,13 @@ specs/product-roadmap.md       ← PROJ map: outcome, Depends on, Status
 specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 0_context/                 ← existing-state inputs when applicable
 ├── 1_brainstorm/              ← approved concept
-├── 2_visual-companion/        ← UI structure exploration when applicable
-├── 3_PRDs/                    ← requirements snapshot
-├── 4_design/                  ← optional design language
-├── 5_mockups/                 ← mockups + implementation handoff when applicable
-├── 6_plan/                    ← architecture + wave plans + gate config
-├── 7_progress/                ← progress, stop reports, autonomous log
-├── 8_handoff/                 ← generated discovery packages; immutable runs
+├── 1b_visual-companion/        ← UI structure exploration when applicable
+├── 2_PRDs/                    ← requirements snapshot
+├── 1c_design/                  ← optional design language
+├── 1d_mockups/                 ← mockups + implementation handoff when applicable
+├── 3-4_plan/                    ← architecture + wave plans + gate config
+├── 5_progress/                ← progress, stop reports, autonomous log
+├── 2b_handoff/                 ← generated discovery packages; immutable runs
 ├── architecture-delta.md      ← new decisions of this PROJ
 ├── api-contracts.md           ← interfaces between parallel stories
 ├── ground-file.md             ← validated assumptions
@@ -1119,9 +1119,9 @@ silently at render time.
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check, component-registry `--check`; any Critical/High → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
-| `cross-review.sh` (3a_cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
-| `review-with-claude.sh` (3a_cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes `claude -p` read-only; validates output; timeout/cancel as one process group |
-| `review-with-codex.sh` (3a_cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
+| `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
+| `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes `claude -p` read-only; validates output; timeout/cancel as one process group |
+| `review-with-codex.sh` (cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
 | `curation-caps.sh` (7_documentation) | `docs/*`, `src/**/agent.md` | cap report | exit ≠ 0 on any cap breach (PRODUCT ½ page, ARCHITECTURE 200 lines, DESIGN-SYSTEM 80 lines, agent.md 100 lines) — curation must shrink before P7 completes |
 | `conflict-probe.sh` (8_delivery) | PROJ branch, `main` | conflict report (JSON: none/trivial/semantic per file) | throwaway worktree, `merge --no-commit`; never touches real branches; classification by file type heuristics |
@@ -1136,12 +1136,12 @@ silently at render time.
 |---|---|---|---|
 | `pr-body.md.tmpl` (8_delivery) | state.json + findings.json | PR description: built scope, gate/QA results, known gaps, debt section, 📚 doc changes | P8 step 3 |
 | `morning-report.md.tmpl` (framework) | state.json + findings.json (all PROJs) | `specs/morning-report-<date>.md` | run end |
-| `stop-report.md.tmpl` (framework) | state.json + verbatim error capture | `specs/PROJ-<X>-<theme>/7_progress/stop-report.md` | on stop condition |
+| `stop-report.md.tmpl` (framework) | state.json + verbatim error capture | `specs/PROJ-<X>-<theme>/5_progress/stop-report.md` | on stop condition |
 | `decisions.md.tmpl` (4a_checkpoint) | reconcile-loop results | `specs/PROJ-<X>-<theme>/decisions.md` (append per checkpoint) | CP1/bootstrap/CP2 |
 | `progress-blocks.md.tmpl` (5_executing) | state.json | the structured blocks in progress.md (wave gate PASSED, Ralph iterations, QA results) | after each gate/loop |
 | `jira-comment.md.tmpl` (2d_prd-import, Mode B) | state.json + findings.json | status/PR-link/debt comments on tickets | sync-back (TODO) |
 | `agent-md-entry.md.tmpl` (5_executing) | learning (free text) + date + commit SHA | uniform agent.md entry block | on write — the one place where LLM content flows in, but inside a fixed frame |
-| `cross-review-prompt.md.tmpl` (3a_cross-review) | mode + artifact list + author provider | provider-neutral adversarial prompt rendered for either CLI | P3, P4, P7 |
+| `cross-review-prompt.md.tmpl` (cross-review) | mode + artifact list + author provider | provider-neutral adversarial prompt rendered for either CLI | P3, P4, P7 |
 
 Free-form LLM text still exists — analysis, findings verification,
 architecture prose, agent.md learnings — but it always lands INSIDE a
@@ -1190,7 +1190,7 @@ controlled way:
    `rescue/PROJ-X-<timestamp>` branch; document open worktrees and dev
    servers (do not delete — evidence)
 2. **`state.json` → `blocked`** with the exact stop cause
-3. **Write the stop report** (`specs/PROJ-<X>-<theme>/7_progress/stop-report.md`):
+3. **Write the stop report** (`specs/PROJ-<X>-<theme>/5_progress/stop-report.md`):
    - What happened (verbatim error output, last 3 attempts)
    - State: which waves are done, what is half-finished, which
      branches/worktrees are open
@@ -1237,7 +1237,7 @@ notification failure never loses or invalidates the report.
 | Provider-opposite Claude ↔ Codex review of pre-mortems + curated docs | same-model persona review only; docs content never reviewed |
 
 Unchanged and explicitly preserved: the current pre-PRD Skills 1–2
-flow, both delivery tracks, immutable generated `8_handoff/` packages,
+flow, both delivery tracks, immutable generated `2b_handoff/` packages,
 the Ralph loop mechanics, the TDD cycle, the wave-gate script principle,
 the read-only persona QA, and
 agent-browser smoke tests.
@@ -1267,10 +1267,10 @@ agent-browser smoke tests.
    context-injector adapters (define the
    manifest schema following the claude-skills frontmatter taxonomy),
    install + parity-check Ponytail on Claude and Codex (§7), agent.md protocol +
-   P7 curation, `3a_cross-review` skill (mechanism + the P7 docs call
+   P7 curation, `cross-review` skill (mechanism + the P7 docs call
    site — it ships with the curation it guards)
 3. **Stage 3:** P3 rework (baseline/delta), pre-mortem reviews in
-   P3/P4 (including wiring the Stage 2 `3a_cross-review` into both).
+   P3/P4 (including wiring the Stage 2 `cross-review` into both).
    **Jira intake Mode B = TODO within this stage:**
    `2d_prd-import` (fetch, snapshot, ID mapping, AC check, sync-back;
    mechanism decision MCP vs. CLI/REST) — built only after the chain
@@ -1302,13 +1302,13 @@ agent-browser smoke tests.
 | Sonar | SonarQube Cloud, already set up (org/token/project) |
 | Execution mode | paired Claude + Codex lanes are the DEFAULT (one writer, one read-only peer); Mode 2 (shared-checkout team inside the writer lane, file-disjoint waves) as the cheap middle tier; Mode 3 (worktree writer processes + merge gate) opt-in, built only on telemetry evidence (Stage 4). Cost stays bounded via model tiering per role |
 | Parallelism cap | 3 (applies to Modes 2/3; framework.config, adjustable via telemetry) |
-| Skill numbering | dock on: `0a_product-vision`, `0c_bootstrap`, `0b_intake`, `2d_prd-import`, `3a_cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
+| Skill numbering | dock on: `0a_product-vision`, `0c_bootstrap`, `0b_intake`, `2d_prd-import`, `cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
 | PRD source | TWO modes, downstream identical. Mode A (DEFAULT): PRDs written directly into the repo (existing structure) — the new chain is tested in this mode first. Mode B (TODO, Stage 3): Jira import, created/enriched via Teklens (teklens.ai); local snapshot = working truth per run; Jira keys in commits/PRs; sync-back |
 | PRD ownership | PM PRDs are raw input: developers enrich with technical stories, re-cut into buildable PRDs (in Jira for Mode B), and OWN the selection of the story set sent into the agentic loop — the framework checks AC quality, not scope |
 | Morning report | file in `specs/` (canonical) + best-effort notification at run end |
 | Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
-| Cross-model review | symmetric provider-opposite review via our thin `3a_cross-review`: Claude-authored → Codex, Codex-authored → Claude, joint → both independently; fallback when a provider is unavailable: MODEL-opposite within the surviving provider (e.g. Sonnet 5 reviews Fable-authored artifacts), flagged — same-model review never satisfies the gate; findings → ledger, blocking per §8 |
+| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → Claude, joint → both independently; fallback when a provider is unavailable: MODEL-opposite within the surviving provider (e.g. Sonnet 5 reviews Fable-authored artifacts), flagged — same-model review never satisfies the gate; findings → ledger, blocking per §8 |
 | P6 QA/fix ownership | Skill 6 is a strictly read-only finder. The P6 phase controller deduplicates and verifies findings, dispatches tier-0 fix lanes, and requires fresh provider-opposite QA re-verification; three failed Critical/High repair attempts trigger the stop policy |
 
 New questions arise during the detailed planning of each stage and are

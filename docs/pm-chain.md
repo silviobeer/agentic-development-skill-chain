@@ -36,11 +36,11 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
     └── PROJ-1-<theme>/
         ├── 0_context/              # brownfield: existing-state.md + references/ (only if something already exists)
         ├── 1_brainstorm/           # PROJ-1-concept.md
-        ├── 2_visual-companion/     # layout-decision.md + layout-exploration.html
-        ├── 4_design/               # design-language.md (only if a design system is defined)
-        ├── 5_mockups/              # mockups + sitemap + implementation-handoff.md + iteration-log.md
-        ├── 3_PRDs/                 # PRDs
-        └── 8_handoff/              # optional standalone package runs
+        ├── 1b_visual-companion/     # layout-decision.md + layout-exploration.html
+        ├── 1c_design/               # design-language.md (only if a design system is defined)
+        ├── 1d_mockups/              # mockups + sitemap + implementation-handoff.md + iteration-log.md
+        ├── 2_PRDs/                 # PRDs
+        └── 2b_handoff/              # optional standalone package runs
 ```
 
 `brainstorming` (1) bootstraps `specs/PROJ-<X>-<theme>/` on its first run, exactly as in the full chain. Nothing needs to be created by hand.
@@ -68,7 +68,7 @@ The Linear/handoff endpoint is rarely one-shot. A developer reviewing the PRDs t
 - It reads the review and the canonical scope/decisions source, then walks each gap **point by point** — explaining what is flagged and why, framing the options with a recommendation, and deciding with the product owner there and then.
 - Items that need engineering input (feasibility, architecture, effort, security, provider constraints) are **not force-decided**; they are deferred onto a `Developer Meeting Agenda` and stay open for the next round.
 - Every decided item is recorded before any binding edit, then reconciled across the PRD (binding), concept (if one exists), and mockups (only where they now contradict the PRD; mockup changes are logged in `iteration-log.md`).
-- A running, audience-facing `3_PRDs/review-changelog.md` records what changed since the reviewed version, so `handoff-package` can show downstream UI/UX experts and developers the delta without making them read the full internal decision log. Per-round `*-review-decisions.md` files remain the detailed audit trail and are copied into the handoff appendix when present.
+- A running, audience-facing `2_PRDs/review-changelog.md` records what changed since the reviewed version, so `handoff-package` can show downstream UI/UX experts and developers the delta without making them read the full internal decision log. Per-round `*-review-decisions.md` files remain the detailed audit trail and are copied into the handoff appendix when present.
 
 It is the post-requirements sibling of `concept-sync`: `concept-sync` reconciles mockup iterations into the concept *before* requirements; `review-reconcile` reconciles review feedback into the PRDs *after* requirements. Skip it when the feedback is pure copyediting (edit the PRD directly) or when it is a fresh mockup iteration (use `ui-mockup` + `concept-sync`).
 
@@ -85,11 +85,11 @@ This becomes the design source where config files would normally be: `visual-com
 
 - **Greenfield, no design system:** `ui-mockup` uses **greyscale wireframes** with very small border radii — structure and flow, not visual identity. A UI/UX expert refines the visual design downstream. Skip `frontend-design`.
 - **Existing design system:** `ui-mockup` adopts the existing tokens, colors, typography, and radii (from `0_context/existing-state.md` on this track) so mockups read as the real product.
-- **Design system built in the chain:** when `frontend-design` runs, it fills three artifacts with one writer each — `docs/DESIGN-SYSTEM.md` (rules, ≤80 lines, injected into every frontend context bundle), `docs/components.md` (the inventory, **generated** from the doc block above each component export via `scripts/gen-component-registry.mjs`, verified by the wave gate), and the `/dev/components` showcase (where the detail lives, because it costs no context budget). On this track there is no scaffold, so the showcase is written as a standalone `4_design/component-showcase.html` — **same sections, same anchors** as the later route, so porting it is mechanical. Its structure is foundations (`#tokens`) → one section per registry entry in alphabetical order → one `#pattern-<name>` section per `## Patterns` entry. Everything downstream references components and patterns by anchor (`/dev/components#bulk-bar`). A missing component is closed by extending the system, not by one-off styling — in `ui-mockup` and in `executing` alike.
+- **Design system built in the chain:** when `frontend-design` runs, it fills three artifacts with one writer each — `docs/DESIGN-SYSTEM.md` (rules, ≤80 lines, injected into every frontend context bundle), `docs/components.md` (the inventory, **generated** from the doc block above each component export via `scripts/gen-component-registry.mjs`, verified by the wave gate), and the `/dev/components` showcase (where the detail lives, because it costs no context budget). On this track there is no scaffold, so the showcase is written as a standalone `1c_design/component-showcase.html` — **same sections, same anchors** as the later route, so porting it is mechanical. Its structure is foundations (`#tokens`) → one section per registry entry in alphabetical order → one `#pattern-<name>` section per `## Patterns` entry. Everything downstream references components and patterns by anchor (`/dev/components#bulk-bar`). A missing component is closed by extending the system, not by one-off styling — in `ui-mockup` and in `executing` alike.
 
 ## The iteration loop
 
-Stakeholder agreement is reached *on the mockups*. Because changes are prompted directly into the HTML, they would otherwise be lost. `ui-mockup` therefore maintains `5_mockups/iteration-log.md`, one entry per round, each classified as scope, behavior, or presentation-only. Only scope/behavior changes flow back into the concept.
+Stakeholder agreement is reached *on the mockups*. Because changes are prompted directly into the HTML, they would otherwise be lost. `ui-mockup` therefore maintains `1d_mockups/iteration-log.md`, one entry per round, each classified as scope, behavior, or presentation-only. Only scope/behavior changes flow back into the concept.
 
 `concept-sync` (1e) then reads the log, updates `1_brainstorm/PROJ-<X>-concept.md`, records superseded decisions, and writes a `Handoff Readiness` section with `Delivery track: discovery (Linear handoff)`. This closes the loop so requirements are written against an accurate concept.
 
@@ -99,7 +99,7 @@ In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories
 
 ## Standalone handoff package
 
-When the work goes to people outside the repo — an external UI/UX expert (e.g. a Figma assignment) and/or a separate dev team — `handoff-package` (2b) assembles a single self-contained dated run folder under `8_handoff/` that survives being zipped and shared. Every run gets its own folder, for example `8_handoff/YYYY-MM-DD-handoff/`; repeated runs on the same day append `-02`, `-03`, and so on. Repeat handoffs start with a curated delta since the previous run, then provide the full current package:
+When the work goes to people outside the repo — an external UI/UX expert (e.g. a Figma assignment) and/or a separate dev team — `handoff-package` (2b) assembles a single self-contained dated run folder under `2b_handoff/` that survives being zipped and shared. Every run gets its own folder, for example `2b_handoff/YYYY-MM-DD-handoff/`; repeated runs on the same day append `-02`, `-03`, and so on. Repeat handoffs start with a curated delta since the previous run, then provide the full current package:
 
 - `00-what-changed-since-last-handoff.md` — the first-read delta for returning UI/UX experts and developers: changed PRDs, decisions, review rounds, mockups, audience impact, and "no material changes" when applicable.
 - `README.md` — index, reading order, source of truth, and conflict rules (PRD wins over mockup).

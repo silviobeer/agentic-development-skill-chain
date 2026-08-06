@@ -19,7 +19,7 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 - Mark sibling PROJs only as context, navigation, dependencies, or future scope.
 - Do not design screens or states for sibling PROJs unless the user explicitly asks for a combined UI review.
 - If `frontend-design` created a shared design language for the PROJ family, use that canonical file even when it lives in a sibling PROJ.
-- If the current PROJ needs a local variation, read or create `4_design/design-delta.md` and document it in the implementation handoff.
+- If the current PROJ needs a local variation, read or create `1c_design/design-delta.md` and document it in the implementation handoff.
 
 ## Principles
 
@@ -47,10 +47,10 @@ If `1c_frontend-design` was skipped for a greenfield project, default to **Wiref
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. Visual Companion decision: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md`
-3. Visual Companion prototype: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html`
-4. Optional design language: `specs/PROJ-<X>-<theme>/4_design/design-language.md` or a canonical sibling design language that lists the current PROJ under `Applies To`
-5. Optional design delta: `specs/PROJ-<X>-<theme>/4_design/design-delta.md`
+2. Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
+3. Visual Companion prototype: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-exploration.html`
+4. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md` or a canonical sibling design language that lists the current PROJ under `Applies To`
+5. Optional design delta: `specs/PROJ-<X>-<theme>/1c_design/design-delta.md`
 6. Optional brownfield as-is reference (discovery track): `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
 
 The selected direction in `layout-decision.md` is binding. Refine it into concrete screens and states. Do not invent alternate layout containers unless the user explicitly asks.
@@ -69,10 +69,10 @@ Read these sections especially:
 
 Load design references:
 
-- If `4_design/design-language.md` exists, use it as the primary design reference.
+- If `1c_design/design-language.md` exists, use it as the primary design reference.
 - If the concept or layout decision references a canonical sibling design language, load it too and apply only local `design-delta.md` differences.
 - Check `docs/DESIGN-SYSTEM.md` (the curated design system baseline). If present, reuse its tokens, scales, patterns, and do/don't rules, and read `docs/components.md` for the component inventory.
-- For composed layouts — form, empty/loading/error state, page shell — open the showcase (`/dev/components#pattern-<name>`, or `4_design/component-showcase.html` before the scaffold) and copy the rendered pattern. Do not invent a layout that a pattern already fixes; that is how two screens end up with two different forms.
+- For composed layouts — form, empty/loading/error state, page shell — open the showcase (`/dev/components#pattern-<name>`, or `1c_design/component-showcase.html` before the scaffold) and copy the rendered pattern. Do not invent a layout that a pattern already fixes; that is how two screens end up with two different forms.
 
 If no design reference exists, scan:
 
@@ -133,7 +133,7 @@ If an app shell exists, embed every mockup inside it. If no shell exists, for ex
 
 ### 2. Create The Sitemap
 
-Create `specs/PROJ-<X>-<theme>/5_mockups/sitemap.html`.
+Create `specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html`.
 
 The sitemap must show:
 
@@ -147,7 +147,7 @@ Use plain HTML/CSS boxes and links. Each sitemap box links to its mockup file.
 
 ### 3. Create Screen Mockups
 
-Create one HTML file per screen in `specs/PROJ-<X>-<theme>/5_mockups/`.
+Create one HTML file per screen in `specs/PROJ-<X>-<theme>/1d_mockups/`.
 
 Each mockup includes:
 
@@ -190,7 +190,7 @@ Open the mockups in a browser and ask the user to review:
 
 Stakeholders typically iterate here by prompting changes directly into the mockups until everyone agrees. Treat this as the primary working loop, not a single pass. Apply requested changes, present the updated mockups, and repeat until the user signals agreement.
 
-**Track every change** so the agreed result can later flow back into the concept. Maintain `specs/PROJ-<X>-<theme>/5_mockups/iteration-log.md` and append an entry per iteration round:
+**Track every change** so the agreed result can later flow back into the concept. Maintain `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md` and append an entry per iteration round:
 
 ```markdown
 # Mockup Iteration Log — PROJ-<X> <theme>
@@ -211,7 +211,7 @@ Do not edit the concept doc from this skill. Capture changes in the log; reconci
 Create:
 
 ```text
-specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md
+specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md
 ```
 
 Required structure:
@@ -312,3 +312,24 @@ docs(PROJ-<X>): Add UI mockups and sitemap for <theme>
 ```
 
 Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the mockup files and `iteration-log.md` are the durable artifacts.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

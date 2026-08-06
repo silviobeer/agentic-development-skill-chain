@@ -40,14 +40,14 @@ Architecture still runs one PROJ at a time. If the concept includes a decomposit
 2. Check existing components: `git ls-files src/components/`
 3. Check existing APIs: `git ls-files src/app/api/`
 4. Read the concept at `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-5. Read **all** PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/`
-6. If present, read UI references from `specs/PROJ-<X>-<theme>/5_mockups/`, especially `implementation-handoff.md`, and `specs/PROJ-<X>-<theme>/4_design/design-language.md`
+5. Read **all** PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/`
+6. If present, read UI references from `specs/PROJ-<X>-<theme>/1d_mockups/`, especially `implementation-handoff.md`, and `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 7. If the concept names blocking sibling PROJs, read their approved concept/PRD/architecture summaries only as dependency context.
 
 ## Workflow
 
 ### 1. Read All PRDs
-- List every PRD in `specs/PROJ-<X>-<theme>/3_PRDs/`
+- List every PRD in `specs/PROJ-<X>-<theme>/2_PRDs/`
 - For each: understand user stories + acceptance criteria
 - Identify cross-PRD themes: shared entities, shared auth, shared data flows
 - Determine: Which PRDs need backend? Which are frontend-only? Where do they overlap?
@@ -114,7 +114,7 @@ List only packages that need to be installed. Skip packages already in the proje
 
 ### 4. Write Architecture File
 
-Save to `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Create the `6_plan/` directory if it does not exist.
+Save to `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Create the `3-4_plan/` directory if it does not exist.
 
 Template:
 ```markdown
@@ -165,15 +165,36 @@ Template:
 - [ ] Each decision marks which PRDs are affected
 - [ ] No over-specification — component trees, API shapes, and UI patterns are left to implementers
 - [ ] New dependencies listed (skip existing packages)
-- [ ] Architecture file saved to `6_plan/PROJ-<X>-architecture.md`
+- [ ] Architecture file saved to `3-4_plan/PROJ-<X>-architecture.md`
 - [ ] User has reviewed and approved
 - [ ] `specs/INDEX.md` status updated to "In Progress" (if INDEX exists)
 
 ## Handoff
 After approval, tell the user:
-> "Architecture is ready at `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
+> "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
 
 ## Git Commit
 ```
 docs(PROJ-<X>): Add architecture for <theme>
 ```
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

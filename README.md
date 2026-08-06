@@ -36,7 +36,6 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |
 | 3 | `architecture` | PROJ-level tech design across all PRDs |
-| 3a | `cross-review` (internal) | Opposite-provider review gate; active call site: the P7 docs truth-check |
 | 4 | `writing-plans` | Wave-based implementation plans |
 | 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
 | 4b | `setup` | P0 once per PROJ: branch, preflight, framework scripts into the repo, context bundles |
@@ -44,6 +43,13 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 6 | `qa` | End-to-end QA; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
+
+A bare number is a main-line step; a letter suffix is a variant at the same
+stage — `1b`–`1e` are a sequence inside the UI branch, `2b`/`2c` optional
+forks, `0a`/`0b`/`0c` alternative entry paths, and `4a`/`4b` mandatory
+despite the letter. Skills with no number are not steps (see below). Inside
+`specs/PROJ-<X>-<theme>/`, each subfolder carries the number of the skill
+that writes it.
 
 Brainstorming can decompose one broad seed into multiple PROJs; downstream
 skills handle one PROJ at a time with sibling PROJs as dependency context.
@@ -98,6 +104,12 @@ Details: [runner/README.md](runner/README.md),
 [docs/skill-chain.md](docs/skill-chain.md), and `CONCEPT.md` for the full
 model. Stage 3+ of the concept (P3 rework, pre-mortem call sites, Jira
 import, worktree parallelism) is not built yet.
+
+## Outside the Chain
+
+`cross-review` is not a chain step and is never routed to directly: it is
+the symmetric opposite-provider review mechanism, invoked inside P7 by the
+documentation skill. It is required, not optional.
 
 ## Optional Skills
 

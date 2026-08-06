@@ -31,8 +31,8 @@ rationale, and never seal an approval while a cascade is unapplied.
 
 ## Input
 
-1. `specs/PROJ-<X>-<theme>/architecture-delta.md` (or `6_plan/PROJ-<X>-architecture.md`)
-2. `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md` (all waves) + `wave-gate-config.json`
+1. `specs/PROJ-<X>-<theme>/architecture-delta.md` (or `3-4_plan/PROJ-<X>-architecture.md`)
+2. `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (all waves) + `wave-gate-config.json`
 3. `specs/PROJ-<X>-<theme>/api-contracts.md` (if present)
 4. Open pre-mortem risks / plan self-review findings (if present)
 5. `specs/PROJ-<X>-<theme>/decisions.md` from earlier rounds (if present)
@@ -155,3 +155,24 @@ turn them into a baseline the developer actually stands behind.
 ```text
 docs(PROJ-<X>): CP1 approved — decision log + cascaded plan updates
 ```
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

@@ -15,7 +15,7 @@ The chain keeps this in three artifacts with one writer each, so a plan can say 
 | `docs/components.md` | What exists? Name, path, purpose, variants | **generated** from the doc block above each component export (`scripts/gen-component-registry.mjs`) — never hand-edited |
 | `/dev/components` | Is it really true? Rendered, light and dark | built here, extended in P5, checked in P6 |
 
-The PROJ-scoped `4_design/design-language.md` keeps the **why** (audience, tone, references, rejected directions). Same shape the chain uses for architecture: PROJ artifact carries the reasoning, the `docs/` baseline carries the standing truth.
+The PROJ-scoped `1c_design/design-language.md` keeps the **why** (audience, tone, references, rejected directions). Same shape the chain uses for architecture: PROJ artifact carries the reasoning, the `docs/` baseline carries the standing truth.
 
 ## When to Use
 
@@ -44,15 +44,15 @@ Use this rule:
 
 Artifact handling:
 
-- Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<theme>/4_design/design-language.md`.
+- Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<theme>/1c_design/design-language.md`.
 - In the document, include a `## Applies To` section listing sibling PROJs that should consume it.
 - Later sibling PROJs should reference this canonical file from their Visual Companion, UI Mockup, PRD, architecture, and plan artifacts.
-- If a sibling needs a local deviation, write a short local `4_design/design-delta.md` instead of creating a competing full design language.
+- If a sibling needs a local deviation, write a short local `1c_design/design-delta.md` instead of creating a competing full design language.
 
 ## Input
 
 - Concept doc from Step 1 (`specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`) — understand the app's purpose and audience
-- Visual Companion output (`specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md` and `layout-exploration.html`) — understand selected UI structure, `Project Mode`, `Shape Brief`, and interaction containers
+- Visual Companion output (`specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md` and `layout-exploration.html`) — understand selected UI structure, `Project Mode`, `Shape Brief`, and interaction containers
 - User preferences expressed during brainstorming
 
 ## Process
@@ -105,7 +105,7 @@ Based on context, create a coherent design system with:
 
 ### 3. Define The Component Catalog
 
-Derive the component set from what the planned screens actually need — do not ship a fixed standard kit. Read the concept and `2_visual-companion/layout-decision.md`, list the UI pieces those screens require, and build only those. The catalog grows later, when a mockup or a user story demands a piece that does not exist yet (see *Extending The Design System*).
+Derive the component set from what the planned screens actually need — do not ship a fixed standard kit. Read the concept and `1b_visual-companion/layout-decision.md`, list the UI pieces those screens require, and build only those. The catalog grows later, when a mockup or a user story demands a piece that does not exist yet (see *Extending The Design System*).
 
 Rules:
 
@@ -119,7 +119,7 @@ For each component define: name, purpose, variants, sizes, states (default, hove
 
 Create these files:
 
-**`specs/PROJ-<X>-<theme>/4_design/design-language.md`** — The design language document:
+**`specs/PROJ-<X>-<theme>/1c_design/design-language.md`** — The design language document:
 
 ```markdown
 # Design Language — [Project Name]
@@ -200,7 +200,7 @@ Include a short implementation-facing section:
 # Design System — [Project Name]
 
 Stack: [framework + component library] · Showcase: `/dev/components`
-Inventory: `docs/components.md` · Rationale: `specs/PROJ-<X>-<theme>/4_design/design-language.md`
+Inventory: `docs/components.md` · Rationale: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 
 ## Tokens
 | Purpose | Class | Never |
@@ -249,7 +249,7 @@ Write the doc block while you write the component, then run `node scripts/gen-co
 Where it lives:
 
 - **App scaffold exists** → the route `/dev/components` (the path `6_qa` visits). Out of production navigation, no auth, no data fetching — it must render without a backend, or it is worthless in the P6 audit.
-- **No scaffold yet** (discovery track, pre-scaffold greenfield) → `specs/PROJ-<X>-<theme>/4_design/component-showcase.html`, plain HTML+CSS with the components rebuilt by hand. **Same structure, same anchors** — P5 ports it to the route with the first UI story, and porting is then mechanical: keep the sections, replace each rebuild with the real import. Only the import line differs: it names the planned path, `→ @/components/ui/button (after scaffold)`.
+- **No scaffold yet** (discovery track, pre-scaffold greenfield) → `specs/PROJ-<X>-<theme>/1c_design/component-showcase.html`, plain HTML+CSS with the components rebuilt by hand. **Same structure, same anchors** — P5 ports it to the route with the first UI story, and porting is then mechanical: keep the sections, replace each rebuild with the real import. Only the import line differs: it names the planned path, `→ @/components/ui/button (after scaffold)`.
 
 Structure — three sections, in this order:
 
@@ -287,7 +287,7 @@ Callers: `1d_ui-mockup` when a screen needs a `New candidate:` piece, and `5_exe
 
 ## Output
 
-The design language document at `specs/PROJ-<X>-<theme>/4_design/design-language.md` (the rationale), `docs/DESIGN-SYSTEM.md` (the rules), `docs/components.md` (the inventory), the implemented components, and the showcase page (the proof). These become the reference for:
+The design language document at `specs/PROJ-<X>-<theme>/1c_design/design-language.md` (the rationale), `docs/DESIGN-SYSTEM.md` (the rules), `docs/components.md` (the inventory), the implemented components, and the showcase page (the proof). These become the reference for:
 - **Step 1d (UI Mockup):** Mockups use the defined colors, fonts, spacing, and reference catalog components by name
 - **Step 3 (Architecture):** Tech design documents the inherited UI stack and references the design tokens
 - **Step 5 (Executing):** frontend-implementer composes catalog components instead of writing new UI
@@ -306,3 +306,24 @@ After the design language is approved, invoke `ui-mockup`. Do not invoke `requir
 - **Registered components must be real** — the registry is generated from code, so a paper component is impossible by construction. Keep it that way: never hand-edit `docs/components.md`.
 - **One writer per artifact** — never copy the component inventory into `docs/DESIGN-SYSTEM.md`. Two lists drift, and both are paid for in every agent's context budget.
 - **English** — all documentation in English
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

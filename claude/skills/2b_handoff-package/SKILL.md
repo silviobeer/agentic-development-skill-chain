@@ -35,15 +35,15 @@ This is the terminal step of the product discovery track. It does not invent pro
 Read these inputs (discovery-track locations):
 
 1. Reconciled concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (with `Concept Sync Log` / `Handoff Readiness`)
-2. PRDs: `specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-*.md`
-4. Review changelog (if present): `specs/PROJ-<X>-<theme>/3_PRDs/review-changelog.md`
-5. Review decision records (if present): `specs/PROJ-<X>-<theme>/3_PRDs/*-review-decisions.md`
-6. Mockups + sitemap + UI handoff: `specs/PROJ-<X>-<theme>/5_mockups/*.html`, `sitemap.html`, `implementation-handoff.md`
-7. Iteration log: `specs/PROJ-<X>-<theme>/5_mockups/iteration-log.md`
-8. Optional design language: `specs/PROJ-<X>-<theme>/4_design/design-language.md`
-9. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md`
+2. PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`
+4. Review changelog (if present): `specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
+5. Review decision records (if present): `specs/PROJ-<X>-<theme>/2_PRDs/*-review-decisions.md`
+6. Mockups + sitemap + UI handoff: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`, `sitemap.html`, `implementation-handoff.md`
+7. Iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
+8. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
+9. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 10. Optional brownfield as-is reference: `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
-11. Previous handoff runs, if any: `specs/PROJ-<X>-<theme>/8_handoff/YYYY-MM-DD-handoff*/`
+11. Previous handoff runs, if any: `specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/`
 
 If the concept lacks a `Handoff Readiness` section, run `concept-sync` (1e) first so the package is built from a reconciled concept.
 
@@ -61,10 +61,10 @@ Confirm the delivery phasing if the concept defines phases, and whether the desi
 
 ### 2. Detect Previous Handoff And Create The Run Folder
 
-Create a new standalone package run under `8_handoff/` for every invocation. Do not overwrite, patch, or reuse a previous handoff run. Name the run folder with the local date. Before writing it, look for the latest existing run folder matching `YYYY-MM-DD-handoff*`; that is the baseline for the delta section. If no previous run exists, mark this as the first handoff. `handoff-package` is the only skill that may create or update files under `8_handoff/`; all other skills must update source artifacts and then trigger a new package run when needed.
+Create a new standalone package run under `2b_handoff/` for every invocation. Do not overwrite, patch, or reuse a previous handoff run. Name the run folder with the local date. Before writing it, look for the latest existing run folder matching `YYYY-MM-DD-handoff*`; that is the baseline for the delta section. If no previous run exists, mark this as the first handoff. `handoff-package` is the only skill that may create or update files under `2b_handoff/`; all other skills must update source artifacts and then trigger a new package run when needed.
 
 ```text
-specs/PROJ-<X>-<theme>/8_handoff/
+specs/PROJ-<X>-<theme>/2b_handoff/
   YYYY-MM-DD-handoff/           # one package run; if it already exists, append -02, -03, etc.
     00-what-changed-since-last-handoff.md
     README.md                   # index, reading order, source-of-truth + conflict rules, deliverables
@@ -81,7 +81,7 @@ specs/PROJ-<X>-<theme>/8_handoff/
 
 Use the local current date for `YYYY-MM-DD`. If `YYYY-MM-DD-handoff/` already exists, create the next unused suffix (`YYYY-MM-DD-handoff-02/`, then `-03/`, etc.) so each handoff run remains independently reviewable and shareable.
 
-Copy mockups, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `3_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `3_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
+Copy mockups, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `2_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `2_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
 
 ### 3. Write `00-what-changed-since-last-handoff.md`
 
@@ -135,7 +135,7 @@ Audiences: UI/UX expert | developers | both
 ## Included Artifacts
 | Package path | Source path | Notes |
 |--------------|-------------|-------|
-| `03-requirements/<file>` | `3_PRDs/<file>` | PRD |
+| `03-requirements/<file>` | `2_PRDs/<file>` | PRD |
 
 ## Source Snapshot
 | Source path | Last modified / commit | Purpose |
@@ -233,8 +233,8 @@ Verify the package stands alone:
 - `00-what-changed-since-last-handoff.md` exists and clearly states previous handoff baseline or first-handoff status.
 - `handoff-manifest.md` exists and records run metadata, previous handoff, included artifacts, and open items.
 - Every referenced mockup, image, and design file is copied into `06-mockups/`.
-- `07-review-changelog.md` is included when `3_PRDs/review-changelog.md` exists.
-- `08-review-decisions/` is included when any `3_PRDs/*-review-decisions.md` files exist, and the `README.md` labels it as audit appendix.
+- `07-review-changelog.md` is included when `2_PRDs/review-changelog.md` exists.
+- `08-review-decisions/` is included when any `2_PRDs/*-review-decisions.md` files exist, and the `README.md` labels it as audit appendix.
 - Cross-cutting facts appear once (in `02`) and are referenced elsewhere, not duplicated.
 - Every open decision has an owner, impact, and next decision point.
 - Conflict order and source of truth are stated in `README.md`.
@@ -245,7 +245,7 @@ Verify the package stands alone:
 Present the package tree and the `README.md` to the user. On approval, offer to zip it:
 
 ```bash
-cd specs/PROJ-<X>-<theme>/8_handoff
+cd specs/PROJ-<X>-<theme>/2b_handoff
 RUN_FOLDER=YYYY-MM-DD-handoff
 zip -r "$RUN_FOLDER.zip" "$RUN_FOLDER"
 ```
@@ -255,7 +255,7 @@ Ask the user to spot-check that an outside reader could act on it without furthe
 ## Completion Checklist
 
 - [ ] Audiences confirmed (UI expert / developers / both)
-- [ ] New dated run folder created under `8_handoff/` without overwriting prior runs
+- [ ] New dated run folder created under `2b_handoff/` without overwriting prior runs
 - [ ] Previous handoff detected, or first-handoff status recorded
 - [ ] `00-what-changed-since-last-handoff.md` written as curated delta
 - [ ] `handoff-manifest.md` written for this run
@@ -278,4 +278,25 @@ Ask the user to spot-check that an outside reader could act on it without furthe
 docs(PROJ-<X>): Assemble standalone handoff package for <theme>
 ```
 
-Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the dated run folder under `8_handoff/` (and its ZIP) is the durable, distributable artifact.
+Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the dated run folder under `2b_handoff/` (and its ZIP) is the durable, distributable artifact.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

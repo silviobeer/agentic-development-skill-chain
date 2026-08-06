@@ -12,7 +12,7 @@
 #
 # Requires:
 #   - jq (for parsing wave-gate-config.json)
-#   - The config file at specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json
+#   - The config file at specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json
 #   - coderabbit CLI
 #   - agent-browser CLI (for frontend smoke tests when frontend_routes is non-empty)
 #
@@ -31,8 +31,8 @@ if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEMA" ]]; then
 fi
 
 BASE="specs/PROJ-${PROJ}-${THEMA}"
-PROGRESS="${BASE}/7_progress/PROJ-${PROJ}-progress.md"
-CFG="${BASE}/6_plan/wave-gate-config.json"
+PROGRESS="${BASE}/5_progress/PROJ-${PROJ}-progress.md"
+CFG="${BASE}/3-4_plan/wave-gate-config.json"
 
 fail() { echo "❌ Wave ${WAVE} Gate FAILED: $1" >&2 ; exit 1 ; }
 step() { echo "→ [$(date +%H:%M:%S)] $1" ; }
@@ -283,7 +283,7 @@ else
 fi
 
 # ─── NEXT ACTION hint (biases the lead agent to auto-continue) ──────────────
-NEXT_PLAN="${BASE}/6_plan/PROJ-${PROJ}-wave-${NEXT}-plan.md"
+NEXT_PLAN="${BASE}/3-4_plan/PROJ-${PROJ}-wave-${NEXT}-plan.md"
 echo ""
 if [[ -f "$NEXT_PLAN" ]]; then
   echo "→ NEXT ACTION: Start Wave ${NEXT} NOW. Read ${NEXT_PLAN} and spawn teammates immediately."

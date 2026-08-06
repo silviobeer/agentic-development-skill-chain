@@ -36,7 +36,7 @@ Visual Companion normally runs for one PROJ at a time. If the concept says the s
 
 ## Required Outputs
 
-Write all outputs to `specs/PROJ-<X>-<theme>/2_visual-companion/`:
+Write all outputs to `specs/PROJ-<X>-<theme>/1b_visual-companion/`:
 
 1. `layout-exploration.html` — one interactive HTML file with 3-4 clickable layout approaches.
 2. `layout-decision.md` — summary, project mode, trade-off matrix, recommendation, and open decisions.
@@ -162,7 +162,7 @@ Each approach must include:
 Create:
 
 ```text
-specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html
+specs/PROJ-<X>-<theme>/1b_visual-companion/layout-exploration.html
 ```
 
 The file must be self-contained HTML/CSS/JS and runnable by opening it in a browser. No build step.
@@ -185,7 +185,7 @@ Visual rules:
 Create:
 
 ```text
-specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md
+specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md
 ```
 
 Use this structure:
@@ -260,7 +260,7 @@ Your response must:
 
 Good prompt:
 
-> "I created an interactive layout exploration at `specs/PROJ-<X>-<theme>/2_visual-companion/layout-exploration.html`. Please try the variants and tell me which direction should drive the requirements: A, B, C, or a combination."
+> "I created an interactive layout exploration at `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-exploration.html`. Please try the variants and tell me which direction should drive the requirements: A, B, C, or a combination."
 
 Iterate by editing the same files. Do not create many `v2` files unless the user explicitly wants history.
 
@@ -297,3 +297,24 @@ Do not transition until the user has explicitly selected or approved a direction
 | User stories and acceptance criteria | `requirements-engineer` |
 | Technical architecture | `architecture` |
 | Production implementation | `executing` |
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

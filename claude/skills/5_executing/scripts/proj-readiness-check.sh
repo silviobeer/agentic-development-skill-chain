@@ -11,9 +11,9 @@
 #   bash scripts/proj-readiness-check.sh 1
 #
 # A PROJ counts as "ready" when it has all of:
-#   - specs/PROJ-<N>-<theme>/6_plan/PROJ-<N>-architecture.md
-#   - specs/PROJ-<N>-<theme>/6_plan/PROJ-<N>-wave-1-plan.md (at least one wave)
-#   - specs/PROJ-<N>-<theme>/6_plan/wave-gate-config.json
+#   - specs/PROJ-<N>-<theme>/3-4_plan/PROJ-<N>-architecture.md
+#   - specs/PROJ-<N>-<theme>/3-4_plan/PROJ-<N>-wave-1-plan.md (at least one wave)
+#   - specs/PROJ-<N>-<theme>/3-4_plan/wave-gate-config.json
 #
 # Exit codes:
 #   0 — next PROJ is ready; prints its folder + NEXT ACTION hint
@@ -48,7 +48,7 @@ if [[ "${#matches[@]}" -gt 1 ]]; then
 fi
 
 NEXT_DIR="${matches[0]}"
-PLAN_DIR="${NEXT_DIR}/6_plan"
+PLAN_DIR="${NEXT_DIR}/3-4_plan"
 MISSING=()
 
 [[ -f "${PLAN_DIR}/PROJ-${NEXT}-architecture.md" ]] || MISSING+=("${PLAN_DIR}/PROJ-${NEXT}-architecture.md")
@@ -63,9 +63,9 @@ if [[ "${#MISSING[@]}" -ne 0 ]]; then
   exit 2
 fi
 
-# PRD coverage: every PRD under 3_PRDs/ must be referenced by at least one wave plan.
+# PRD coverage: every PRD under 2_PRDs/ must be referenced by at least one wave plan.
 # Catches cases where Skill 4 forgot to include US from a late-added PRD.
-PRD_DIR="${NEXT_DIR}/3_PRDs"
+PRD_DIR="${NEXT_DIR}/2_PRDs"
 ORPHANED_PRDS=()
 if [[ -d "$PRD_DIR" ]]; then
   shopt -s nullglob

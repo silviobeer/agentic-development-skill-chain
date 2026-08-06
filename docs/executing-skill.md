@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-16
 
-The executing skill is Step 5 in the 0-to-7 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification after each user story and hard gates between waves.
+The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification after each user story and hard gates between waves.
 
 Its main job is orchestration. The lead agent keeps the process moving, records proof in `progress.md`, dispatches implementation or fix work when useful, and personally owns acceptance-criteria verification and browser checks that require the main tool context.
 
@@ -17,16 +17,16 @@ flowchart LR
 
 Inputs:
 
-- PRDs in `specs/PROJ-<X>-<theme>/3_PRDs/*.md`
-- Architecture in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`
-- Wave plans in `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md`
-- Gate config in `specs/PROJ-<X>-<theme>/6_plan/wave-gate-config.json`
-- UI handoff in `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`, when the PROJ has UI work
+- PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md`
+- Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
+- Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`
+- Gate config in `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`
+- UI handoff in `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`, when the PROJ has UI work
 
 Outputs:
 
 - Implemented and committed code
-- `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`
+- `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`
 - Optional source-local `agent.md` notes for non-obvious gotchas
 - A QA-ready PROJ handoff to Step 6
 
@@ -63,7 +63,7 @@ Required setup includes:
 - Playwright MCP when planned frontend routes require full QA later.
 - `agent-browser`, `coderabbit`, and `jq` CLIs for wave gates.
 - `BASE_SHA`, recorded with `git rev-parse HEAD`.
-- `7_progress/PROJ-<X>-progress.md`, created before implementation changes.
+- `5_progress/PROJ-<X>-progress.md`, created before implementation changes.
 
 `progress.md` is the short-term memory and proof log for the whole PROJ. If it is missing, execution stops and creates it before continuing.
 

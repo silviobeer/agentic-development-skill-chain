@@ -9,7 +9,7 @@
 //     the best-effort push notification to stdout.
 //
 //   stop <proj-x> <theme> --reason "<text>" [--error-file <path>]
-//     Renders specs/PROJ-<X>-<theme>/7_progress/stop-report.md.
+//     Renders specs/PROJ-<X>-<theme>/5_progress/stop-report.md.
 //
 // Exit: 0 ok · 1 render failed · 2 required input missing · 64 usage
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "node:fs";
@@ -129,7 +129,7 @@ if (mode === "morning") {
 
   const cleanup = [
     s.stop?.rescue_branch ? `- Rescue branch \`${s.stop.rescue_branch}\`: inspect, salvage, delete` : null,
-    `- Lane output files under \`${base}/7_progress/lanes/\`: review, then remove`,
+    `- Lane output files under \`${base}/5_progress/lanes/\`: review, then remove`,
     "- Open worktrees / dev servers (if any): documented above — evidence, do not delete before reading",
   ].filter(Boolean).join("\n");
 
@@ -148,8 +148,8 @@ if (mode === "morning") {
       `and re-run \`runner/run-phase.sh ${s.phase} ${projX} ${theme}\`.`,
   });
 
-  mkdirSync(join(base, "7_progress"), { recursive: true });
-  const outPath = join(base, "7_progress", "stop-report.md");
+  mkdirSync(join(base, "5_progress"), { recursive: true });
+  const outPath = join(base, "5_progress", "stop-report.md");
   writeFileSync(outPath, out);
   console.log(`stop report: ${outPath}`);
 } else {

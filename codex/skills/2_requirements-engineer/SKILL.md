@@ -28,7 +28,7 @@ Split into a separate PRD when:
 Prefer several focused files inside the same PROJ over one large PRD:
 
 ```text
-specs/PROJ-1-auth/3_PRDs/
+specs/PROJ-1-auth/2_PRDs/
   PROJ-1-PRD-1-user-signup.md
   PROJ-1-PRD-2-login.md
   PROJ-1-PRD-3-password-reset.md
@@ -61,11 +61,11 @@ Requirements run one PROJ at a time. If the concept contains `Decomposition Cont
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. UI mockups: `specs/PROJ-<X>-<theme>/5_mockups/*.html`
-3. Sitemap: `specs/PROJ-<X>-<theme>/5_mockups/sitemap.html`
-4. UI implementation handoff: `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`
-5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md`
-6. Optional design language: `specs/PROJ-<X>-<theme>/4_design/design-language.md`
+2. UI mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`
+3. Sitemap: `specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html`
+4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
+6. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 7. Optional shared sibling design language referenced by the concept, layout decision, or mockup handoff
 
 For UI features, mockups and `implementation-handoff.md` are required inputs. They define screens, flows, states, component reuse, new component candidates, design tokens, the interaction contract, and implementation tolerance.
@@ -76,7 +76,7 @@ If a UI feature has no mockups, stop and run `visual-companion` -> optional `fro
 
 ### 1. Check Existing PRDs
 
-Before creating a PRD, inspect `specs/PROJ-<X>-<theme>/3_PRDs/`.
+Before creating a PRD, inspect `specs/PROJ-<X>-<theme>/2_PRDs/`.
 
 Use the next available `PRD-Y` number inside the PROJ, starting at 1 and avoiding gaps where practical. Do not duplicate existing PRDs.
 
@@ -117,7 +117,7 @@ Identify and prioritize edge cases:
 Save PRDs under:
 
 ```text
-specs/PROJ-<X>-<theme>/3_PRDs/PROJ-<X>-PRD-<Y>-<short-description>.md
+specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-<Y>-<short-description>.md
 ```
 
 Use kebab-case for `<short-description>`.
@@ -201,3 +201,24 @@ feat(PROJ-<X>-PRD-<Y>): Add PRD for <feature-name>
 ```
 
 Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the PRD files are the durable artifacts.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

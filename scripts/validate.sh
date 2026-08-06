@@ -16,7 +16,6 @@ CORE_SKILLS=(
   2b_handoff-package
   2c_review-reconcile
   3_architecture
-  3a_cross-review
   4_writing-plans
   4a_checkpoint
   4b_setup
@@ -24,6 +23,7 @@ CORE_SKILLS=(
   6_qa
   7_documentation
   8_delivery
+  cross-review
 )
 OPTIONAL_SKILLS=(
   refactor-dreamer
@@ -103,8 +103,8 @@ for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl
          4b_setup/manifests/roles/frontend-implementer.md 4b_setup/manifests/roles/backend-implementer.md \
          4b_setup/manifests/roles/reviewer.md 4b_setup/manifests/roles/explore.md \
          0b_intake/scripts/intake-seal-check.sh \
-         3a_cross-review/scripts/cross-review.sh 3a_cross-review/scripts/review-with-claude.sh \
-         3a_cross-review/scripts/review-with-codex.sh 3a_cross-review/templates/cross-review-prompt.md.tmpl \
+         cross-review/scripts/cross-review.sh cross-review/scripts/review-with-claude.sh \
+         cross-review/scripts/review-with-codex.sh cross-review/templates/cross-review-prompt.md.tmpl \
          5_executing/templates/agent-md-entry.md.tmpl \
          5_executing/scripts/gen-component-registry.mjs \
          6_qa/scripts/ledger.mjs 6_qa/scripts/harvest-debt.sh \

@@ -40,7 +40,7 @@ step() { echo "→ $*"; }
 # Fixture repo: intake-style baseline + one PROJ, framework scripts installed
 # =============================================================================
 FIX="$WORK/repo"
-mkdir -p "$FIX"/{docs,src/feature,scripts,templates/roles,specs/PROJ-96-stage2/3_PRDs,specs/PROJ-96-stage2/7_progress}
+mkdir -p "$FIX"/{docs,src/feature,scripts,templates/roles,specs/PROJ-96-stage2/2_PRDs,specs/PROJ-96-stage2/5_progress}
 cd "$FIX"
 git init -q -b main; git config user.email spike@local; git config user.name spike
 
@@ -53,8 +53,8 @@ printf '# Security baseline\n- no secrets in code\n' > docs/security-baseline.md
 printf '# Test conventions\n- vitest\n' > docs/test-conventions.md
 printf '# Rules\n- rule 1\n' > AGENTS.md
 printf '// retry forever, NO backoff, NO dead-letter handling\nmodule.exports = () => {};\n' > src/queue.js
-printf '# PRD\nNEVER-INJECT-MARKER-PRD full requirement text.\n' > specs/PROJ-96-stage2/3_PRDs/PROJ-96-PRD-1.md
-printf '# Progress\nNEVER-INJECT-MARKER-PROGRESS wave log.\n' > specs/PROJ-96-stage2/7_progress/PROJ-96-progress.md
+printf '# PRD\nNEVER-INJECT-MARKER-PRD full requirement text.\n' > specs/PROJ-96-stage2/2_PRDs/PROJ-96-PRD-1.md
+printf '# Progress\nNEVER-INJECT-MARKER-PROGRESS wave log.\n' > specs/PROJ-96-stage2/5_progress/PROJ-96-progress.md
 printf '## Wave 1 — queue API\nPOST /enqueue\n' > specs/PROJ-96-stage2/api-contracts.md
 printf '# Ground file\nAssumption: node 22.\n' > specs/PROJ-96-stage2/ground-file.md
 mkdir -p specs/intake
@@ -64,12 +64,12 @@ for s in 4b_setup/scripts/state.sh 4b_setup/scripts/compile-context-bundles.mjs 
          4b_setup/scripts/context-injector.mjs 4b_setup/scripts/ponytail-check.sh \
          6_qa/scripts/ledger.mjs 7_documentation/scripts/curation-caps.sh \
          0b_intake/scripts/intake-seal-check.sh \
-         3a_cross-review/scripts/cross-review.sh 3a_cross-review/scripts/review-with-claude.sh \
-         3a_cross-review/scripts/review-with-codex.sh; do
+         cross-review/scripts/cross-review.sh cross-review/scripts/review-with-claude.sh \
+         cross-review/scripts/review-with-codex.sh; do
   cp "$SKILLS/$s" scripts/
 done
 mkdir -p templates
-cp "$SKILLS/3a_cross-review/templates/cross-review-prompt.md.tmpl" templates/
+cp "$SKILLS/cross-review/templates/cross-review-prompt.md.tmpl" templates/
 cp "$SKILLS"/4b_setup/manifests/roles/*.md templates/roles/
 chmod +x scripts/*.sh
 git add -A; git commit -qm base

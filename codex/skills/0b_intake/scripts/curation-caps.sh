@@ -10,7 +10,7 @@
 #
 # This script checks FORM only. TRUTH (stale claims, cap-gaming — shrinking
 # docs by deleting true load-bearing statements) is checked by the
-# 3a_cross-review P7 pass. Curation must shrink before P7 completes.
+# cross-review P7 pass. Curation must shrink before P7 completes.
 #
 # Usage: curation-caps.sh [--require-baseline] [repo-root]
 #   --require-baseline  missing capped docs are breaches instead of warnings

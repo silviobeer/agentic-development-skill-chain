@@ -1,18 +1,18 @@
 ---
 name: concept-sync
-description: "Reconcile mockup iteration changes back into the concept before requirements. Use after ui-mockup when stakeholders have iterated on the mockups (changes prompted directly into the HTML) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-7 chain."
+description: "Reconcile mockup iteration changes back into the concept before requirements. Use after ui-mockup when stakeholders have iterated on the mockups (changes prompted directly into the HTML) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-8 chain."
 ---
 
 # Concept Sync — Reconcile Mockup Iterations Into The Concept
 
 During mockup review, stakeholders iterate by prompting changes directly into the HTML mockups until everyone agrees. Those agreed changes drift away from the original concept. This skill closes that loop: it reads the tracked changes and updates the concept so the concept again reflects what was actually decided — before requirements are written.
 
-This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → ui-mockup ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-7 chain whenever mockups were iterated after the concept was written.
+This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → ui-mockup ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
 
 ## When To Use
 
-- Mockups in `5_mockups/` were changed after the concept was approved.
-- `5_mockups/iteration-log.md` exists with logged change entries.
+- Mockups in `1d_mockups/` were changed after the concept was approved.
+- `1d_mockups/iteration-log.md` exists with logged change entries.
 - The team has reached agreement on the mockups and wants the concept to match.
 - Requirements should be written next, and they must consume an up-to-date concept.
 
@@ -35,10 +35,10 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. Mockup iteration log: `specs/PROJ-<X>-<theme>/5_mockups/iteration-log.md`
-3. Current mockups: `specs/PROJ-<X>-<theme>/5_mockups/*.html`
-4. UI implementation handoff: `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md`
-5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/2_visual-companion/layout-decision.md`
+2. Mockup iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
+3. Current mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`
+4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 
 If `iteration-log.md` does not exist but mockups clearly changed, reconstruct the change set by comparing the current mockups against the concept and ask the user to confirm what was decided. Then write the missing log so the trail is not lost.
 
@@ -139,3 +139,24 @@ docs(PROJ-<X>): Sync concept with mockup iterations for <theme>
 ```
 
 Git is optional on the discovery track. If the workspace is not a git repository, skip the commit; the reconciled concept file is the durable artifact.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

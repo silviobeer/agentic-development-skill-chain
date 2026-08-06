@@ -19,7 +19,7 @@ This skill was imported from a Claude workflow. In Codex, follow these overrides
 - Use `multi_tool_use.parallel` for safe parallel local reads and commands.
 - Keep `.codex/skills` paths for reusable skill assets. Treat copied `.claude` permission templates as legacy references, not required setup.
 
-**One PROJ at a time:** The executing loop runs per PROJ. Each PROJ has multiple wave-plan files (`PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …) that are read in order. A single `7_progress/PROJ-<X>-progress.md` tracks all waves. When the user provides multiple PROJ plans, execute each PROJ fully (all waves → Quality Gate → QA) before starting the next.
+**One PROJ at a time:** The executing loop runs per PROJ. Each PROJ has multiple wave-plan files (`PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …) that are read in order. A single `5_progress/PROJ-<X>-progress.md` tracks all waves. When the user provides multiple PROJ plans, execute each PROJ fully (all waves → Quality Gate → QA) before starting the next.
 
 **Decomposed PROJs:** If the plan references sibling PROJs, treat them as dependencies or context only. Do not implement sibling scope from the current PROJ's waves. If a wave depends on an incomplete sibling PROJ, stop before that wave and report the blocker. Shared design-language files from sibling PROJs may be consumed, but they do not authorize building sibling workflows.
 
@@ -55,7 +55,7 @@ Before doing implementation work:
    has `frontend_routes`, Supabase CLI/MCP when the project uses Supabase.
    Any hard tool missing → STOP.
 3. Record BASE_SHA: from `state.json` (`.base_sha`, set by 4b) — standalone: `git rev-parse HEAD`
-4. Create `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md` using the template below
+4. Create `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` using the template below
 5. Store BASE_SHA in progress.md
 
 This file is your single source of truth for the whole PROJ. Update it after EVERY action.
@@ -78,7 +78,7 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
 
 The script validates:
-1. **Ralph ACs** — every `ac_commands` entry from `6_plan/wave-gate-config.json` for wave N exits 0
+1. **Ralph ACs** — every `ac_commands` entry from `3-4_plan/wave-gate-config.json` for wave N exits 0
 2. **Build** — `build_cmd` from config exits 0
 3. **CodeRabbit** — 0 non-advisory findings against wave start SHA. Advisory severities come from `advisory_severities` in `wave-gate-config.json`.
 4. **Smoke Test** — `agent-browser` passes on every `frontend_routes` entry (skipped if empty)
@@ -91,7 +91,7 @@ On success the script appends a `### Wave N Gate — PASSED` block with timestam
 
 **If jq, coderabbit, or agent-browser are missing:** the script prints a clear error and exits non-zero. Install them, do not work around the gate.
 
-**Belt-and-braces enforcement:** In Codex, enforce this in the main orchestration loop: before starting any Wave N with N > 1, verify `### Wave N-1 Gate — PASSED` exists in `7_progress/PROJ-<X>-progress.md`. The `wave-gate.sh` script is the primary gate.
+**Belt-and-braces enforcement:** In Codex, enforce this in the main orchestration loop: before starting any Wave N with N > 1, verify `### Wave N-1 Gate — PASSED` exists in `5_progress/PROJ-<X>-progress.md`. The `wave-gate.sh` script is the primary gate.
 </HARD-GATE>
 
 ---
@@ -219,20 +219,20 @@ Write to `agent.md` immediately when a learning occurs — not at the end. Futur
 
 Read the following before starting each PROJ:
 
-**All PRDs** — `specs/PROJ-<X>-<theme>/3_PRDs/*.md`. These are the authoritative requirements source. Used by the outer Ralph loop to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
+**All PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md`. These are the authoritative requirements source. Used by the outer Ralph loop to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
 
-**Architecture** — `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
+**Architecture** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
 
-**Wave plans** — `specs/PROJ-<X>-<theme>/6_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
+**Wave plans** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
 - The user stories in that wave (may span multiple PRDs)
 - Tasks per US with TDD cycle descriptions and file paths
-- For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `5_mockups/implementation-handoff.md`
+- For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `1d_mockups/implementation-handoff.md`
 
-**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/5_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
+**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
 
 The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating HTML mockups as pixel-perfect production specs.
 
-**When multiple PROJ plans are provided:** Execute one PROJ fully (all waves → Quality Gate → QA) before starting the next. Each PROJ has its own `7_progress/PROJ-<X>-progress.md`.
+**When multiple PROJ plans are provided:** Execute one PROJ fully (all waves → Quality Gate → QA) before starting the next. Each PROJ has its own `5_progress/PROJ-<X>-progress.md`.
 
 ---
 
@@ -242,7 +242,7 @@ For each PROJ-X plan (in order):
 
 ```
 0. Record BASE_SHA (git rev-parse HEAD)
-1. Create specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md
+1. Create specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md
 2. Execute waves (Steps 1–5 below)
 3. Wave-end gate after each wave: ACs + Build + CodeRabbit + Smoke (Step 8)
 4. Quality Gate after all waves (Step 9)
@@ -320,7 +320,7 @@ Read the `Complexity` column in the wave plan's "User Stories in this Wave" tabl
 - `sonnet` → `model: "sonnet"` (default for standard US)
 - `opus` → `model: "opus"` (architecture-sensitive: state machines, concurrency, cross-feature contracts, migrations, auth/session, money, crypto)
 
-Haiku is deliberately not in the menu — US-level work loses too much fidelity on it. If the wave plan is missing the `Complexity` column (older plan format), default to `sonnet` and log a one-line note in `7_progress/PROJ-<X>-progress.md` so the planner can retrofit it.
+Haiku is deliberately not in the menu — US-level work loses too much fidelity on it. If the wave plan is missing the `Complexity` column (older plan format), default to `sonnet` and log a one-line note in `5_progress/PROJ-<X>-progress.md` so the planner can retrofit it.
 
 ```
 Create an agent team for Wave N of PROJ-X.
@@ -342,7 +342,7 @@ Pass to each teammate (via `references/implementer.md` template):
 - Codebase context + conventions
 - What previous waves implemented
 - Relevant sections from `agent.md`
-- **If the US touches UI:** include the relevant `UI Implementation Notes` from the wave plan and the matching sections from `5_mockups/implementation-handoff.md`:
+- **If the US touches UI:** include the relevant `UI Implementation Notes` from the wave plan and the matching sections from `1d_mockups/implementation-handoff.md`:
   - Project mode (`greenfield`, `brownfield`, `hybrid`)
   - Mockup file reference and selected UI direction
   - Existing components/tokens to reuse
@@ -549,7 +549,7 @@ Create an agent team for QA of PROJ-X.
 Spawn teammates:
 - "red-team" using the red-team-tester agent type with prompt:
   "Test feature PROJ-X for security vulnerabilities and edge cases.
-   Read PRDs at specs/PROJ-<X>-<theme>/3_PRDs/*.md for acceptance criteria.
+   Read PRDs at specs/PROJ-<X>-<theme>/2_PRDs/*.md for acceptance criteria.
    Focus on: injection attacks, auth bypass, boundary values, race conditions."
 - "ui-audit" using the ui-auditor agent type with prompt:
   "Audit PROJ-X UI changes for design system compliance.
@@ -639,7 +639,7 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 > ...
 >
 > Learnings documented in `src/features/[feature]/agent.md`.
-> Progress logs at `specs/PROJ-<X>-<theme>/7_progress/PROJ-<X>-progress.md`."
+> Progress logs at `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`."
 
 ---
 
@@ -716,3 +716,24 @@ feat(PROJ-<X>-PRD-<Y>): implement [US-N task name]
 fix(PROJ-<X>-PRD-<Y>): address review findings for [US-N]
 fix(PROJ-<X>): address quality gate findings
 ```
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.

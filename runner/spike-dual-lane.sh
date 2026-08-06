@@ -237,7 +237,7 @@ RUN_ELAPSED=$((SECONDS - RUN_START))
                           || bad "runner took ${RUN_ELAPSED}s — peer was not cancelled on writer failure"
 PSTATE="$(cd "$RWORK/repo" && bash scripts/state.sh get 98 spike '.phase + ":" + .status' 2>/dev/null)"
 [ "$PSTATE" = "P5:blocked" ] && ok "state parked at P5:blocked" || bad "state is '$PSTATE' (expected P5:blocked)"
-[ -f "$RWORK/repo/specs/PROJ-98-spike/7_progress/stop-report.md" ] && ok "stop report rendered" || bad "stop report missing"
+[ -f "$RWORK/repo/specs/PROJ-98-spike/5_progress/stop-report.md" ] && ok "stop report rendered" || bad "stop report missing"
 if pgrep -f "sleep 300" >/dev/null 2>&1; then
   bad "stub peer process survived the runner"
   pkill -f "sleep 300" 2>/dev/null || true

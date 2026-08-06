@@ -28,7 +28,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_SH="$SCRIPT_DIR/state.sh"
 BASE="specs/PROJ-${PROJ}-${THEME}"
-GATE_CFG="$BASE/6_plan/wave-gate-config.json"
+GATE_CFG="$BASE/3-4_plan/wave-gate-config.json"
 
 # Sibling Stage 2 helpers may not be next to this script yet (preflight runs
 # BEFORE the framework copy step on a fresh target): fall back to the

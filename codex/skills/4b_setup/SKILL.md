@@ -35,7 +35,7 @@ This skill is aligned with the Claude variant. In Codex:
 
 - `specs/PROJ-<X>-<theme>/state.json` at `CP1:approved` (sealed by
   **checkpoint** at Checkpoint 1)
-- `specs/PROJ-<X>-<theme>/6_plan/` — wave plans + `wave-gate-config.json`
+- `specs/PROJ-<X>-<theme>/3-4_plan/` — wave plans + `wave-gate-config.json`
 
 ## Workflow
 
@@ -117,8 +117,8 @@ files; overwrite older copies and note it in the commit):
 | `4b_setup/scripts/state.sh`, `preflight.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs` | `scripts/` |
 | `4b_setup/manifests/roles/*.md` | `templates/roles/` |
 | `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
-| `3a_cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
-| `3a_cross-review/templates/cross-review-prompt.md.tmpl` | `templates/` |
+| `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
+| `cross-review/templates/cross-review-prompt.md.tmpl` | `templates/` |
 | `6_qa/scripts/ledger.mjs`, `harvest-debt.sh` | `scripts/` |
 | `7_documentation/scripts/curation-caps.sh` | `scripts/` |
 | `0b_intake/scripts/intake-seal-check.sh` | `scripts/` |
@@ -204,3 +204,24 @@ Any hard preflight failure or git error is a stop condition (§8): state
 written, nothing half-configured left silently in place. P0 is
 idempotent — after fixing the cause, re-run this skill; completed steps
 (existing branch, identical script copies) are skipped, not duplicated.
+
+## Legacy Folder Layout
+
+PROJ folders created before the layout rename use different subfolder
+names. Mapping, old → current:
+
+`2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
+`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
+`7_progress/` → `5_progress/`
+
+If an expected folder is missing but its legacy twin exists, **read from the
+legacy one and keep writing where the existing files already are**. Never
+create a second folder next to it — a split PROJ is worse than an old name.
+Say it once, then continue either way:
+
+> "This PROJ uses the old folder layout (`<old>`). Rename the folders to the
+> current names, or continue with the existing layout?"
+
+Renaming is a `git mv` per folder plus a search for the old paths in the
+PROJ's own documents. It is never a precondition for this skill.
