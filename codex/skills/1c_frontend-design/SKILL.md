@@ -64,9 +64,9 @@ Ask the user (if not already clear from the spec):
 - **What's the tone?** (professional, playful, minimal, bold, luxurious, utilitarian)
 - **Any references?** (existing apps, websites, or styles they admire)
 - **Dark mode?** (yes/no/both)
-- **Which UI stack?** — framework and component library (for example Next.js + shadcn/ui, Vite + React, SvelteKit, plain HTML/CSS). Detect it from `package.json` for brownfield/hybrid and only confirm. The components in step 3 are written in this stack, so it must be decided here.
+- **Which UI stack?** — read `docs/ARCHITECTURE.md` § Stack; the framework, styling, and component library are decided there by `bootstrap` (0c) or extracted by `intake` (0b). Only if that section does not exist (a repo that predates it, or a discovery workspace with no code): detect from `package.json`, otherwise ask — and record the answer in `docs/ARCHITECTURE.md` § Stack, not only in the design language document. The components in step 3 are written in this stack.
 
-Record the stack in the design language document. `3_architecture` inherits this decision as given and only documents it — it does not re-open the UI stack choice.
+Reference the stack from the design language document; do not copy the table. `3_architecture` inherits the same section and documents consequences — nobody re-opens the choice.
 
 ### 2. Define Design Language
 

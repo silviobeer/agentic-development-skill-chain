@@ -50,7 +50,7 @@ missing() { # <file>
     echo "BREACH  $1 missing (required baseline file)"
     BREACH=1
   else
-    echo "WARN    $1 missing — no baseline yet (not a breach; run 0b_intake to create it)"
+    echo "WARN    $1 missing — no baseline yet (not a breach; run 0a/0c for a new build, 0b_intake for an existing codebase)"
   fi
 }
 

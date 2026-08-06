@@ -58,5 +58,5 @@ the ladder, recorded in state.json and flagged in the reports.
 ## Notes
 
 - Existing skill folders with the same names are overwritten.
-- The 0-to-8 core chain (incl. `0a_product-vision`, `0b_intake`, `3a_cross-review`) and optional skills are installed.
+- The 0-to-8 core chain (incl. `0a_product-vision`, `0c_bootstrap`, `0b_intake`, `3a_cross-review`) and optional skills are installed.
 - `CLAUDE.md` is not installed as a skill. It is a repo-level pointer file only.

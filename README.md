@@ -20,6 +20,7 @@ review after delivery (CP2).
 | 0 | `chain-guide` | Detect project state, route to the right next step |
 | 0a | `product-vision` | Once per product, new build: interview into `docs/PRODUCT.md` (what/who/non-goals) and cut the product into a numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
+| 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1 | `brainstorming` | Explore the idea, allocate PROJ-X, write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |

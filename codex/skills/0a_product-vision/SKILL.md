@@ -188,10 +188,10 @@ Run `bash scripts/curation-caps.sh` if it is already in the repo; otherwise
 count: `docs/PRODUCT.md` must fit 30 non-blank lines. Over the cap means the
 vision is carrying feature detail — cut it, never raise the cap.
 
-→ NEXT ACTION: `brainstorming` (1) on the recommended first PROJ. If the
-project has no scaffold yet, set it up first — `frontend-design` (1c) needs
-a component directory and a route to render the showcase into, and the
-component registry is generated from `src/components/**`.
+→ NEXT ACTION: `bootstrap` (0c) — decide the stack and stand up the empty
+project — then `brainstorming` (1) on the recommended first PROJ. On the
+discovery track (no code, Linear handoff) skip `bootstrap` and go straight
+to `brainstorming`.
 
 ## Revision Round
 

@@ -63,6 +63,8 @@ Use `AskUserQuestion` for cross-cutting concerns:
 
 Focus on cross-cutting decisions that affect multiple PRDs or multiple user stories. Do NOT over-specify — the specialized implementer agents handle component-level and API-level decisions during execution.
 
+**The stack is inherited, not decided here.** `docs/ARCHITECTURE.md` § Stack is the single source of truth, written by `bootstrap` (0c) or extracted by `intake` (0b). Read it, build on it, and document the consequences for this PROJ. Do not restate the table and do not re-open a choice. A PROJ that genuinely needs a new stack layer (a queue, a cache, a second database) adds ONE row there with the reason — that is an architecture decision and it belongs in the table, not scattered across PRDs. If a row says `open`, closing it is in scope here.
+
 #### A) System Boundaries
 Define what talks to what at the highest level:
 ```

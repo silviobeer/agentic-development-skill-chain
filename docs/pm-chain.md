@@ -22,7 +22,7 @@ flowchart LR
   S2C -.->|items needing engineering| MTG([Developer meeting agenda])
 ```
 
-Steps 3–7 (architecture, plans, executing, QA, documentation) do **not** apply on this track.
+Steps 0c (bootstrap) and 3–7 (architecture, plans, executing, QA, documentation) do **not** apply on this track — there is no codebase to scaffold or build.
 
 ## Workspace and folder setup
 
