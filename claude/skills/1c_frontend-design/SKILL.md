@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: "Define the design system — visual design language plus the component catalog and a running showcase page — before UI mockups and before requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no theme tokens or CSS variables exist yet. Skip for brownfield projects with an established design system."
+description: "Define the design system — starting with a mood-led minimum set of colors, typography, buttons, and form controls — plus the component catalog and a running showcase page, before UI mockups and requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no theme tokens or CSS variables exist yet. Skip for brownfield projects with an established design system."
 ---
 
 # Frontend Design — Design System Definition
@@ -57,20 +57,46 @@ Artifact handling:
 
 ## Process
 
-### 1. Understand Context
+### 1. Establish Mood Before Design Choices
 
-Ask the user (if not already clear from the spec):
+When no design system exists, ask this question **first**, before proposing colors, components, or fonts:
+
+> What mood should the interface evoke?
+
+Wait for the answer. Then ask whether the user has inspirations (products, sites, images, or styles); accept links or a short description, but do not require them. Use the mood and any inspirations as constraints, not as a request to clone a reference.
+
+Then establish any remaining context that is not already clear from the spec:
+
 - **Who uses this?** (developers, consumers, enterprise, creative professionals)
-- **What's the tone?** (professional, playful, minimal, bold, luxurious, utilitarian)
-- **Any references?** (existing apps, websites, or styles they admire)
 - **Dark mode?** (yes/no/both)
-- **Which UI stack?** — read `docs/ARCHITECTURE.md` § Stack; the framework, styling, and component library are decided there by `bootstrap` (0c) or extracted by `intake` (0b). Only if that section does not exist (a repo that predates it, or a discovery workspace with no code): detect from `package.json`, otherwise ask — and record the answer in `docs/ARCHITECTURE.md` § Stack, not only in the design language document. The components in step 3 are written in this stack.
+- **Which UI stack?** — read `docs/ARCHITECTURE.md` § Stack; the framework, styling, and component library are decided there by `bootstrap` (0c) or extracted by `intake` (0b). Only if that section does not exist (a repo that predates it, or a discovery workspace with no code): detect from `package.json`, otherwise ask — and record the answer in `docs/ARCHITECTURE.md` § Stack, not only in the design language document. The components in step 4 are written in this stack.
 
 Reference the stack from the design language document; do not copy the table. `3_architecture` inherits the same section and documents consequences — nobody re-opens the choice.
 
-### 2. Define Design Language
+### 2. Propose and Approve the Minimum Set
 
-Based on context, create a coherent design system with:
+Only for a project without an established design system, propose **two or three distinct, mood-consistent directions** before writing tokens or components. Each direction must include:
+
+- A color direction: primary, surfaces, text contrast, and accent/status character
+- A button and form-control direction: emphasis, shape, border/fill treatment, focus treatment, and density
+- A font pairing: display and body fonts (plus mono only when the product needs code or dense data)
+
+Make the trade-offs concrete and concise. The alternatives must be genuinely different, but all must respect accessibility and the selected stack. Ask the user to select one direction or explicitly combine named parts. Do not silently choose or merge directions.
+
+Create a **decision playground** alongside the proposals so the user can try them rather than choosing from prose alone. It is a deliberately disposable design-exploration artifact, not a production screen or catalog component. It must include at least:
+
+- Two or three representative example pages drawn from the planned UI (for example, a content/list page, a detail/card page, and a form); if the planned UI has fewer page types, use its real types rather than inventing features
+- A direction switcher for each proposed color/button/form/font direction
+- Controls to compare the approved scales: display/body font pairing, radius tokens, density/spacing, light/dark mode when supported, and button/form states
+- Realistic sample content and a visible form with label, help text, focus, error, disabled, primary, and secondary states
+
+Controls may update CSS variables locally in the playground; they must never alter production tokens or components until the user explicitly approves a direction. Make each current setting visible and let the user reset to a proposed direction. Ask for the approval only after the user has had the opportunity to inspect or play with the page.
+
+The approved direction is the **minimum set**. Implement it before expanding the catalog: color tokens, typography tokens, a `Button`, and a labeled text `Field`/`Input` with help, error, disabled, and focus states. Add `Select`, `Textarea`, checkbox, or other controls only when planned screens need them.
+
+### 3. Define Design Language
+
+Based on the approved minimum set and context, create a coherent design system with:
 
 **Color Palette**
 - Primary, secondary, accent colors with semantic names
@@ -103,9 +129,9 @@ Based on context, create a coherent design system with:
 - What makes this design memorable (the "one thing")
 - What to avoid (anti-patterns for this specific design)
 
-### 3. Define The Component Catalog
+### 4. Define The Component Catalog
 
-Derive the component set from what the planned screens actually need — do not ship a fixed standard kit. Read the concept and `1b_visual-companion/layout-decision.md`, list the UI pieces those screens require, and build only those. The catalog grows later, when a mockup or a user story demands a piece that does not exist yet (see *Extending The Design System*).
+The approved minimum-set `Button` and labeled text `Field`/`Input` are mandatory for a new system. Beyond them, derive the component set from what the planned screens actually need — do not ship a fixed standard kit. Read the concept and `1b_visual-companion/layout-decision.md`, list the UI pieces those screens require, and build only those. The catalog grows later, when a mockup or a user story demands a piece that does not exist yet (see *Extending The Design System*).
 
 Rules:
 
@@ -115,7 +141,7 @@ Rules:
 
 For each component define: name, purpose, variants, sizes, states (default, hover, focus, disabled, loading, error, empty where applicable), and the tokens it consumes.
 
-### 4. Generate Artifacts
+### 5. Generate Artifacts
 
 Create these files:
 
@@ -132,6 +158,17 @@ Create these files:
 
 ## Tone
 [Professional/Playful/Minimal/Bold/etc. — with reasoning]
+
+## Mood & Inspiration
+- Mood: [user-approved mood]
+- Inspirations: [links/descriptions, or "none supplied"]
+
+## Minimum Set Decision
+- Selected direction: [name and short rationale]
+- Alternatives considered: [names and why not selected]
+- Button and form treatment: [approved direction]
+- Font pairing: [approved direction]
+- Decision playground: [path or route, and the selected playground settings]
 
 ## Color Palette
 
@@ -189,6 +226,8 @@ Include a short implementation-facing section:
 ```
 
 **Theme configuration** — write the tokens into whatever the chosen stack themes with: the styling config named in `docs/ARCHITECTURE.md` § Stack (a Tailwind config, a UnoCSS preset, a theme file) plus the global stylesheet holding the CSS custom properties. Extend the existing config, never overwrite it, and make sure the component library picks the variables up.
+
+**Decision playground** — create the interactive exploration page from step 2. When an app scaffold exists, put it at `/dev/design-lab`, outside production navigation, with no authentication, data fetching, or persistence. Before scaffold, write `specs/PROJ-<X>-<theme>/1c_design/design-playground.html` as self-contained HTML, CSS, and minimal client-side JavaScript. It must remain available until the design language is approved; it may then stay as the rationale/prototype or be replaced by the route, but it must never become a second source of production tokens.
 
 **The components themselves** — implement each catalog entry in the chosen stack, in the project's component directory (for example `src/components/ui/`). Tokens only: no hardcoded hex values, no arbitrary pixel sizes. Every component must be usable without further styling by the consumer.
 
@@ -259,13 +298,16 @@ Structure — three sections, in this order:
 
 A sticky header carries: project · stack · links to `docs/DESIGN-SYSTEM.md` and `docs/components.md` · the light/dark toggle.
 
-Static examples only — no props playground.
+The component showcase remains static — no props playground. Interactive experimentation belongs only in the separate decision playground, which exists to make a design choice before the system is sealed.
 
-### 5. Verify
+### 6. Verify
 
 - Ensure the CSS custom properties map correctly onto the theme configuration
 - Check that the chosen component library actually inherits the custom colors
 - Verify the fonts are loaded the way the stack loads fonts
+- Open the decision playground and verify every direction switcher, font, radius, density, mode, reset control, and example-page link works without changing production tokens
+- Confirm `design-language.md` records the approved mood, any inspiration, the chosen direction, and the rejected alternatives
+- Confirm the showcase renders the minimum-set `Button` and labeled text `Field`/`Input`, including focus, disabled, and error states
 - Open the showcase page and check every component in light and dark mode
 - Every `## Patterns` entry in `docs/DESIGN-SYSTEM.md` has a `#pattern-<name>` section on the page
 - Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block, the registry is stale, or a component has no showcase section
@@ -298,6 +340,8 @@ After the design language is approved, invoke `ui-mockup`. Do not invoke `requir
 ## Rules
 
 - **Ask before deciding** — don't assume the user wants bold if they haven't said so
+- **Mood first for new systems** — ask for mood, then optional inspiration, and obtain approval of one minimum-set direction before committing colors, buttons/forms, or fonts
+- **Play before committing** — a new system gets an interactive decision playground with representative example pages. Its controls are local experiments; only the user's approved settings become tokens or components.
 - **Commit to a direction** — wishy-washy "a bit of everything" designs fail. Pick a lane.
 - **Respect the component library** — the tokens must work WITH its theming mechanism, not fight it
 - **No feature code** — this step builds tokens, catalog components, and the showcase. No screens, no business logic, no data fetching.

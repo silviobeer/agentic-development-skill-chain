@@ -1,99 +1,73 @@
 ---
 name: cross-review
-description: "Route review of an artifact to the provider OPPOSITE its author (Claude-authored → codex exec, Codex-authored → claude -p) so review never happens in the authoring model's echo chamber. Use when: (1) P7 curated docs need the truth-check before the phase seals (the one active call site), (2) a degraded single-provider run needs a model-opposite review. Not for: finding bugs in code (use qa), form/size caps (curation-caps.sh in documentation), P3 pre-mortem or P4 plan review (Stage 3 — not wired yet)."
+description: "Route a concept, architecture, implementation plan, or curated documentation to the provider opposite its author for an adversarial, read-only review. Use after creating a concept (1_brainstorming), architecture (3), wave plans (4_writing-plans), or P7 curated docs when the user elects a cross-model review. Works before P0 without state.json. Not for code-bug testing (use qa) or form/size caps (use curation-caps.sh)."
 ---
 
-# Cross-Review — The Opposite-Provider Gate
+# Cross-Review — Opposite-Provider Gate
 
-Owns the cross-model review mechanism of the agent workflow (CONCEPT.md
-§4). Same-model review is an echo chamber: persona prompts vary the
-PROMPT but not the model's blind spots. This skill routes review to the
-provider opposite the artifact's author — headless, strictly read-only,
-bounded — and lands findings in the ledger like every other source.
+Same-model review is an echo chamber. This skill asks the other provider to
+try to break an artifact, with identical severity rules and JSON Lines output
+for every mode. It never starts by itself: the producing skill asks the human
+at handoff, defaulting to yes.
 
-**The invariant this skill exists to enforce: a review gate is NEVER
-satisfied by the same model that authored the artifact.**
+## Modes
 
-## Codex Adaptation
-
-This skill is aligned with the Claude variant. In Codex:
-
-- The scripts are host-neutral — a Codex session runs the same
-  `scripts/cross-review.sh`; routing depends only on `author_provider`
-  in state.json, never on which CLI happens to run the skill.
-- Reusable skill assets live under `~/.codex/skills/...` instead of
-  `~/.claude/skills/...`.
-- The degraded fallback still goes through `claude -p --model` (claude
-  is the HARD provider of the chain). If a Codex-hosted run finds
-  `claude` missing, that is a P0 preflight stop condition, not something
-  this skill works around.
-
-## Call sites
-
-| Call site | Artifacts | Status |
+| Mode | Artifact | Review focus |
 |---|---|---|
-| **P7 docs review** | curated docs delta (+ full capped docs) vs the PROJ diff | **ACTIVE** — invoked by **documentation** (7) before P7 seals; Critical/High BLOCK the phase |
-| P3 pre-mortem | architecture-delta + PRDs | Stage 3 — do NOT improvise |
-| P4 plan review | wave plans + gate config + api-contracts | Stage 3 — do NOT improvise |
+| `concept` | `1_brainstorm/PROJ-<X>-concept.md` | product coherence, buildability, boundaries, grounding |
+| `architecture` | `3-4_plan/PROJ-<X>-architecture.md` | decisions, feasibility, traceability, risk |
+| `plan` | wave plans and gate config | executability, coverage, sequencing, scope |
+| `docs` | curated documentation | factual truth, staleness, cap-gaming, durable-rule quality |
 
-The mechanism (scripts below) is call-site-agnostic; only `docs` mode is
-accepted until the Stage 3 call sites ship.
+Supply source artifacts that establish truth through `--ground-truth`; the
+script embeds both artifacts and ground truth with `cat -n` line numbers. A
+`--diff-base` embeds that git diff. The reviewer has no need or permission to
+run commands, making read-only behaviour independent of sandbox support.
 
-## Mechanics
+## Run it
 
-Everything deterministic is in `scripts/` — the skill (or the P7 writer
-lane) runs one command:
+Before P0, state.json does not exist. Pass the author explicitly; findings are
+written to stdout for the human, never to a ledger:
+
+```bash
+bash scripts/cross-review.sh concept <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+  --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
+  --author-provider claude --author-model <writer-model> --round 1
+```
+
+Use `architecture` with the concept and PRDs as ground truth, and `plan` with
+the architecture and PRDs as ground truth. If a referenced input does not
+exist, omit it; do not invent a replacement.
+
+After P0, omit `--author-provider` and use `--author-key` to resolve authorship
+from state.json. That is the persistent gate path: findings are added only via
+`ledger.mjs`, and the round is appended only via `state.sh`.
 
 ```bash
 bash scripts/cross-review.sh docs <X> <theme> \
   --artifacts docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md \
   --author-key docs-delta \
-  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" \
-  --round 1
+  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" --round 1
 ```
 
-What it does, in order:
+Exit codes: `0` clean or non-blocking only; `3` Critical/High findings;
+`1` infrastructure failure; `64` invalid use. Critical/High findings block the
+current handoff: fix and perform one re-review (`--round 2`); a remaining red
+round goes to the human. Medium/Low findings are reported or deferred as debt.
 
-1. Resolves `author_provider` + `author_model` from
-   `.authorship["<key>"]` in state.json (fallback: the phase's last
-   writer lane). No resolvable author → hard error, the gate cannot run.
-2. Renders `templates/cross-review-prompt.md.tmpl` (mode + artifact list
-   + author provider + diff scope) — one provider-neutral adversarial
-   prompt for either CLI.
-3. Routes: opposite provider available → its adapter
-   (`review-with-codex.sh` = `codex exec --sandbox read-only`,
-   `review-with-claude.sh` = `claude -p --allowedTools Read,Grep,Glob`).
-   Opposite provider missing/unauthenticated → **MODEL-opposite**
-   fallback via `review-with-claude.sh --model $CLAUDE_REVIEW_MODEL`,
-   refused if that equals `author_model`. Every degraded round is
-   recorded (`degraded_fallback: true`) and later rendered into the
-   morning report and PR body — never silent.
-4. `--joint`: jointly curated artifacts get independent Claude AND Codex
-   passes, launched concurrently; dedupe happens in the ledger AFTER
-   provider attribution is stamped on every line.
-5. Normalizes adapter output to findings JSON lines
-   (`source: cross-review`, `provider` set) and pipes them into
-   `node scripts/ledger.mjs add` — the ledger stays the sole write path.
-   The `review-clean` marker line proves the adapter ran; it is not
-   ingested.
-6. Appends a round record to `.cross_review` in state.json (via
-   state.sh) and exits: `0` clean · `3` Critical/High ingested ·
-   `1` infrastructure failure.
+## Routing and output integrity
 
-## Severity rules (no new ones)
-
-- **Critical/High** → BLOCK the calling phase. Fix, then ONE re-review
-  round (`--round 2`). Still red → stop policy §8: park the run, the
-  human decides in the morning. `--round 3` is refused by the script.
-- **Medium/Low** → auto-defer as debt (§8), never block.
-
-## Boundaries
-
-- Adapters are strictly read-only; timeouts kill the whole process
-  group (TERM then KILL) — no orphaned CLI trees.
-- This skill checks TRUTH. Form (size caps) is `curation-caps.sh` in
-  the documentation skill — run that FIRST, caps-breach output would
-  only pollute this review.
-- Never bypass the gate by setting `CLAUDE_REVIEW_MODEL` to the writer
-  model — cross-review.sh refuses same-model reviews, and run-phase.sh
-  refuses to start with equal writer/review models.
+- Claude-authored artifacts go to Codex; Codex-authored artifacts go to Claude.
+  `--joint` runs both independently. If Codex is unavailable, a different
+  Claude model may be used only when it is not the author model; that is marked
+  as a degraded persistent review.
+- Adapters reject zero findings, `review-blocked`, recognizable Bubblewrap or
+  user-namespace failures, and any output that mixes `review-clean` with a
+  finding.
+- Findings are deduplicated by `category + file + line + summary` before they
+  reach stdout or the ledger. `review-clean` is a liveness marker, never a
+  finding.
+- The default 128 KiB embedded-context limit fails explicitly if exceeded.
+  Narrow the review inputs, or deliberately set
+  `CROSS_REVIEW_MAX_CONTEXT_BYTES` for a reviewed larger prompt.

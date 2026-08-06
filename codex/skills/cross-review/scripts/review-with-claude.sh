@@ -34,11 +34,13 @@ kill_tree() { # whole process group, TERM then KILL (mirrors run-phase.sh kill_g
 
 MODEL_ARGS=()
 [ -n "$MODEL" ] && MODEL_ARGS=(--model "$MODEL")
-# Read-only git commands included: the docs truth-check must be able to
-# compare artifacts against the actual diff (git diff BASE..HEAD), not just
-# read the current files.
+# The prompt embeds every review input and forbids commands. Safe mode keeps
+# the user's subscription OAuth while disabling user/project customization
+# (plugins, hooks, skills, MCP); strict MCP prevents configured connectors from
+# re-entering. `--tools ""` then disables the built-in tool set as well.
 setsid claude -p "$(cat "$PROMPT")" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
-  --allowedTools "Read,Grep,Glob,Bash(git diff*),Bash(git log*),Bash(git show*)" </dev/null >"$RAW" 2>&1 &
+  --safe-mode --strict-mcp-config --tools "" --max-turns 1 --effort low \
+  --no-session-persistence </dev/null >"$RAW" 2>&1 &
 PID=$!
 trap 'kill_tree "$PID"; exit 1' INT TERM
 
@@ -59,14 +61,22 @@ if [ "$RC" -ne 0 ]; then
   exit 1
 fi
 
-VALID=0
-while IFS= read -r line; do
-  v="$(jq -c 'select(type == "object" and .severity? and .summary?) + {provider: "claude"}' <<<"$line" 2>/dev/null || true)"
-  [ -n "$v" ] && { printf '%s\n' "$v"; VALID=$((VALID + 1)); }
-done < <(grep '^{' "$RAW" 2>/dev/null || true)
+NORMALIZED="$(grep '^{' "$RAW" 2>/dev/null | jq -cs '
+  map(select(type == "object" and .severity? and .summary?) + {provider: "claude"})
+  | unique_by([(.category // ""), (.file // ""), (.line // 0), .summary])[]
+' 2>/dev/null || true)"
+VALID="$(printf '%s\n' "$NORMALIZED" | grep -c '^{' || true)"
 
 if [ "$VALID" -eq 0 ]; then
   echo "review-with-claude.sh: zero valid finding lines — a clean review must emit the review-clean line" >&2
   tail -n 5 "$RAW" >&2 || true
   exit 1
 fi
+
+CLEAN="$(printf '%s\n' "$NORMALIZED" | jq -s '[.[] | select(.category == "review-clean")] | length')"
+FINDINGS="$(printf '%s\n' "$NORMALIZED" | jq -s '[.[] | select(.category != "review-clean")] | length')"
+if [ "$CLEAN" -gt 0 ] && [ "$FINDINGS" -gt 0 ]; then
+  echo "review-with-claude.sh: review-clean and findings appeared together — output contract violated" >&2
+  exit 1
+fi
+printf '%s\n' "$NORMALIZED"

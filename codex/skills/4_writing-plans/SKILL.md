@@ -275,6 +275,14 @@ Ask the user to review the wave-plan artifacts with a different model before exe
 
 After saving all wave plans + the gate config:
 
+Ask before offering execution: "Shall I run the optional opposite-provider
+cross-review of these implementation plans now? Default: yes." Wait for a
+yes/no answer. On yes, invoke `cross-review` in `plan` mode with all wave plans
+and `wave-gate-config.json` as `--artifacts`, and architecture plus PRDs as
+`--ground-truth`; pass the current writer as `--author-provider`. Resolve
+Critical/High findings with the user before execution. On no, record that the
+human declined it.
+
 > "Plans complete. Files in `specs/PROJ-<X>-<theme>/3-4_plan/`:
 > - `PROJ-<X>-architecture.md`
 > - `PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …

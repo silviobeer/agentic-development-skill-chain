@@ -600,6 +600,13 @@ After self-review, ask the user to review the written concept:
 
 Wait for the user's response. If they request changes, update the concept and run self-review again. Only proceed after approval.
 
+Before the transition, explicitly ask: "Shall I run the optional
+opposite-provider cross-review of this concept now? Default: yes." Wait for a
+yes/no answer. On yes, invoke `cross-review` in `concept` mode with the concept
+as `--artifacts`, available discovery/context files as `--ground-truth`, and
+the current writer as `--author-provider`; resolve Critical/High findings with
+the user before transition. On no, record that the human declined it.
+
 ## Transition
 
 - If the feature has a UI component, invoke `visual-companion`.

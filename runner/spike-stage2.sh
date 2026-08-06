@@ -206,6 +206,11 @@ EOF
 cat > "$STUB/codex" <<'EOF'
 #!/bin/sh
 [ "$1" = "login" ] && exit 0
+input="$(cat)"
+case "$input" in
+  *"## Artifact under review: docs/ARCHITECTURE.md"*) ;;
+  *) exit 9 ;;
+esac
 echo '{"severity":"medium","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub codex finding"}'
 EOF
 chmod +x "$STUB/claude" "$STUB/codex"
@@ -216,8 +221,48 @@ XRP="$(jq -r '.cross_review[-1].reviewer_provider' specs/PROJ-96-stage2/state.js
 [ "$RC" -eq 0 ] && [ "$XRP" = "codex" ] && ok "claude-authored -> codex reviews; round recorded in state" || bad "routing rc=$RC reviewer=$XRP"
 LED="$(jq -r '[.findings[] | select((.source == "cross-review") and .provider == "codex")] | length' specs/PROJ-96-stage2/findings.json 2>/dev/null)"
 [ "${LED:-0}" -ge 1 ] && ok "finding landed in the ledger: source=cross-review, provider attributed" || bad "ledger has no attributed cross-review finding"
+# Before P0 there is no state.json. An explicit author must route the review,
+# embed its input, and report findings only to the human (stdout).
+OUT="$(PATH="$STUB:$PATH" bash scripts/cross-review.sh concept 97 pre-p0 --artifacts docs/ARCHITECTURE.md --author-provider claude 2>/dev/null)"
+RC=$?
+printf '%s\n' "$OUT" | jq -e 'select(.provider == "codex" and .source == "cross-review")' >/dev/null 2>&1 \
+  && [ "$RC" -eq 0 ] && [ ! -e specs/PROJ-97-pre-p0/findings.json ] \
+  && ok "pre-P0 explicit author reports to human without state.json or ledger" \
+  || bad "pre-P0 explicit-author path failed (rc=$RC)"
 PATH="$STUB:$PATH" bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --round 3 >/dev/null 2>&1
 [ $? -eq 64 ] && ok "round 3 refused (max 2 rounds, then §8)" || bad "round 3 not refused"
+
+# Adapter output is a gate protocol, not best-effort parsing: duplicate
+# findings collapse, and a clean marker may never coexist with a finding.
+cat > "$STUB/codex" <<'EOF'
+#!/bin/sh
+[ "$1" = "login" ] && exit 0
+echo '{"severity":"medium","category":"duplicate","file":"docs/ARCHITECTURE.md","line":2,"summary":"same finding"}'
+echo '{"severity":"medium","category":"duplicate","file":"docs/ARCHITECTURE.md","line":2,"summary":"same finding"}'
+EOF
+chmod +x "$STUB/codex"
+printf 'prompt' > "$WORK/p.md"
+OUT="$(PATH="$STUB:$PATH" bash scripts/review-with-codex.sh --prompt "$WORK/p.md" --timeout 10 2>/dev/null)"
+[ "$(printf '%s\n' "$OUT" | grep -c '^{' || true)" -eq 1 ] \
+  && ok "adapter deduplicates identical findings" || bad "adapter did not deduplicate findings"
+cat > "$STUB/codex" <<'EOF'
+#!/bin/sh
+[ "$1" = "login" ] && exit 0
+echo '{"severity":"low","category":"review-clean","summary":"clean"}'
+echo '{"severity":"medium","category":"contradiction","file":"docs/ARCHITECTURE.md","line":2,"summary":"not clean"}'
+EOF
+chmod +x "$STUB/codex"
+PATH="$STUB:$PATH" bash scripts/review-with-codex.sh --prompt "$WORK/p.md" --timeout 10 >/dev/null 2>&1
+[ $? -eq 1 ] && ok "adapter rejects review-clean plus findings" || bad "adapter accepted contradictory clean output"
+cat > "$STUB/codex" <<'EOF'
+#!/bin/sh
+[ "$1" = "login" ] && exit 0
+echo 'bubblewrap: user namespaces unavailable'
+echo '{"severity":"medium","category":"false-success","file":"docs/ARCHITECTURE.md","line":2,"summary":"must not pass"}'
+EOF
+chmod +x "$STUB/codex"
+PATH="$STUB:$PATH" bash scripts/review-with-codex.sh --prompt "$WORK/p.md" --timeout 10 >/dev/null 2>&1
+[ $? -eq 1 ] && ok "adapter rejects sandbox false-success output" || bad "adapter accepted sandbox false-success"
 # opposite provider "unavailable": stub codex fails login (a bare rm would fall
 # through to a REAL codex on PATH) -> model-opposite fallback
 printf '#!/bin/sh\nexit 1\n' > "$STUB/codex"; chmod +x "$STUB/codex"

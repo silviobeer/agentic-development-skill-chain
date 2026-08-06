@@ -173,6 +173,14 @@ Template:
 After approval, tell the user:
 > "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
 
+Before handing off, explicitly ask: "Shall I run the optional
+opposite-provider cross-review of this architecture now? Default: yes." Wait
+for a yes/no answer. On yes, invoke `cross-review` in `architecture` mode with
+the architecture as `--artifacts` and the concept, PRDs, and relevant existing
+state as `--ground-truth`; pass the current writer as `--author-provider`.
+Resolve Critical/High findings with the user before plan writing. On no, record
+that the human declined it.
+
 ## Git Commit
 ```
 docs(PROJ-<X>): Add architecture for <theme>
