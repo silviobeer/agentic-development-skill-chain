@@ -279,7 +279,7 @@ The intake is therefore a collaborative session with the developer,
 not a batch job.
 
 **Step 1 — Scan & draft (automated; spec-miner principle: Arch Hat +
-QA Hat; component-scout for the registry).** Produce first drafts of
+QA Hat; `gen-component-registry.mjs` for the registry).** Produce first drafts of
 all curated docs, with every statement carrying a provenance marker:
 
 - `extracted` — derived from code/README/git history, with evidence
@@ -306,8 +306,10 @@ deliberate drift audit, never automatically.
 (+ `docs/architecture/` details), `docs/GUIDELINES.md`,
 `docs/DESIGN-SYSTEM.md` (brownfield: extract tokens from the code; if
 none exist, record a pointer to `1c_frontend-design` instead of
-inventing one), `docs/components.md` (component-scout), the security
-baseline and test conventions, and an initial `AGENTS.md`.
+inventing one), `docs/components.md` (generated from the doc block above each
+component export; the interview supplies the purpose lines no parser
+can extract), the security baseline and test conventions, and an
+initial `AGENTS.md`.
 
 **Near-greenfield variant:** if there is almost no code yet, the
 extraction step is thin and the interview carries the weight — same
@@ -634,7 +636,8 @@ debt section in the PR — not mid-run.
    - `docs/PRODUCT.md` ← new domain terms/scope changes
    - `docs/GUIDELINES.md` + merge candidates into project-root
      `AGENTS.md` through the existing approval pipeline
-   - `docs/components.md` ← register new components
+   - `docs/components.md` ← regenerate (`gen-component-registry.mjs`);
+     curate the purpose lines in the components, never the table
    - **Curate folder agent.md files:** keep what is confirmed, delete
      what is outdated, promote what is project-wide
 3. **Cross-model docs review (`3a_cross-review`, §4):** the provider
@@ -702,8 +705,8 @@ docs/                          ← LONG-LIVED, curated, injectable
 ├── ARCHITECTURE.md            ← overarching architecture (≤200 lines, hard cap)
 ├── architecture/…             ← details/ADRs, referenced only
 ├── GUIDELINES.md              ← code conventions, error handling, naming
-├── DESIGN-SYSTEM.md           ← tokens, do/don't
-└── components.md              ← component registry
+├── DESIGN-SYSTEM.md           ← tokens, scales, patterns, do/don't (≤80 lines, hard cap)
+└── components.md              ← component registry (GENERATED from the code)
 
 specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 0_context/                 ← existing-state inputs when applicable
@@ -778,8 +781,8 @@ change what context a role receives.
 - The context-curator compiles a bundle per agent type and COUNTS
   tokens. The P0 preflight fails if a bundle exceeds the budget
   (~2–3k tokens) → condense first, then start.
-- File caps (PRODUCT ½ page, ARCHITECTURE 200 lines, agent.md
-  100 lines, …) are checked as a hard gate in the P7 curation —
+- File caps (PRODUCT ½ page, ARCHITECTURE 200 lines, DESIGN-SYSTEM
+  80 lines, agent.md 100 lines, …) are checked as a hard gate in the P7 curation —
   otherwise the curated docs grow unnoticed until every session gets
   more expensive.
 
@@ -1067,13 +1070,14 @@ silently at render time.
 | `preflight.sh` (4b_setup) | CLI list §7 (embedded), env | report to stdout; state.json `preflight` block | checks `command -v` + auth per tool; exit ≠ 0 on any missing HARD tool (stop condition); skippable tools → logged skip |
 | `compile-context-bundles.mjs` (4b_setup) | root `AGENTS.md`, `docs/*`, `specs/PROJ-<X>-<theme>/*`, injection matrix §5 | one canonical bundle per role plus Claude/Codex projections | counts tokens and hashes both provider projections; exit ≠ 0 on budget breach or semantic drift |
 | `state.sh` (4b_setup) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
-| `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check; any Critical/High → exit ≠ 0 |
+| `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check, component-registry `--check`; any Critical/High → exit ≠ 0 |
+| `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry or a component without a doc block (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
 | `cross-review.sh` (3a_cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
 | `review-with-claude.sh` (3a_cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes `claude -p` read-only; validates output; timeout/cancel as one process group |
 | `review-with-codex.sh` (3a_cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
-| `curation-caps.sh` (7_documentation) | `docs/*`, `src/**/agent.md` | cap report | exit ≠ 0 on any cap breach (PRODUCT ½ page, ARCHITECTURE 200 lines, agent.md 100 lines) — curation must shrink before P7 completes |
+| `curation-caps.sh` (7_documentation) | `docs/*`, `src/**/agent.md` | cap report | exit ≠ 0 on any cap breach (PRODUCT ½ page, ARCHITECTURE 200 lines, DESIGN-SYSTEM 80 lines, agent.md 100 lines) — curation must shrink before P7 completes |
 | `conflict-probe.sh` (8_delivery) | PROJ branch, `main` | conflict report (JSON: none/trivial/semantic per file) | throwaway worktree, `merge --no-commit`; never touches real branches; classification by file type heuristics |
 | `render-pr-body.mjs` (8_delivery) | state.json + findings.json + template | PR body markdown | pure render, no side effects |
 | `ci-poll.sh` (8_delivery) | PR number | check status JSON; failed-check logs verbatim | wraps `gh pr checks --watch`; timeout from config; exit ≠ 0 after timeout |
