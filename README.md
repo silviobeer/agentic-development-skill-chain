@@ -21,7 +21,7 @@ review after delivery (CP2).
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 1 | `brainstorming` | Explore the idea, allocate PROJ-X, write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
-| 1c | `frontend-design` (opt) | Visual design language — greenfield or hybrid gaps |
+| 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `ui-mockup` (UI req.) | HTML sitemap + per-screen mockups + implementation handoff |
 | 1e | `concept-sync` (opt) | Reconcile iterated mockups back into the concept |
 | 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases |

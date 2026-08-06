@@ -38,8 +38,8 @@ This skill is aligned with the Claude variant. In Codex:
 | `docs/PRODUCT.md` | what the product is, for whom, non-goals | ½ page (≤30 non-blank lines) |
 | `docs/ARCHITECTURE.md` | the load-bearing architecture truths; details → `docs/architecture/` | ≤200 lines |
 | `docs/GUIDELINES.md` | conventions that ARE the rule (incl. Known Debt notes for losing patterns) | — |
-| `docs/DESIGN-SYSTEM.md` | tokens/components extracted from code — or a pointer to **frontend-design** (1c) if none exist; never invented | — |
-| `docs/components.md` | component registry (component-scout pass) | — |
+| `docs/DESIGN-SYSTEM.md` | design **rules** extracted from code — tokens, scales, patterns, do/don't — or a pointer to **frontend-design** (1c) if none exist; never invented. No component inventory (that's `components.md`) | ≤80 lines |
+| `docs/components.md` | component registry — **generated** by `scripts/gen-component-registry.mjs` from the doc block above each component export | — |
 | `docs/security-baseline.md` | auth model, secret handling, input validation floor | — |
 | `docs/test-conventions.md` | test runner, layout, naming, what must be tested | — |
 | `AGENTS.md` (root) | initial durable agent rules | ≤40 non-blank lines |
@@ -72,7 +72,10 @@ they locate, you judge):
   integrations → ARCHITECTURE draft (+ `docs/architecture/` for detail).
 - **QA Hat:** test setup, error-handling patterns, validation, auth →
   test-conventions + security-baseline drafts.
-- **component-scout:** exported UI components → components.md registry;
+- **component-scout:** run `node scripts/gen-component-registry.mjs`, then
+  write the missing doc blocks into the components it reports as
+  undocumented (purpose + "not for" are interview material, not
+  extractable) and regenerate → components.md registry;
   design tokens (tailwind config, CSS custom properties) →
   DESIGN-SYSTEM draft. If no real tokens exist, write a pointer to the
   **frontend-design** skill (1c) instead of inventing a design system.

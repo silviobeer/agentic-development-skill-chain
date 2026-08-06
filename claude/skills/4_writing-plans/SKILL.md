@@ -38,7 +38,13 @@ Plans are written one PROJ at a time. If the architecture or concept references 
 - Extract **all** user stories and acceptance criteria verbatim, prefixing with `PROJ-<X>-PRD-<Y>-US-<Z>` for uniqueness
 - Check existing codebase for relevant files, patterns, and conventions
 - **Check for `agent.md`** in the feature's source folder (e.g., `src/features/[feature]/agent.md`). If it exists, read it — incorporate known gotchas into the relevant tasks as warnings.
-- **Component Registry — mandatory for UI waves:** The canonical registry is `docs/components.md`. If the PROJ has any UI work (any wave with `frontend_routes` or frontend-implementer tasks), spawn `component-scout` unconditionally to build/refresh the registry before drafting task descriptions. Greenfield projects with zero components yet: still spawn the scout — it creates the empty registry file so future waves have it. The registry is the source Task-Components-sections draw from.
+- **Component Registry — mandatory for UI waves:** The canonical registry is `docs/components.md`, and it is **generated from the code**, not written by hand. If the PROJ has any UI work (any wave with `frontend_routes` or frontend-implementer tasks), refresh it before drafting task descriptions:
+
+  ```bash
+  node scripts/gen-component-registry.mjs
+  ```
+
+  Greenfield projects with zero components yet: run it anyway — it writes an empty registry so later waves have it. If it reports a component without a doc block, that component is undocumented in the code; fix it there, never by editing `docs/components.md`. The registry is the source Task-Components-sections draw from.
 
 ### 2. Build the PROJ-wide dependency graph
 
@@ -136,7 +142,9 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 **Components (UI tasks only — mandatory):**
 - Reuse: [list from `docs/components.md` registry, e.g. Button, Card, FormField]
-- Create new: [list + one-line justification each, e.g. `PriceBadge — no monetary display primitive exists yet`]
+- Create new: [list + one-line justification each. The justification must name the semantic
+  neighbours checked in the registry and why none fit, e.g. `PriceBadge — checked Badge (status
+  only, no numeric alignment) and Chip (removable, interactive); no monetary display primitive exists`]
 
 **UI handoff constraints (UI tasks only — mandatory):**
 - Follow: [relevant `implementation-handoff.md` interaction/tokens/reuse notes]
@@ -237,7 +245,7 @@ After writing all wave files, review them with fresh eyes:
 6. **No vague instructions:** Every "What to build" has concrete inputs/outputs?
 7. **Cross-PRD consistency:** If two user stories in the same wave touch the same file/module, is that flagged?
 8. **Post-Wave Notes placeholder:** Every US has the empty `### Post-Wave Notes` block for Skill 7's documentation harvest.
-9. **Components-section complete:** every UI task declares `Reuse:` and `Create new:` (with 1-line justification per new). Registry `docs/components.md` is up-to-date via `component-scout`.
+9. **Components-section complete:** every UI task declares `Reuse:` and `Create new:`. Registry `docs/components.md` is freshly generated (`node scripts/gen-component-registry.mjs`), and every `Create new:` names the semantic neighbours checked against it (Badge/Chip/Tag, Card/Panel, Drawer/Sheet) and why none fit. A new component without that comparison is an unreviewed duplicate risk — the cheapest place to catch it is here, before anyone writes code.
 10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `5_mockups/implementation-handoff.md`; every UI task carries the relevant constraints.
 
 Fix issues inline. Move on.

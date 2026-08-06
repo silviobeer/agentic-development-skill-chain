@@ -137,6 +137,7 @@ Template:
 
 ## UI Implementation Constraints
 [Only if UI handoff exists: project mode, reuse constraints, new component candidates, interaction contract, implementation tolerance]
+[If `frontend-design` ran: the UI stack and design system are already decided there. Document them as inherited — do not re-open the framework or component-library choice.]
 
 ## Cross-PROJ Dependencies
 [Only if decomposed: sibling PROJs consumed by or blocked by this PROJ, high-level contract, and what remains out of scope]

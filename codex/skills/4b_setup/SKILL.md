@@ -106,7 +106,7 @@ files; overwrite older copies and note it in the commit):
 | `5_executing/templates/agent-md-entry.md.tmpl` | `templates/` |
 | `8_delivery/scripts/conflict-probe.sh`, `render-pr-body.mjs`, `ci-poll.sh` | `scripts/` |
 | `8_delivery/templates/pr-body.md.tmpl` | `templates/` |
-| `5_executing/scripts/wave-gate.sh` | `scripts/` (as today) |
+| `5_executing/scripts/wave-gate.sh`, `gen-component-registry.mjs` | `scripts/` (as today) |
 
 `chmod +x` the shell scripts.
 

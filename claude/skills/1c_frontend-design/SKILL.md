@@ -1,11 +1,21 @@
 ---
 name: frontend-design
-description: "Define the visual design language for a new project before UI mockups and before requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no tailwind.config theme or CSS variables exist yet. Skip for brownfield projects with an established design system."
+description: "Define the design system — visual design language plus the component catalog and a running showcase page — before UI mockups and before requirements. Use after visual-companion when: (1) greenfield project with no existing design system, (2) the user wants a distinctive visual identity before mockups, (3) no tailwind.config theme or CSS variables exist yet. Skip for brownfield projects with an established design system."
 ---
 
-# Frontend Design — Design Language Definition
+# Frontend Design — Design System Definition
 
-Define the visual identity and design language for a project before any UI is built. This ensures every component, page, and interaction follows a coherent aesthetic — instead of agents making random visual choices during implementation.
+Define the design system for a project before any UI is built: the visual design language (tokens) **and** the component catalog built from it, plus a showcase page that renders every component. This ensures every component, page, and interaction follows a coherent aesthetic — instead of agents making random visual choices during implementation.
+
+The chain keeps this in three artifacts with one writer each, so a plan can say "use Button `primary/md`" instead of describing a button:
+
+| Artifact | Answers | Owner |
+|---|---|---|
+| `docs/DESIGN-SYSTEM.md` | How does it look? Tokens, scales, patterns, do/don't | this skill (or `0b_intake` for brownfield extraction), curated by P7 |
+| `docs/components.md` | What exists? Name, path, purpose, variants | **generated** from the doc block above each component export (`scripts/gen-component-registry.mjs`) — never hand-edited |
+| `/dev/components` | Is it really true? Rendered, light and dark | built here, extended in P5, checked in P6 |
+
+The PROJ-scoped `4_design/design-language.md` keeps the **why** (audience, tone, references, rejected directions). Same shape the chain uses for architecture: PROJ artifact carries the reasoning, the `docs/` baseline carries the standing truth.
 
 ## When to Use
 
@@ -54,6 +64,9 @@ Ask the user (if not already clear from the spec):
 - **What's the tone?** (professional, playful, minimal, bold, luxurious, utilitarian)
 - **Any references?** (existing apps, websites, or styles they admire)
 - **Dark mode?** (yes/no/both)
+- **Which UI stack?** — framework and component library (for example Next.js + shadcn/ui, Vite + React, SvelteKit, plain HTML/CSS). Detect it from `package.json` for brownfield/hybrid and only confirm. The components in step 3 are written in this stack, so it must be decided here.
+
+Record the stack in the design language document. `3_architecture` inherits this decision as given and only documents it — it does not re-open the UI stack choice.
 
 ### 2. Define Design Language
 
@@ -90,7 +103,19 @@ Based on context, create a coherent design system with:
 - What makes this design memorable (the "one thing")
 - What to avoid (anti-patterns for this specific design)
 
-### 3. Generate Artifacts
+### 3. Define The Component Catalog
+
+Derive the component set from what the planned screens actually need — do not ship a fixed standard kit. Read the concept and `2_visual-companion/layout-decision.md`, list the UI pieces those screens require, and build only those. The catalog grows later, when a mockup or a user story demands a piece that does not exist yet (see *Extending The Design System*).
+
+Rules:
+
+- **Variant before component.** A new size, tone, or state of an existing component is a variant, not a new component. Only add a component when no existing one covers the anatomy.
+- **Reuse the library.** If the chosen stack ships a component library (shadcn/ui, Radix, MUI), configure and theme its component instead of writing one. Write custom code only for pieces the library does not have.
+- **No speculative components.** If no planned screen uses it, it does not belong in the catalog.
+
+For each component define: name, purpose, variants, sizes, states (default, hover, focus, disabled, loading, error, empty where applicable), and the tokens it consumes.
+
+### 4. Generate Artifacts
 
 Create these files:
 
@@ -157,6 +182,7 @@ Include a short implementation-facing section:
 ```markdown
 ## Implementation Notes
 - Project mode: greenfield | hybrid
+- UI stack: <framework + component library>
 - Existing tokens/components to preserve:
 - New tokens/components allowed:
 - Existing app design takes precedence over exact mockup CSS: yes/no
@@ -166,19 +192,93 @@ Include a short implementation-facing section:
 
 **`src/app/globals.css` updates** — Add CSS variables for the color palette so shadcn/ui components inherit them.
 
-### 4. Verify
+**The components themselves** — implement each catalog entry in the chosen stack, in the project's component directory (for example `src/components/ui/`). Tokens only: no hardcoded hex values, no arbitrary pixel sizes. Every component must be usable without further styling by the consumer.
+
+**`docs/DESIGN-SYSTEM.md`** — the curated baseline slot the chain already reserves for the design system (`0b_intake` lists it and points at this skill when no design system exists). It is injected into every `frontend-implementer` context bundle, so it is **capped at 80 lines** (`curation-caps.sh`) and holds rules only — no component inventory, no rationale:
+
+```markdown
+# Design System — [Project Name]
+
+Stack: [framework + component library] · Showcase: `/dev/components`
+Inventory: `docs/components.md` · Rationale: `specs/PROJ-<X>-<theme>/4_design/design-language.md`
+
+## Tokens
+| Purpose | Class | Never |
+|---------|-------|-------|
+| Page background | `bg-background` | `bg-white`, hex values |
+| Primary action | `bg-primary text-primary-foreground` | own colors |
+| Muted text | `text-muted-foreground` | `text-gray-500` |
+
+## Scales
+- Type: `text-xs sm base lg xl 2xl 3xl` — nothing in between, no `text-[17px]`
+- Spacing: 4-step scale · card `p-6` · section `py-12` · stack gap `gap-4`
+- Radius: button `rounded-md` · card `rounded-lg` · badge `rounded-full`
+- Shadow: `shadow-sm` (card) · `shadow-lg` (overlay) — no others
+
+## Patterns
+| Pattern | Rule |
+|---------|------|
+| Page shell | `AppShell > PageHeader > content` — never a custom layout |
+| Form | Label above field, error below, submit bottom-right |
+| Empty/Loading/Error | Every data view has all three — use the catalog's state components |
+
+## Do / Don't
+- Do: compose from registered components (`docs/components.md`)
+- Don't: hex colors, arbitrary sizes, a styled `<div>` that duplicates a component
+- Don't: introduce a component that is not registered — escalate instead
+
+## Extending
+Variant before new component. Procedure: `1c_frontend-design` → Extending The Design System.
+```
+
+Write tokens as **classes, not hex palettes** — the implementer needs what to type. The hex values live in the design language document and in the CSS variables.
+
+**`docs/components.md`** — the component registry. **Do not write it by hand.** Each component carries its own metadata in a doc block above the export, and `scripts/gen-component-registry.mjs` collects them:
+
+```tsx
+/** Actions. Not for navigation — use Link.
+ *  @variants primary|secondary|ghost|destructive  @sizes sm|md|lg
+ *  @states hover|focus|disabled|loading */
+export function Button(props) { … }
+```
+
+Write the doc block while you write the component, then run `node scripts/gen-component-registry.mjs`. The purpose line and the "not for" hint are the only parts no parser can derive — they belong next to the code, not in a second list. From here on the registry stays current the same way: implementers (P5) write doc blocks, the wave gate verifies with `--check`, P7 curates the prose, never the table.
+
+**Showcase page** — the one artifact that carries the detail, because it costs no context budget and cannot lie: every component with all variants, sizes, and states, in light and dark mode.
+
+- If an app scaffold exists, add it as the route `/dev/components` (the path `6_qa` visits). Keep it out of production navigation.
+- If the repo has no scaffold yet, write `specs/PROJ-<X>-<theme>/4_design/component-showcase.html` and note in the design language that P5 ports it to `/dev/components` with the first UI story.
+- Structure: token section first (color swatches, type scale, spacing, radius), then one anchored section per component (`#button`), then composed pattern examples. Each anchor matches its `docs/components.md` name so the registry can link into it.
+- Static examples, no props playground. Include a light/dark toggle — dark-mode breakage found in P6 is found too late.
+
+### 5. Verify
 
 - Ensure CSS variables map correctly to Tailwind config
 - Check that shadcn/ui theming will pick up the custom colors
 - Verify font imports are added (Google Fonts link or next/font)
+- Open the showcase page and check every component in light and dark mode
+- Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block or the registry is stale
+- Run `curation-caps.sh` (or count lines): `docs/DESIGN-SYSTEM.md` must fit its 80-line cap. If it does not, move detail to the showcase page — never to a second markdown file
+
+## Extending The Design System
+
+The design system is not sealed after this skill. When a later step needs a UI piece that does not exist, it runs a short excursion back into this skill instead of styling a one-off:
+
+1. Check `docs/components.md`: does an existing component cover it, possibly as a new variant?
+2. If a variant suffices, add the variant — do not add a component.
+3. If a genuinely new component is needed, ask the user to confirm, then define it (anatomy, variants, states, tokens) with the same rules as step 3.
+4. Implement it with its doc block, regenerate `docs/components.md`, and add it to the showcase page. Touch `docs/DESIGN-SYSTEM.md` only if a *rule* changed — a new component is not a rule change.
+5. Only then use it in the mockup, plan, or implementation.
+
+Callers: `1d_ui-mockup` when a screen needs a `New candidate:` piece, and `5_executing` when a user story needs a component that does not exist. Both must extend the system rather than work around it.
 
 ## Output
 
-The design language document at `specs/PROJ-<X>-<theme>/4_design/design-language.md` plus updated config files. This document becomes the reference for:
-- **Step 1d (UI Mockup):** Mockups use the defined colors, fonts, spacing
-- **Step 3 (Architecture):** Tech design references the design tokens
-- **Step 5 (Executing):** frontend-implementer follows the design language
-- **Step 6 (QA):** ui-auditor checks compliance against the design language
+The design language document at `specs/PROJ-<X>-<theme>/4_design/design-language.md` (the rationale), `docs/DESIGN-SYSTEM.md` (the rules), `docs/components.md` (the inventory), the implemented components, and the showcase page (the proof). These become the reference for:
+- **Step 1d (UI Mockup):** Mockups use the defined colors, fonts, spacing, and reference catalog components by name
+- **Step 3 (Architecture):** Tech design documents the inherited UI stack and references the design tokens
+- **Step 5 (Executing):** frontend-implementer composes catalog components instead of writing new UI
+- **Step 6 (QA):** ui-auditor checks compliance against the catalog, the registry, and the showcase route
 
 ## Handoff
 
@@ -189,5 +289,7 @@ After the design language is approved, invoke `ui-mockup`. Do not invoke `requir
 - **Ask before deciding** — don't assume the user wants bold if they haven't said so
 - **Commit to a direction** — wishy-washy "a bit of everything" designs fail. Pick a lane.
 - **Respect shadcn/ui** — the tokens should work WITH shadcn's theming, not fight it
-- **No code beyond config** — this step defines the language, not components. Components come later.
+- **No feature code** — this step builds tokens, catalog components, and the showcase. No screens, no business logic, no data fetching.
+- **Registered components must be real** — the registry is generated from code, so a paper component is impossible by construction. Keep it that way: never hand-edit `docs/components.md`.
+- **One writer per artifact** — never copy the component inventory into `docs/DESIGN-SYSTEM.md`. Two lists drift, and both are paid for in every agent's context budget.
 - **English** — all documentation in English

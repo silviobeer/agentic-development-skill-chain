@@ -50,7 +50,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 |---|---|---|
 | 1 | brainstorming | Turn stakeholder input and requirements into a first concept; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
-| 1c | frontend-design (optional) | Only when adopting an existing design system; otherwise skip and use greyscale wireframes |
+| 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the HTML; every concept-affecting change is recorded in `iteration-log.md` |
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
 | 2 | requirements-engineer | Produce PRDs plus a paste-ready `linear-import.md` for the developer |
@@ -81,6 +81,7 @@ This becomes the design source where config files would normally be: `visual-com
 
 - **Greenfield, no design system:** `ui-mockup` uses **greyscale wireframes** with very small border radii — structure and flow, not visual identity. A UI/UX expert refines the visual design downstream. Skip `frontend-design`.
 - **Existing design system:** `ui-mockup` adopts the existing tokens, colors, typography, and radii (from `0_context/existing-state.md` on this track) so mockups read as the real product.
+- **Design system built in the chain:** when `frontend-design` runs, it fills three artifacts with one writer each — `docs/DESIGN-SYSTEM.md` (rules, ≤80 lines, injected into every frontend context bundle), `docs/components.md` (the inventory, **generated** from the doc block above each component export via `scripts/gen-component-registry.mjs`, verified by the wave gate), and the `/dev/components` showcase (where the detail lives, because it costs no context budget). Everything downstream references components by registered name. A missing component is closed by extending the system, not by one-off styling — in `ui-mockup` and in `executing` alike.
 
 ## The iteration loop
 

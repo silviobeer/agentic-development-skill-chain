@@ -165,18 +165,18 @@ Scale checks to the feature — not every feature needs all of these:
 ### 5. UI Consistency Check
 
 **Component Registry hard check (ui-auditor):**
-- Every new file in `src/components/` or `src/features/*/components/` since BASE_SHA MUST have a matching entry in `docs/components.md`. Missing entry → file a Critical bug (registry desynced is a process failure).
+- Run `node scripts/gen-component-registry.mjs --check`. Non-zero exit → file a Critical bug: either a component lacks its doc block or `docs/components.md` was not regenerated (registry desynced is a process failure). Do not fix it — report it.
 - For every new component, search the registry for semantically similar existing components (Button/PrimaryButton, Card/Panel, Badge/Chip/Tag). Flag any that should have been reused instead.
 - Visit `/dev/components` showcase route via Playwright or the active agent browser: does every registered component render? Any new component not registered?
 
-Look for a design system reference (check `.claude/skills/references/design-system.md` in the project first, then `~/.claude/skills/references/design-system.md` globally). If found, audit the implemented UI for violations:
+Look for the design system baseline at `docs/DESIGN-SYSTEM.md` (rules) plus `docs/components.md` (inventory). If found, audit the implemented UI for violations:
 
-- **Components:** Are existing components used? Check the design system reference for the project-specific component catalog. Flag any one-off styled `<div>` that duplicates an existing component.
+- **Components:** Are existing components used? Check `docs/components.md` for the project-specific component inventory. Flag any one-off styled `<div>` that duplicates a registered component.
 - **Colors:** Grep changed files for hardcoded hex values in TSX (`#[0-9A-Fa-f]{3,8}` in className or style). All colors must use Tailwind semantic classes.
-- **Radius:** Check border-radius usage matches the design system reference. Flag inconsistencies with the project's radius tokens.
+- **Radius:** Check border-radius usage matches `docs/DESIGN-SYSTEM.md`. Flag inconsistencies with the project's radius tokens.
 - **Typography:** Verify text sizes follow the scale (text-2xl/xl/lg/base/sm/xs, not arbitrary `text-[17px]`).
 - **Spacing:** Check for consistent spacing (Tailwind scale, not arbitrary pixel values).
-- **Focus states:** Tab through interactive elements — verify focus states match the design system reference.
+- **Focus states:** Tab through interactive elements — verify focus states match `docs/DESIGN-SYSTEM.md`.
 
 Compare against the Component Showcase at `/dev/components` using Playwright or the active agent browser if needed.
 

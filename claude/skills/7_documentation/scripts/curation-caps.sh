@@ -4,6 +4,7 @@
 # Caps (deterministic definitions of the §5 limits):
 #   docs/PRODUCT.md        <= 30 non-blank lines   ("half page")
 #   docs/ARCHITECTURE.md   <= 200 lines
+#   docs/DESIGN-SYSTEM.md  <= 80 lines    (injected into every frontend bundle)
 #   src/**/agent.md        <= 100 lines each
 #   AGENTS.md (root)       <= 40 non-blank lines   (existing 7_documentation cap)
 #
@@ -63,6 +64,12 @@ if [ -f docs/ARCHITECTURE.md ]; then
   check docs/ARCHITECTURE.md "$(total docs/ARCHITECTURE.md)" 200 "lines"
 else
   missing docs/ARCHITECTURE.md
+fi
+
+# Only capped when it exists: projects without a UI never create it, and a
+# missing design system is not a curation breach.
+if [ -f docs/DESIGN-SYSTEM.md ]; then
+  check docs/DESIGN-SYSTEM.md "$(total docs/DESIGN-SYSTEM.md)" 80 "lines"
 fi
 
 if [ -f AGENTS.md ]; then

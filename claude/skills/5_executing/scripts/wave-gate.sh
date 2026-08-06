@@ -94,7 +94,7 @@ echo "=== Wave ${WAVE} Completion Gate (PROJ-${PROJ}-${THEMA}) ==="
 echo "   advisory severities: ${ADVISORY[*]:-none}"
 
 # ─── 1. Ralph: AC checks ────────────────────────────────────────────────────
-step "1/5 Ralph: AC verification"
+step "1/6 Ralph: AC verification"
 AC_COUNT=$(jq -r "${WAVE_KEY}.ac_commands | length" "$CFG")
 if [[ "$AC_COUNT" -eq 0 ]]; then
   fail "no ac_commands defined for wave ${WAVE}"
@@ -107,14 +107,14 @@ while IFS= read -r cmd; do
 done < <(jq -r "${WAVE_KEY}.ac_commands[]" "$CFG")
 
 # ─── 2. Build ───────────────────────────────────────────────────────────────
-step "2/5 Build"
+step "2/6 Build"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG")
 [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing in config"
 echo "   $ $BUILD_CMD"
 run_with_timeout "$BUILD_TIMEOUT" "build" bash -c "$BUILD_CMD"
 
 # ─── 3. CodeRabbit ──────────────────────────────────────────────────────────
-step "3/5 CodeRabbit wave review"
+step "3/6 CodeRabbit wave review"
 command -v coderabbit >/dev/null || fail "coderabbit not installed"
   # Wave base SHA resolution (first match wins, hard-fail otherwise):
   #   1. $WAVE_BASE_SHA env override
@@ -211,7 +211,7 @@ command -v coderabbit >/dev/null || fail "coderabbit not installed"
 # Skippable per CONCEPT.md §7: missing CLI or missing config → logged skip,
 # never a silent one. The command is config-owned (.sonar_cmd) — this script
 # does not guess CLI flags.
-step "4/5 Sonar local scan + secrets check"
+step "4/6 Sonar local scan + secrets check"
 SONAR_CMD=$(jq -r '.sonar_cmd // empty' "$CFG")
 SONAR_STATUS="skipped"
 if ! command -v sonar >/dev/null; then
@@ -226,7 +226,7 @@ else
 fi
 
 # ─── 5. Smoke test ──────────────────────────────────────────────────────────
-step "5/5 Browser smoke test"
+step "5/6 Browser smoke test"
 mapfile -t ROUTES < <(jq -r "${WAVE_KEY}.frontend_routes[]? // empty" "$CFG")
 if [[ "${#ROUTES[@]}" -eq 0 ]]; then
   echo "   (backend-only wave — skipped)"
@@ -246,6 +246,20 @@ else
   fi
 fi
 
+step "6/6 Component registry"
+# The registry is generated from the component doc blocks. A stale file or an
+# undocumented component blocks the wave — this replaces the per-edit hook.
+if [[ -f scripts/gen-component-registry.mjs ]]; then
+  if [[ -d src/components || -d src/features ]]; then
+    node scripts/gen-component-registry.mjs --check \
+      || fail "component registry out of date or component missing its doc block"
+  else
+    echo "   (no component directories — skipped)"
+  fi
+else
+  echo "   (scripts/gen-component-registry.mjs not installed — skipped)"
+fi
+
 # ─── Record in progress.md (verdict only — Skill 7 derives docs from git) ───
 TS=$(date -Iseconds)
 ROUTES_STR="${ROUTES[*]:-backend-only}"
@@ -258,6 +272,7 @@ cat >> "$PROGRESS" <<EOF
 - [x] Build: ${BUILD_STATUS}
 - [x] CodeRabbit: 0 blocking findings (advisory: ${ADVISORY_COUNT:-0})
 - [x] Sonar: ${SONAR_STATUS}
+- [x] Component registry: generated + current
 - [x] Smoke: ${ROUTES_STR}
 EOF
 

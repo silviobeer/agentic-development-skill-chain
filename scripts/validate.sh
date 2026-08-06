@@ -104,6 +104,7 @@ for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl
          3a_cross-review/scripts/cross-review.sh 3a_cross-review/scripts/review-with-claude.sh \
          3a_cross-review/scripts/review-with-codex.sh 3a_cross-review/templates/cross-review-prompt.md.tmpl \
          5_executing/templates/agent-md-entry.md.tmpl \
+         5_executing/scripts/gen-component-registry.mjs \
          6_qa/scripts/ledger.mjs 6_qa/scripts/harvest-debt.sh \
          8_delivery/scripts/conflict-probe.sh 8_delivery/scripts/render-pr-body.mjs \
          8_delivery/scripts/ci-poll.sh 8_delivery/templates/pr-body.md.tmpl; do

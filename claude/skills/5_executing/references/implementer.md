@@ -26,11 +26,11 @@ Task tool:
     [What was implemented in previous waves that this US builds on]
 
     ## UI Design System (include for any US that touches UI)
-    [Paste relevant sections from the project's design-system.md reference
-     (check `.claude/skills/references/design-system.md` in the project, or
-     `~/.claude/skills/references/design-system.md` globally).
-     At minimum include: Do/Don't rules, component catalog, and typography scale.
-     The subagent MUST use existing components — never create one-off styled elements.]
+    [Skip this section in framework runs — the frontend-implementer context bundle
+     already injects docs/DESIGN-SYSTEM.md and docs/components.md.
+     Outside bundle runs, paste both files here (DESIGN-SYSTEM.md is capped at 80
+     lines, so paste it whole; components.md may be trimmed to the relevant entries).
+     The subagent MUST reuse registered components — never one-off styled elements.]
 
     ## Agent Notes (long-term memory)
     [Optionally paste known-relevant sections from `agent.md` in the source folder.
@@ -63,8 +63,10 @@ Task tool:
     - Do NOT verify acceptance criteria — that is the main agent's job
     - UI: Use existing components from `@/components/ui/` — never create one-off styled elements
     - UI: Never hardcode hex colors — use Tailwind semantic classes (bg-primary, text-muted-foreground)
-    - UI: Follow border-radius, spacing, and component rules from the design system reference
-    - UI: Use project-specific shared components (see design-system.md Custom Components table)
+    - UI: Follow the radius, spacing, and pattern rules in `docs/DESIGN-SYSTEM.md`
+    - UI: Use project-specific shared components (see the `docs/components.md` registry)
+    - UI: If no registered component fits, do NOT style a one-off — escalate to the main agent
+      so the design system gets extended (variant first, new component only if needed)
 
     ## agent.md Protocol (long-term local memory)
     READ (mandatory): before your FIRST edit in any folder, read that folder's
@@ -91,8 +93,15 @@ Task tool:
     2. `grep -rn "export function.*<Semantic>" src/components/` — check for semantically similar (e.g. `Badge`, `Chip`, `Tag`)
     3. Read `docs/components.md` registry end-to-end
     4. If anything comparable exists → **reuse or extend**, don't create
-    5. If truly new → **add entry to `docs/components.md` in the same commit** as the component file, with 1-line purpose + props summary
-    The `component-registry-check.js` PreToolUse hook enforces step 5 mechanically.
+    5. If truly new → write a doc block above the export, in the SAME commit as the
+       component file. This block IS the registry entry — there is no second list:
+         /** Actions. Not for navigation — use Link.
+          *  @variants primary|ghost  @sizes sm|md  @states hover|disabled */
+         export function Button(…)
+    6. Regenerate: `node scripts/gen-component-registry.mjs` and commit `docs/components.md`
+    7. If a `/dev/components` showcase route exists → add the new component there too, with
+       its variants and states. QA checks that every registered component renders.
+    A component without a doc block, or a stale `docs/components.md`, fails the wave gate.
 
     ## agent.md Criteria (strict)
     Only add an `agent.md` entry if ALL three hold:
