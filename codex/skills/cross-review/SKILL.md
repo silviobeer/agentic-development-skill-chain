@@ -36,9 +36,12 @@ bash scripts/cross-review.sh concept <X> <theme> \
   --author-provider claude --author-model <writer-model> --round 1
 ```
 
-Use `architecture` with the concept and PRDs as ground truth, and `plan` with
-the architecture and PRDs as ground truth. If a referenced input does not
-exist, omit it; do not invent a replacement.
+Use `architecture` with the concept, every PRD in `2_PRDs/`, and the curated
+`docs/ARCHITECTURE.md` and `docs/GUIDELINES.md` as ground truth; `plan` takes
+the architecture and the same PRDs. Feasibility and traceability are only
+checked against what is supplied, so a PRD left out is a requirement nobody
+reviews. If a referenced input does not exist, omit it; do not invent a
+replacement.
 
 After P0, omit `--author-provider` and use `--author-key` to resolve authorship
 from state.json. That is the persistent gate path: findings are added only via

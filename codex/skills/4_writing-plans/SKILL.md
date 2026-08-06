@@ -277,11 +277,24 @@ After saving all wave plans + the gate config:
 
 Ask before offering execution: "Shall I run the optional opposite-provider
 cross-review of these implementation plans now? Default: yes." Wait for a
-yes/no answer. On yes, invoke `cross-review` in `plan` mode with all wave plans
-and `wave-gate-config.json` as `--artifacts`, and architecture plus PRDs as
-`--ground-truth`; pass the current writer as `--author-provider`. Resolve
-Critical/High findings with the user before execution. On no, record that the
-human declined it.
+yes/no answer. On yes, run it over the complete set of plans — a wave left out
+is a wave whose sequencing nobody checked:
+
+```bash
+bash scripts/cross-review.sh plan <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md \
+    specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
+  --ground-truth specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/GUIDELINES.md \
+  --author-provider <current-writer> --round 1
+```
+
+Drop any path that does not exist — the script fails on a missing file. This is
+the largest input in the chain, so the embedded-context cap is most likely to
+reject it here. Do not silently trim: tell the user which inputs you left out,
+and prefer dropping ground truth over dropping a wave plan.
+Resolve Critical/High findings with the user before execution. On no, record
+that the human declined it.
 
 > "Plans complete. Files in `specs/PROJ-<X>-<theme>/3-4_plan/`:
 > - `PROJ-<X>-architecture.md`

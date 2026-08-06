@@ -175,9 +175,21 @@ After approval, tell the user:
 
 Before handing off, explicitly ask: "Shall I run the optional
 opposite-provider cross-review of this architecture now? Default: yes." Wait
-for a yes/no answer. On yes, invoke `cross-review` in `architecture` mode with
-the architecture as `--artifacts` and the concept, PRDs, and relevant existing
-state as `--ground-truth`; pass the current writer as `--author-provider`.
+for a yes/no answer. On yes, run it with the architecture under review and
+every input that establishes truth for it:
+
+```bash
+bash scripts/cross-review.sh architecture <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
+  --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
+  --author-provider <current-writer> --round 1
+```
+
+Drop any path that does not exist — the script fails on a missing file. Never
+drop a PRD to stay quiet: the reviewer checks that no requirement was lost, and
+it can only check the PRDs it is given. If the embedded-context cap rejects the
+call, name to the user which inputs you left out before re-running.
 Resolve Critical/High findings with the user before plan writing. On no, record
 that the human declined it.
 

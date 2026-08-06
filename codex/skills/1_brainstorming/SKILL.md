@@ -602,10 +602,24 @@ Wait for the user's response. If they request changes, update the concept and ru
 
 Before the transition, explicitly ask: "Shall I run the optional
 opposite-provider cross-review of this concept now? Default: yes." Wait for a
-yes/no answer. On yes, invoke `cross-review` in `concept` mode with the concept
-as `--artifacts`, available discovery/context files as `--ground-truth`, and
-the current writer as `--author-provider`; resolve Critical/High findings with
-the user before transition. On no, record that the human declined it.
+yes/no answer. On yes, run it with everything that establishes as-is truth for
+the concept:
+
+```bash
+bash scripts/cross-review.sh concept <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+  --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
+    docs/PRODUCT.md specs/product-roadmap.md \
+  --author-provider <current-writer> --round 1
+```
+
+Drop any path that does not exist — the script fails on a missing file, and on
+the discovery track most of these may be absent. The grounding check ("claims
+about the existing product agree with the supplied context") is only as good as
+what you supply: with no ground truth at all, say so to the user rather than
+presenting the result as a grounded review.
+Resolve Critical/High findings with the user before transition. On no, record
+that the human declined it.
 
 ## Transition
 
