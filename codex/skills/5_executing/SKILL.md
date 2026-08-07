@@ -271,7 +271,7 @@ Extract waves from the plan's dependency table:
 
 ```
 Wave 1: US-1                    → 1 teammate
-Wave 2: US-2, US-7 (parallel)   → 2 teammates simultaneously + integration-guard
+Wave 2: US-2, US-7 (parallel)   → 2 teammates simultaneously
 Wave 3: US-3                    → 1 teammate
 ...
 ```
@@ -307,6 +307,14 @@ One tag per (wave, PROJ) pair. Tags are local-only; do not push. If neither `WAV
 
 **For waves with 2+ parallel user stories:** Create an agent team. The lead (you) coordinates.
 
+**Honor the plan's `## Execution` block before spawning.** `sequential` means
+dispatch exactly one US at a time even when `Can start when` says both are
+ready. For any frontend wave, the lead owns the dev server: start and stop it
+once for the round; agents reuse it and never start or kill one. For a parallel
+wave, the lead also owns every other declared shared resource and the control
+plane: `progress.md`, staging, and commits. Include the execution mode, runtime
+constraints, and these ownership rules in every spawn prompt.
+
 **Choose the right implementer type per US.** Where the current session can
 spawn P0's `skillchain-<role>` agent types, use them. Otherwise use the normal
 agent type and attach the path printed by
@@ -330,7 +338,6 @@ Create an agent team for Wave N of PROJ-X.
 Spawn teammates:
 - "us-2" using the frontend-implementer agent type, model: "sonnet": [US-2 prompt with full context]
 - "us-7" using the backend-implementer agent type, model: "opus": [US-7 prompt with full context — this one touches auth/session]
-- "guard" using the integration-guard agent type: Monitor us-2 and us-7 for file conflicts
 
 Require plan approval for each implementer before they make changes.
 ```
@@ -355,8 +362,6 @@ Pass to each teammate (via `references/implementer.md` template):
 - **If a US needs a component the catalog does not have:** the teammate escalates instead of styling a one-off. The lead agent runs the extension procedure from `1c_frontend-design` → *Extending The Design System* (variant before new component, confirm with the user, then catalog + `docs/components.md` + `/dev/components` showcase), then the teammate composes the new entry. A component that reaches QA without a catalog and registry entry is a Critical bug (`6_qa` hard-checks this).
 - **If the US touches Tailwind CSS styling:** Include the contents of `~/.codex/skills/tailwind-css/SKILL.md`. Pass the relevant sections (responsive patterns, dark mode, class organisation, component patterns) so the teammate uses consistent utility classes and avoids conflicts.
 - **If the US involves Next.js App Router:** Include the contents of `~/.codex/skills/nextjs-app-router-patterns/SKILL.md`. Pass the relevant sections (Server vs. Client Components, data fetching, routing, caching) so the teammate follows App Router conventions and avoids common pitfalls (e.g. accidentally marking a Server Component as `'use client'`).
-
-**Integration Guard:** For parallel waves, the `integration-guard` teammate monitors file ownership and alerts implementers if they touch overlapping files. This prevents merge conflicts and duplicated utilities.
 
 **UI implementation rule:** Existing React components and design tokens take precedence over exact HTML mockup CSS. Preserve the selected layout direction and interaction contract; do not replace a sidepanel with a modal, a wizard with a single page, or a brownfield component with a one-off styled element unless the user explicitly approved that change.
 
@@ -445,9 +450,10 @@ Update `$WAVE_BASE_SHA` to the current commit after the wave review passes.
 Browser smoke testing is owned by `wave-gate.sh`. If the wave touched frontend routes, the gate runs `agent-browser` to verify that what was just built actually renders and works. This is NOT the full QA — it's a 60-second gut check.
 
 ```bash
-# Ensure dev server is running first (npm run dev in background)
-agent-browser --url http://localhost:3000/[route-affected-by-wave] \
-  --prompt "Verify this page renders without errors. Check: (1) page loads fully, (2) no visible error messages or blank sections, (3) click the primary action of [US-N description] and confirm it works. Report PASS or FAIL with details."
+# The lead owns this server for the wave; do not start or stop another one.
+agent-browser open http://localhost:3000/[route-affected-by-wave]
+agent-browser read
+agent-browser errors
 ```
 
 For multiple pages affected by the wave, run one `agent-browser` call per route.
@@ -650,7 +656,7 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 Each subagent:
 1. Reads `agent.md` if provided in the prompt
 2. Implements all tasks for its US in order (TDD per task — see below)
-3. Updates `progress.md` task row after each TDD cycle: tests written → tests passing → done
+3. Reports task status after each TDD cycle; the lead updates `progress.md` and commits for parallel waves
 4. Runs an **inner Ralph loop** (2-stage review) after all tasks complete
 5. Reports back with full detail
 

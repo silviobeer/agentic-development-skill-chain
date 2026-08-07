@@ -610,9 +610,9 @@ for each wave N:
   1. Start Claude + Codex lanes (execution mode per wave plan, §6)
      – Mode 1 paired: one writer on the PROJ branch, the other lane
        prepares tests/risks and reviews; roles may swap by story
-     – Mode 2 parallel, file-disjoint → agent team in the writer lane's
-       SHARED checkout; integration-guard observes; the peer lane
-       stays read-only
+     – Mode 2 parallel, file-disjoint and runtime-safe → agent team in the
+       writer lane's SHARED checkout; the lead owns declared shared resources,
+       progress, staging, and commits; the peer lane stays read-only
      – Mode 3 parallel, overlap risk → own worktree + story branch each,
        then semantic merge gate
      – context arrives via hook; local knowledge via the agent.md
@@ -893,12 +893,12 @@ main
   worktrees or merge gate are required.
 - **Mode 2 — shared-checkout parallelism (cheap middle tier):** the
   planner may mark a wave parallel ONLY if the stories' file sets are
-  disjoint (it must list them). The stories then run as an agent team
-  INSIDE the writer lane's process, in the shared checkout, with the
-  integration-guard as observer — exactly today's Skill 5 model. The
-  peer lane stays read-only for the whole wave. No branches, no merge
-  gate, near-zero extra machinery; the single-writer-process invariant
-  is untouched.
+  disjoint **and** its runtime constraints are safe or have a named lead
+  owner. The stories then run as an agent team INSIDE the writer lane's
+  process, in the shared checkout. The lead owns shared resources plus
+  progress, staging, and commits; the peer lane stays read-only for the
+  whole wave. No branches or merge gate, near-zero extra machinery; the
+  single-writer-process invariant is untouched.
 - **Mode 3 — isolated writer processes (OPT-IN, evidence-gated):**
   built in Stage 4 only if telemetry shows Modes 1/2 miss the nightly
   window. One worktree + story branch per writer lane (possibly one
@@ -924,9 +924,8 @@ main
   (cwd = worktree; the code is not merged yet) → merge gate →
   wave gate (build, CodeRabbit, Sonar, smoke) ONCE on the merged PROJ
   branch.
-- The integration-guard (observer in Mode 2) becomes the semantic
-  **merge gate** in Mode 3: merge in dependency order, fix trivial
-  conflicts, escalate semantic ones. Additionally: **union merge of
+- Mode 3 uses a semantic **merge gate**: merge in dependency order, fix
+  trivial conflicts, escalate semantic ones. Additionally: **union merge of
   the agent.md files**.
 - **Gotcha channel:** agent.md is NOT enough across worktrees (isolated
   checkouts — invisible until merge), and agent-team messaging does not

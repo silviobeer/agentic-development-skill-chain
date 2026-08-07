@@ -50,6 +50,11 @@ CODEX_STATE="ok"
 
 say()  { echo "  $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+agent_browser_contract() {
+  agent-browser open --help >/dev/null 2>&1 \
+    && agent-browser read --help >/dev/null 2>&1 \
+    && agent-browser errors --help >/dev/null 2>&1
+}
 
 echo "→ P0 preflight (PROJ-${PROJ}-${THEME})"
 
@@ -67,7 +72,12 @@ fi
 
 # agent-browser — hard only if any planned wave has frontend routes
 if [ -f "$GATE_CFG" ] && jq -e '[.waves[]?.frontend_routes[]?] | length > 0' "$GATE_CFG" >/dev/null 2>&1; then
-  if have agent-browser; then say "✓ agent-browser (frontend waves planned)"; else say "❌ agent-browser MISSING (hard — frontend waves planned)"; HARD_MISSING+=("agent-browser"); fi
+  if have agent-browser && agent_browser_contract; then
+    say "✓ agent-browser (frontend waves planned; open/read/errors contract)"
+  else
+    say "❌ agent-browser MISSING or incompatible (hard — frontend waves planned)"
+    HARD_MISSING+=("agent-browser")
+  fi
 else
   if have agent-browser; then say "✓ agent-browser"; else say "– agent-browser missing: no frontend waves planned — skip"; SKIPPED+=("agent-browser"); fi
 fi

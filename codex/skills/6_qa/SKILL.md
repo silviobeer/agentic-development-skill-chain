@@ -315,7 +315,7 @@ After all six persona reviews complete:
    - The `verification-before-completion` reminder
    - ≤ 2000 tokens total
 4. **Disjoint-file invariant:** if clustering leaves bugs that span multiple files, assign to the primary file's cluster and document the cross-file touch in the prompt. Never split a single bug across subagents.
-5. **Integration-guard:** spawn the `integration-guard` (Haiku) in read-only mode alongside the fixers. It watches `git status` and flags collisions if the clustering logic missed something.
+5. **Lead-owned control plane:** the lead alone updates `progress.md`, stages, and commits while parallel fixers run.
 
 The main agent collects reports from all fixers, verifies that simplicity fixes actually remove or collapse unnecessary code, updates each BUG-ID's `status` (to `fixed` or `open` + `fix_attempts += 1`), and re-runs the affected tests. Only after all clusters return does the main agent decide on re-spawns for still-failing bugs.
 

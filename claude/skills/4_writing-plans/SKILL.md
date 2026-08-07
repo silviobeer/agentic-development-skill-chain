@@ -99,7 +99,16 @@ Save each wave to `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`.
 | PROJ-<X>-PRD-1-US-1 | backend | backend-implementer | sonnet | immediately |
 | PROJ-<X>-PRD-2-US-1 | backend | backend-implementer | opus | immediately (parallel to PRD-1-US-1) |
 
-All user stories in a wave run in parallel (unless otherwise noted).
+## Execution
+
+- **Mode:** `parallel` | `sequential`
+- **Runtime constraints:** `none` | [shared process, external mutable service, or test harness and its owner]
+
+Default to `parallel` only when the stories have no dependency **and** no shared
+runtime hazard. Choose `sequential` when they contend on a dev server/port,
+hosted database or other mutable external service, browser profile, cache, or
+shared test harness. File contact still belongs in the cross-US file-contact
+note; runtime constraints are a separate decision and must name the owner.
 
 **Complexity column — classification rule (the planner sets this, Skill 5 reads it to choose the Agent model):**
 - **`sonnet`** (default): standard feature US — CRUD, form handling, a straightforward component, a well-defined route or service, test-only refactor, copy/UI polish.
@@ -231,7 +240,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   - Never list `critical`, `blocker`, or `error` unless the user explicitly accepts that risk for this wave.
 - `codex_effort`: `"minimal" | "low" | "medium" | "high" | "xhigh"` — reasoning effort for Codex-backed PROJ-end reviewers or rescue work if invoked. Default: `"high"` for normal/risky waves, `"medium"` for low-risk polish waves. Optional — omit to accept the default.
 
-The test commands here are the **same commands** Ralph will run during execution — keep them in sync with the Smoke Test and AC sections of the wave plans.
+The test commands here are the **same commands** Ralph will run during execution — keep them in sync with the Smoke Test and AC sections of the wave plans. The plan's `Execution` block, not `Can start when`, decides whether independent stories are dispatched concurrently.
 
 ### 6. Plan Self-Review
 
@@ -250,7 +259,7 @@ After writing all wave files, review them with fresh eyes:
 
 Fix issues inline. Move on.
 
-**Config consistency check:** `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four `timeouts` keys are present, `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. Mismatch here will block execution.
+**Config consistency check:** every wave plan has an `Execution` block; `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four `timeouts` keys are present, `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. Mismatch here will block execution.
 
 ### 7. User Review
 

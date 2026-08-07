@@ -217,11 +217,9 @@ else
     BASE_URL=$(jq -r '.dev_url // "http://localhost:3000"' "$CFG")
     for route in "${ROUTES[@]}"; do
       [[ -z "$route" ]] && continue
-      echo "   $ agent-browser $BASE_URL$route"
+      echo "   $ agent-browser open ${BASE_URL}${route}"
       run_with_timeout "$BROWSER_TIMEOUT" "smoke ${route}" \
-        agent-browser --url "${BASE_URL}${route}" \
-          --prompt "Verify page renders without console errors, primary happy path works" \
-          --exit-on-fail
+        bash -c 'agent-browser open "$1" && agent-browser read && agent-browser errors' _ "${BASE_URL}${route}"
     done
   else
     fail "agent-browser not installed but frontend routes defined"
