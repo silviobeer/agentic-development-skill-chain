@@ -4,8 +4,8 @@
 // Compiles ONE canonical context bundle per role (from the provider-neutral
 // role manifests) plus thin Claude/Codex projections that embed the canonical
 // body VERBATIM — both providers receive the same canonical bundle hash.
-// Counts tokens against the per-role budget and fails hard on breach:
-// exit != 0 and NOTHING written (condense the docs first, then start).
+// Counts tokens against the per-role budget. A breach blocks only that role:
+// fitting bundles are written and blocked-roles.json records the denial.
 //
 // The source-id -> path map and the hard never-inject list (whole PRDs,
 // other stories' wave plans, progress.md, SKILL.md texts, src/**/agent.md)
@@ -25,8 +25,8 @@
 //   node compile-context-bundles.mjs show    <proj-x> <theme> <role>
 //
 // Env: CONTEXT_BUNDLE_BUDGET  overrides every manifest budget (tokens)
-// Exit: 0 ok · 1 budget breach / projection drift / verify mismatch / bad manifest · 2 missing inputs · 64 usage
-import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync } from "node:fs";
+// Exit: 0 ok · 1 projection drift / verify mismatch / bad manifest · 2 missing inputs · 64 usage
+import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -59,6 +59,7 @@ if (process.env.CONTEXT_BUNDLE_BUDGET) budgetOverride = parseInt(process.env.CON
 const BASE = `specs/PROJ-${projX}-${theme}`;
 const OUT_DIR = join(BASE, "context");
 const LOCK = join(OUT_DIR, "bundles.lock.json");
+const BLOCKED = join(OUT_DIR, "blocked-roles.json");
 
 function fail(msg, code = 1) { console.error(`compile-context-bundles: ${msg}`); process.exit(code); }
 function sha256(s) { return createHash("sha256").update(s).digest("hex"); }
@@ -174,7 +175,7 @@ function sourceContent(id) {
     case "ground-file":          return { title: `Validated assumptions (${BASE}/ground-file.md)`, text: readOr(join(BASE, "ground-file.md"), "generated in P0 step 6b") };
     case "test-conventions":     return { title: "Test conventions (docs/test-conventions.md)", text: readOr("docs/test-conventions.md", "no intake baseline yet") };
     case "design-system":        return { title: "Design system (docs/DESIGN-SYSTEM.md)", text: readOr("docs/DESIGN-SYSTEM.md", "no intake baseline yet") };
-    case "components":           return { title: "Component registry (docs/components.md)", text: readOr("docs/components.md", "no intake baseline yet") };
+    case "components":           return { title: "Component registry (docs/components.md)", text: "Read `docs/components.md` before creating or changing a component; it is deliberately referenced by path so its inventory does not consume this bundle's budget." };
     case "security-baseline":    return { title: "Security baseline (docs/security-baseline.md)", text: readOr("docs/security-baseline.md", "no intake baseline yet") };
     case "api-contracts-own-wave": return { title: "API contracts — own wave only", text: apiContractsOwnWave() };
     case "review-criteria":      return { title: "Review criteria", text: "_(dynamic: your persona's review criteria arrive in the spawn prompt — read them there)_" };
@@ -229,7 +230,7 @@ function compileAll() {
     const body = canonicalBody(m);
     const t = tokens(body);
     const budget = budgetOverride ?? m.budget_tokens;
-    if (t > budget) breaches.push(`${m.name}: ${t} tokens > budget ${budget}`);
+    if (t > budget) { breaches.push({ role: m.name, tokens: t, budget }); continue; }
     const cl = claudeProjection(m, body);
     const cx = codexProjection(m, body);
     // Projection drift check: the canonical body must be embedded verbatim.
@@ -238,14 +239,17 @@ function compileAll() {
       fail(`${m.name}: projection drift — a provider projection does not embed the canonical body verbatim`);
     compiled.push({ manifest: m, body, cl, cx, tokens: t });
   }
-  if (breaches.length > 0)
-    fail(`budget breach — NOTHING written. Condense docs/ (move detail to docs/architecture/), then recompile:\n  ${breaches.join("\n  ")}`);
-  return compiled;
+  return { compiled, breaches };
+}
+
+function removeRoleBundles(role) {
+  for (const suffix of [".md", ".claude.md", ".codex.md"])
+    rmSync(join(OUT_DIR, `bundle-${role}${suffix}`), { force: true });
 }
 
 if (cmd === "compile") {
   if (!existsSync(BASE)) fail(`${BASE} not found — run from the repo root of an active PROJ`, 2);
-  const compiled = compileAll();
+  const { compiled, breaches } = compileAll();
   const lock = {};
   for (const { manifest: m, body, cl, cx, tokens: t } of compiled) {
     atomicWrite(join(OUT_DIR, `bundle-${m.name}.md`), body);
@@ -261,9 +265,15 @@ if (cmd === "compile") {
     };
   }
   atomicWrite(LOCK, JSON.stringify(lock, null, 2) + "\n");
+  atomicWrite(BLOCKED, JSON.stringify(breaches, null, 2) + "\n");
+  for (const { role } of breaches) removeRoleBundles(role);
   for (const [role, rec] of Object.entries(lock))
     console.log(`compiled ${role}: ${rec.tokens} tokens · ${rec.hash.slice(0, 12)}… · wave ${rec.wave ?? "-"}`);
   console.log(`✓ ${Object.keys(lock).length} bundle(s) -> ${OUT_DIR} (canonical + claude/codex projections, one hash)`);
+  if (breaches.length > 0) {
+    console.warn(`⚠ blocked role(s), no bundle written: ${breaches.map((b) => `${b.role} (${b.tokens}/${b.budget})`).join(", ")}`);
+    console.warn("  Spawn only roles with a compiled bundle; condense their sources or raise that role's manifest budget when its scope genuinely requires it.");
+  }
   // Claude agent-file projection. Safety: ONLY skillchain-<role>.md files are
   // ever written — pre-existing agents in .claude/agents/ are never touched.
   let agentFiles = 0;
@@ -280,7 +290,7 @@ if (cmd === "compile") {
   const wavesSeen = [...new Set(Object.values(lock).map((r) => r.wave))];
   if (wavesSeen.length > 1) fail(`lock file mixes wave scopes (${wavesSeen.join(", ")}) — recompile`);
   wave = wavesSeen[0] ?? null;
-  const compiled = compileAll();
+  const { compiled, breaches } = compileAll();
   const problems = [];
   for (const { manifest: m, body, tokens: t } of compiled) {
     const rec = lock[m.name];
@@ -299,6 +309,8 @@ if (cmd === "compile") {
   }
   for (const role of Object.keys(lock))
     if (!compiled.find((c) => c.manifest.name === role)) problems.push(`${role}: in lock but no longer compiled from manifests`);
+  const blocked = existsSync(BLOCKED) ? JSON.parse(readFileSync(BLOCKED, "utf8")) : [];
+  if (JSON.stringify(blocked) !== JSON.stringify(breaches)) problems.push("blocked roles changed — recompile");
   if (problems.length > 0) fail(`verify FAILED:\n  ${problems.join("\n  ")}`);
   console.log(`✓ verify ok — ${Object.keys(lock).length} bundle(s) match the lock, budgets hold`);
 } else if (cmd === "show") {

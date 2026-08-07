@@ -11,10 +11,9 @@
 # report the SAME plugin version and mode; a mismatch blocks P0. In degraded
 # single-provider mode the gate applies to the surviving provider alone.
 #
-# It also verifies PONYTAIL_SUBAGENT_MATCHER is scoped to the code-writing
-# roles (implementer|frontend-implementer|backend-implementer|micro-fixer)
-# so reviewer/explore lanes never receive the ladder (warning + export line,
-# not a failure — the runner exports it itself).
+# It also verifies no PONYTAIL_SUBAGENT_MATCHER is set. Ponytail's native
+# unset path injects every normal subagent; a scoped matcher silently misses
+# generic implementation fallbacks.
 #
 # Rollout: PONYTAIL_ENFORCE=1 (default, spec-true) — absence or parity
 # mismatch exits 1 with the exact install commands. PONYTAIL_ENFORCE=0 is a
@@ -42,7 +41,6 @@ CODEX_CACHE="${PONYTAIL_CODEX_CACHE:-$HOME/.codex/plugins/cache/ponytail/ponytai
 CODEX_TOML="${PONYTAIL_CODEX_CONFIG:-$HOME/.codex/config.toml}"
 PT_CONFIG="${PONYTAIL_CONFIG:-$HOME/.config/ponytail/config.json}"
 ENFORCE="${PONYTAIL_ENFORCE:-1}"
-EXPECTED_MATCHER='implementer|frontend-implementer|backend-implementer|micro-fixer'
 
 say() { [ "$JSON_OUT" -eq 1 ] || echo "$*"; }
 note() { echo "ponytail-check: $*" >&2; }
@@ -85,12 +83,11 @@ if [ "$CODEX_ACTIVE" = true ]; then
   fi
 fi
 
-# --- matcher scoping (enforced): env, or the merged .claude/settings.json ----
-# Without a scoped matcher, reviewer/explore lanes receive the ladder too.
+# --- all-subagent coverage (enforced): env and project settings must be empty -
 SETTINGS_MATCHER=""
 [ -f .claude/settings.json ] && SETTINGS_MATCHER="$(jq -r '.env.PONYTAIL_SUBAGENT_MATCHER // ""' .claude/settings.json 2>/dev/null || true)"
-MATCHER_OK=false
-{ [ "${PONYTAIL_SUBAGENT_MATCHER:-}" = "$EXPECTED_MATCHER" ] || [ "$SETTINGS_MATCHER" = "$EXPECTED_MATCHER" ]; } && MATCHER_OK=true
+MATCHER_CLEAR=false
+[ -z "${PONYTAIL_SUBAGENT_MATCHER:-}" ] && [ -z "$SETTINGS_MATCHER" ] && MATCHER_CLEAR=true
 
 # --- parity verdict --------------------------------------------------------------
 REQUIRED_MODE="${PONYTAIL_REQUIRED_MODE:-full}"
@@ -105,8 +102,8 @@ fi
 if [ "$MODE" != "$REQUIRED_MODE" ]; then
   PROBLEMS+=("mode '$MODE' != required '$REQUIRED_MODE' — an off/lite ladder is a silent degradation; persist {\"defaultMode\":\"$REQUIRED_MODE\"} in $PT_CONFIG (or unset PONYTAIL_DEFAULT_MODE)")
 fi
-if [ "$MATCHER_OK" = false ]; then
-  PROBLEMS+=("ladder matcher not scoped to code-writing roles (env and .claude/settings.json both unset/different) — reviewer/explore lanes would receive the ladder. Set: export PONYTAIL_SUBAGENT_MATCHER='${EXPECTED_MATCHER}' (the preflight merges it into .claude/settings.json)")
+if [ "$MATCHER_CLEAR" = false ]; then
+  PROBLEMS+=("PONYTAIL_SUBAGENT_MATCHER is set (env or .claude/settings.json) — it can skip generic implementation fallbacks. Unset it; Ponytail's native default covers every normal subagent")
 fi
 PARITY_OK=true
 [ ${#PROBLEMS[@]} -eq 0 ] || PARITY_OK=false
@@ -135,6 +132,7 @@ for p in "${PROBLEMS[@]}"; do note "$p"; done
 note "install/align ponytail (one version, both providers):"
 note "  claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail"
 note "  codex plugin marketplace add DietrichGebert/ponytail && codex plugin add ponytail@ponytail"
+note "  intentional single-provider run: rerun P0 with PREFLIGHT_CODEX_INACTIVE=1 (recorded as degraded)"
 if [ "$ENFORCED" = true ]; then
   note "❌ ponytail gate FAILED (PONYTAIL_ENFORCE=1) — stop condition for P0"
   exit 1

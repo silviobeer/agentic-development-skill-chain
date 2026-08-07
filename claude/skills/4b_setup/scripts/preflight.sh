@@ -10,7 +10,7 @@
 #                                 run, recorded in state.json and flagged in
 #                                 the morning report + PR body (never silent)
 #   - agent-browser            -> hard only if any wave has frontend_routes
-# Env: PREFLIGHT_PROBE_TIMEOUT (default 90) · PREFLIGHT_SKIP_LIVE_PROBE=1
+# Env: PREFLIGHT_PROBE_TIMEOUT (default 90) · PREFLIGHT_SKIP_LIVE_PROBE=1 · PREFLIGHT_CODEX_INACTIVE=1
 #      skips the LLM probes (test use only — never for real overnight runs)
 # Writes the preflight block into state.json via state.sh when it exists;
 # otherwise prints the report only.
@@ -103,7 +103,10 @@ if have claude; then
 fi
 
 # --- codex: preferred, degradable (§7) ----------------------------------
-if ! have codex; then
+if [ "${PREFLIGHT_CODEX_INACTIVE:-0}" = "1" ]; then
+  CODEX_STATE="inactive"
+  DEGRADED_REASON="codex deliberately disabled (PREFLIGHT_CODEX_INACTIVE=1)"
+elif ! have codex; then
   CODEX_STATE="missing"
   DEGRADED_REASON="codex CLI missing"
 elif ! codex login status >/dev/null 2>&1; then
@@ -122,9 +125,16 @@ else
 fi
 
 # --- skippable tools (auth checked when present; broken auth = logged skip) --
-for tool in sonar sonar-scanner supabase; do
+for tool in sonar sonar-scanner; do
   if have "$tool"; then say "✓ $tool"; else say "– $tool missing: skip (logged)"; SKIPPED+=("$tool"); fi
 done
+if have supabase; then
+  say "✓ supabase"
+elif have npx && npx supabase --version >/dev/null 2>&1; then
+  say "✓ supabase (via npx)"
+else
+  say "– supabase missing: skip (logged)"; SKIPPED+=("supabase")
+fi
 if have sonar; then
   if [ -n "${SONAR_TOKEN:-}" ] || sonar auth status >/dev/null 2>&1; then
     say "✓ sonar auth (SONAR_TOKEN or auth status)"
@@ -134,31 +144,52 @@ if have sonar; then
   fi
 fi
 
+# Framework-owned files are versioned for the run but must not inherit the
+# target repo's formatting policy. Keep the lock out of git as well.
+if [ -f biome.json ]; then
+  node - <<'NODE'
+const fs = require("fs");
+const path = "biome.json";
+const config = JSON.parse(fs.readFileSync(path, "utf8"));
+const ignored = [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs"];
+config.files ??= {};
+config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
+fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");
+NODE
+  say "✓ Biome ignores merged for framework-owned files"
+elif [ ! -f biome.jsonc ]; then
+  printf '%s\n' '{' '  "files": {' '    "ignore": [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs"]' '  }' '}' > biome.json
+  say "✓ Biome ignores created for framework-owned files"
+else
+  say "⚠ biome.jsonc detected — add framework-owned scripts + .claude/settings.json to files.ignore before the setup commit"
+fi
+grep -qxF '.state.lock' .gitignore 2>/dev/null || printf '.state.lock\n' >> .gitignore
+
 # --- context injector hook (host-neutral, idempotent) ---------------------
-# Deterministic on BOTH hosts: without the SubagentStart hook + ladder-matcher
-# env in .claude/settings.json, Claude subagents silently run without their
-# bundle and reviewer/explore lanes receive the ladder. Runs BEFORE the
-# ponytail check so the matcher is verifiable from the settings file.
+# Keep the context hook deterministic. Ponytail deliberately has no matcher:
+# its native unset path reaches every normal subagent, including generic
+# implementation fallbacks. Runs before the Ponytail check so stale project
+# settings are removed before coverage is verified.
 INJECTOR_CMD="node scripts/context-injector.mjs claude"
-MATCHER_EXPECTED='implementer|frontend-implementer|backend-implementer|micro-fixer'
 mkdir -p .claude
 [ -f .claude/settings.json ] || echo '{}' > .claude/settings.json
 if jq -e --arg cmd "$INJECTOR_CMD" \
      '[.hooks.SubagentStart[]?.hooks[]? | select(.command == $cmd)] | length > 0
-      and ((.env.PONYTAIL_SUBAGENT_MATCHER // "") | length > 0)' \
+      and ((.env.PONYTAIL_SUBAGENT_MATCHER // "") == "")' \
      .claude/settings.json >/dev/null 2>&1; then
-  say "✓ context injector hook + ladder matcher present (.claude/settings.json)"
+  say "✓ context injector hook present; Ponytail applies to all subagents (.claude/settings.json)"
 else
   TMP_SETTINGS="$(mktemp)"
-  if jq --arg cmd "$INJECTOR_CMD" --arg m "$MATCHER_EXPECTED" \
+  if jq --arg cmd "$INJECTOR_CMD" \
        '.hooks.SubagentStart = (
           (.hooks.SubagentStart // [])
           + (if ([.hooks.SubagentStart[]?.hooks[]? | select(.command == $cmd)] | length) > 0
              then [] else [{hooks: [{type: "command", command: $cmd}]}] end))
-        | .env.PONYTAIL_SUBAGENT_MATCHER = (.env.PONYTAIL_SUBAGENT_MATCHER // $m)' \
+        | del(.env.PONYTAIL_SUBAGENT_MATCHER)
+        | if .env == {} then del(.env) else . end' \
        .claude/settings.json > "$TMP_SETTINGS" 2>/dev/null; then
     mv "$TMP_SETTINGS" .claude/settings.json
-    say "✓ context injector hook merged into .claude/settings.json (SubagentStart + PONYTAIL_SUBAGENT_MATCHER)"
+    say "✓ context injector hook merged; stale Ponytail matcher removed (.claude/settings.json)"
   else
     rm -f "$TMP_SETTINGS"
     say "⚠ could not merge the injector hook (.claude/settings.json unparseable?) — merge it manually via merge-project-settings.sh"

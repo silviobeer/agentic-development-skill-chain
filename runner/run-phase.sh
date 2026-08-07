@@ -60,9 +60,9 @@ REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"
 PEER_GRACE="${PEER_GRACE:-300}"
 PHASES=(CP1 P0 P5 P6 P7 P8 done)
 
-# Ponytail's minimalism ladder goes ONLY to code-writing roles (§7) —
-# reviewer/QA/explore lanes must not receive it. Respect an existing override.
-export PONYTAIL_SUBAGENT_MATCHER="${PONYTAIL_SUBAGENT_MATCHER:-implementer|frontend-implementer|backend-implementer|micro-fixer}"
+# Ponytail's unset matcher is its all-subagent path. Do not let a caller's
+# narrow matcher silently drop generic implementation fallbacks.
+unset PONYTAIL_SUBAGENT_MATCHER
 
 # Pin the injector to THIS run's PROJ — without these the injector falls back
 # to guessing the most recently modified specs/PROJ-* (wrong with parallel PROJs).

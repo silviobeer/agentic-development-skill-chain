@@ -71,15 +71,13 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
   (`context-injector.mjs claude`), codex lanes read
   `bundle-<role>.codex.md`. Both providers receive the same canonical
   bundle hash.
-- **Ponytail scoping (Stage 2):** the runner exports
-  `PONYTAIL_SUBAGENT_MATCHER` so only code-writing roles (implementer /
-  frontend-implementer / backend-implementer / micro-fixer) receive the
-  minimalism ladder; parity across providers is gated in the P0
-  preflight (`ponytail-check.sh`).
+- **Ponytail coverage (Stage 2):** the runner clears
+  `PONYTAIL_SUBAGENT_MATCHER`, using Ponytail's native all-subagent path;
+  P0 blocks any scoped matcher because it can miss generic implementation
+  fallbacks. Version and mode parity remain gated in `ponytail-check.sh`.
 
 Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `PEER_GRACE`
 (seconds a peer may outlive the writer, default 300),
-`PONYTAIL_SUBAGENT_MATCHER` (override the ladder scoping),
 `PONYTAIL_ENFORCE` (0 = loud escape hatch for the P0 ponytail gate),
 `CONTEXT_BUNDLE_BUDGET` (token budget override for the compiler).
 

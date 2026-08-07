@@ -116,7 +116,8 @@ Stage 2 adds the bootstrap and the full context system:
   micro-fixer and explore spawns get nothing by design.
 - **Ponytail parity:** the minimalism ladder comes from the Ponytail
   plugin on both providers — same version and mode, gated in the P0
-  preflight, scoped to code-writing roles only.
+  preflight. P0 leaves its matcher unset so generic implementation
+  fallbacks receive the same ladder.
 - **P7 curation + gates:** `documentation` (7) curates docs/ and
   `src/**/agent.md`, then must pass FORM (`curation-caps.sh`: PRODUCT
   ≤30 non-blank lines, ARCHITECTURE ≤200 lines, agent.md ≤100 lines) and

@@ -307,7 +307,7 @@ After all six persona reviews complete:
 **Fix handoff format — parallel when safe:**
 
 1. **Cluster bugs by `file` field.** Bugs touching the same file go into one cluster (sequential within, because parallel edits on the same file race regardless of anchors).
-2. **Run clusters in parallel only when safe and allowed.** If Codex delegation is allowed, spawn one worker per disjoint file cluster. Otherwise hand the clusters back to implementation or fix locally only after the user explicitly asks for fixes.
+2. **Run clusters in parallel only when safe and allowed.** If Codex delegation is allowed, spawn one worker task named `micro-fixer` per disjoint file cluster. Otherwise hand the clusters back to implementation or fix locally only after the user explicitly asks for fixes.
 3. **Each worker prompt or local fix task contains only:**
    - The BUG-IDs + anchors for its cluster
    - The relevant feature's `agent.md` excerpt

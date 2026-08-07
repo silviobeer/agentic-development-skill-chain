@@ -46,11 +46,9 @@ codex plugin add ponytail@ponytail
 
 The shared mode lives in `~/.config/ponytail/config.json`
 (`{"defaultMode":"full"}` — `ponytail-check.sh` persists it if absent).
-Scope the ladder to code-writing roles (the runner exports this itself):
-
-```bash
-export PONYTAIL_SUBAGENT_MATCHER='implementer|frontend-implementer|backend-implementer|micro-fixer'
-```
+Leave `PONYTAIL_SUBAGENT_MATCHER` unset. Ponytail then reaches every normal
+subagent, including generic implementation fallbacks; P0 rejects a scoped
+matcher because it silently misses those fallbacks.
 
 `PONYTAIL_ENFORCE=0` is the loud escape hatch — the run continues without
 the ladder, recorded in state.json and flagged in the reports.

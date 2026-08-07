@@ -95,11 +95,10 @@ config produces an overnight run that gates against a stale plan.
 
 Only after the cascade is clean:
 
-1. Ensure state.json exists:
-   `bash scripts/state.sh init <X> <theme>` — copy the helper from
-   `~/.codex/skills/4a_checkpoint/scripts/state.sh` if `scripts/` does
-   not have it yet (setup, 4b, later copies the identical helper into
-   the repo at P0).
+1. Read the `state.json` created with the PROJ folder by brainstorming (1).
+   If this is a legacy PROJ without one, recover once with
+   `bash ~/.codex/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`;
+   it must still be `CP1:pending` before this checkpoint approves it.
 2. `bash scripts/state.sh transition <X> <theme> CP1 running` (first
    round only), then `bash scripts/state.sh transition <X> <theme> CP1 approved`
 3. `bash scripts/state.sh set <X> <theme> .decision_log specs/PROJ-<X>-<theme>/decisions.md`

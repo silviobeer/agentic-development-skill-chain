@@ -279,7 +279,7 @@ Create a task for each item and complete them in order:
 11. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
 12. **Present feature concept** - section by section, scaled to complexity, and get approval.
 13. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-14. **Create PROJ folder** - `specs/PROJ-<X>-<theme>/1_brainstorm/`.
+14. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_brainstorm/`, then run `bash ~/.codex/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
 15. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
 16. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
 17. **User reviews written concept** - wait for approval before transition.

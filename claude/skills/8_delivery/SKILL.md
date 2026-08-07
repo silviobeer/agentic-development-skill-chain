@@ -71,7 +71,7 @@ Run `bash scripts/ci-poll.sh <pr-number>`:
 
 - Exit 0 (green) → `bash scripts/state.sh set <X> <theme> .pr.ci green`, continue.
 - Exit 1 (red) → the script printed the failing checks and verbatim
-  `--log-failed` output. Spawn a tier-0 fix agent with EXACTLY that
+  `--log-failed` output. Spawn a `micro-fixer` with EXACTLY that
   verbatim output + the affected file paths (no context pack — §5 spawn
   tiering), commit, push, re-poll. **Max 3 attempts**; the 4th red on
   the same check is a stop condition (§8).
@@ -97,7 +97,7 @@ Apply the **checkpoint** (4a) reconcile loop to the PR comments, via
 
 1. Classify each comment, point by point: **fix now** / **debt** /
    **reject with rationale**.
-2. `fix now` → tier-0 fix spawn (comment verbatim + file paths),
+2. `fix now` → `micro-fixer` spawn (comment verbatim + file paths),
    verify, commit.
 3. `debt` → `ponytail:` marker + ledger record
    (`node scripts/ledger.mjs add <X> <theme>` with status `deferred`),

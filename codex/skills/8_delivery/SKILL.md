@@ -14,7 +14,7 @@ and merging; this skill's job is making that reviewable.
 ## Codex Adaptation
 
 This skill is aligned with the Claude variant. In Codex: use
-`spawn_agent` roles (`worker` or default) for the tier-0 fix spawns —
+`spawn_agent` roles (`worker` or default) for fix tasks named `micro-fixer` —
 do not assume Claude's Agent tool, `subagent_type`, or
 `run_in_background` exist. Reusable skill assets live under
 `~/.codex/skills/...`.
@@ -79,7 +79,7 @@ Run `bash scripts/ci-poll.sh <pr-number>`:
 
 - Exit 0 (green) → `bash scripts/state.sh set <X> <theme> .pr.ci green`, continue.
 - Exit 1 (red) → the script printed the failing checks and verbatim
-  `--log-failed` output. Spawn a tier-0 fix agent with EXACTLY that
+  `--log-failed` output. Spawn a fix task named `micro-fixer` with EXACTLY that
   verbatim output + the affected file paths (no context pack — §5 spawn
   tiering), commit, push, re-poll. **Max 3 attempts**; the 4th red on
   the same check is a stop condition (§8).
@@ -105,7 +105,7 @@ Apply the **checkpoint** (4a) reconcile loop to the PR comments, via
 
 1. Classify each comment, point by point: **fix now** / **debt** /
    **reject with rationale**.
-2. `fix now` → tier-0 fix spawn (comment verbatim + file paths),
+2. `fix now` → fix task named `micro-fixer` (comment verbatim + file paths),
    verify, commit.
 3. `debt` → `ponytail:` marker + ledger record
    (`node scripts/ledger.mjs add <X> <theme>` with status `deferred`),

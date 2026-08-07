@@ -129,6 +129,18 @@ files; overwrite older copies and note it in the commit):
 
 `chmod +x` the shell scripts.
 
+After copying, preflight merges the framework-owned files into Biome's
+`files.ignore` (or creates `biome.json`) and adds `.state.lock` to
+`.gitignore`. This preserves target linting for target code while keeping the
+versioned framework helpers available for the run.
+
+Before committing the copied files, run the target's existing lint command
+when it has one (`npm run lint --if-present`, or its configured equivalent)
+and `node scripts/gen-component-registry.mjs --check` when component folders
+exist. Exit 3 means a hand-written or safety-refused registry: report it and
+do not overwrite it; any other non-zero registry result must be fixed before
+P0 is sealed.
+
 ### 5. Context system (compile bundles, ground file, injectors)
 
 **5a. Compile the context bundles.**
@@ -137,9 +149,10 @@ files; overwrite older copies and note it in the commit):
 node scripts/compile-context-bundles.mjs compile <X> <theme>
 ```
 
-- Exit != 0 = budget breach = **stop condition (§8)** — NOTHING was
-  written. Condense `docs/` (move detail into `docs/architecture/`),
-  then recompile. Never raise the budget to make it fit.
+- A role over budget is written to `context/blocked-roles.json` and receives
+  no bundle; all fitting roles are still compiled. Do not spawn a blocked role
+  (the injector refuses it). Condense that role's sources, or raise only its
+  manifest budget when its documented scope genuinely requires it.
 - Record the hashes in state:
   `bash scripts/state.sh set <X> <theme> .context.bundles "$(jq -c . specs/PROJ-<X>-<theme>/context/bundles.lock.json)"`
 - The compiler also projects `.claude/agents/skillchain-<role>.md` agent
@@ -161,9 +174,9 @@ recompile (5a) so the bundles carry it.
   runner's lane prompts point there. There is no hook step on this host.
 - Claude lanes (the runner starts them even when Codex hosts setup): the
   preflight (step 3) already merged the SubagentStart hook
-  (`node scripts/context-injector.mjs claude`) and the ladder matcher env
-  into `.claude/settings.json` — deterministic on this host too, no
-  deferral to a later Claude session.
+  (`node scripts/context-injector.mjs claude`) and removes any ladder matcher
+  from `.claude/settings.json`, preserving Ponytail's all-subagent coverage
+  without deferral to a later Claude session.
 - Both providers receive the same canonical bundle hash (recorded in
   5a); the injector refuses a stale bundle (hash mismatch → injects
   nothing and warns).

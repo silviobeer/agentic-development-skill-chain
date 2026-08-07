@@ -121,6 +121,18 @@ files; overwrite older copies and note it in the commit):
 
 `chmod +x` the shell scripts.
 
+After copying, preflight merges the framework-owned files into Biome's
+`files.ignore` (or creates `biome.json`) and adds `.state.lock` to
+`.gitignore`. This preserves target linting for target code while keeping the
+versioned framework helpers available for the run.
+
+Before committing the copied files, run the target's existing lint command
+when it has one (`npm run lint --if-present`, or its configured equivalent)
+and `node scripts/gen-component-registry.mjs --check` when component folders
+exist. Exit 3 means a hand-written or safety-refused registry: report it and
+do not overwrite it; any other non-zero registry result must be fixed before
+P0 is sealed.
+
 ### 6. Context system (compile bundles, ground file, injectors)
 
 **6a. Compile the context bundles.**
@@ -129,9 +141,10 @@ files; overwrite older copies and note it in the commit):
 node scripts/compile-context-bundles.mjs compile <X> <theme>
 ```
 
-- Exit != 0 = budget breach = **stop condition (§8)** — NOTHING was
-  written. Condense `docs/` (move detail into `docs/architecture/`),
-  then recompile. Never raise the budget to make it fit.
+- A role over budget is written to `context/blocked-roles.json` and receives
+  no bundle; all fitting roles are still compiled. Do not spawn a blocked role
+  (the injector refuses it). Condense that role's sources, or raise only its
+  manifest budget when its documented scope genuinely requires it.
 - Record the hashes in state:
   `bash scripts/state.sh set <X> <theme> .context.bundles "$(jq -c . specs/PROJ-<X>-<theme>/context/bundles.lock.json)"`
 - The compiler also projects `.claude/agents/skillchain-<role>.md` agent
@@ -148,9 +161,9 @@ recompile (6a) so the bundles carry it.
 **6c. Activate the injector adapters.**
 
 - Claude: the preflight (step 4) already merged the SubagentStart hook
-  (`node scripts/context-injector.mjs claude`) and the
-  `PONYTAIL_SUBAGENT_MATCHER` env into `.claude/settings.json` —
-  deterministic, idempotent, host-neutral. `bash
+  (`node scripts/context-injector.mjs claude`) and removes any
+  `PONYTAIL_SUBAGENT_MATCHER` from `.claude/settings.json`, so Ponytail's
+  native all-subagent path also covers generic implementation fallbacks. `bash
   scripts/merge-project-settings.sh` additionally merges the execution
   permission allowlist. Subagents then receive their type-scoped bundle
   automatically — never paste bundles into spawn prompts.

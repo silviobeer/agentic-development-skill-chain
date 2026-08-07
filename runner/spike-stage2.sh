@@ -173,7 +173,6 @@ printf '[plugins."ponytail@ponytail"]\nenabled = true\n' > "$PT/codex.toml"
 echo '{"defaultMode":"full"}' > "$PT/cfg/config.json"
 ptc() { PONYTAIL_CLAUDE_REGISTRY="$PT/claude.json" PONYTAIL_CODEX_CACHE="$PT/cache" \
         PONYTAIL_CODEX_CONFIG="$PT/codex.toml" PONYTAIL_CONFIG="$PT/cfg/config.json" \
-        PONYTAIL_SUBAGENT_MATCHER='implementer|frontend-implementer|backend-implementer|micro-fixer' \
         bash scripts/ponytail-check.sh "$@"; }
 ptc >/dev/null 2>&1 && ok "parity ok -> exit 0" || bad "parity fixture failed"
 mkdir -p "$PT/cache/4.9.0/.codex-plugin"; echo '{"version":"4.9.0"}' > "$PT/cache/4.9.0/.codex-plugin/plugin.json"
@@ -191,9 +190,9 @@ ptc >/dev/null 2>&1 && bad "mode 'off' passed the gate" || ok "mode 'off' -> exi
 echo '{"defaultMode":"full"}' > "$PT/cfg/config.json"
 PONYTAIL_CLAUDE_REGISTRY="$PT/claude.json" PONYTAIL_CODEX_CACHE="$PT/cache" \
   PONYTAIL_CODEX_CONFIG="$PT/codex.toml" PONYTAIL_CONFIG="$PT/cfg/config.json" \
-  PONYTAIL_SUBAGENT_MATCHER='' bash scripts/ponytail-check.sh >/dev/null 2>&1 \
-  && bad "unscoped ladder matcher passed the gate" \
-  || ok "unscoped ladder matcher (env + settings both unset) -> exit 1"
+  PONYTAIL_SUBAGENT_MATCHER='implementer|frontend-implementer|backend-implementer|micro-fixer' bash scripts/ponytail-check.sh >/dev/null 2>&1 \
+  && bad "scoped ladder matcher passed the gate" \
+  || ok "scoped ladder matcher -> exit 1 (generic implementation fallback would be missed)"
 
 # =============================================================================
 step "cross-review mechanics (PATH-shimmed CLIs, deterministic)"

@@ -314,10 +314,12 @@ One tag per (wave, PROJ) pair. Tags are local-only; do not push. If neither `WAV
 
 **For waves with 2+ parallel user stories:** Create an agent team. The lead (you) coordinates.
 
-**Choose the right implementer type per US** (framework runs: spawn the
-`skillchain-<role>` agent types that P0 projected into `.claude/agents/` —
-the SubagentStart injector matches those names and delivers the role's
-context bundle; a generic `general-purpose` spawn gets NO bundle):
+**Choose the right implementer type per US.** Where the current session can
+spawn P0's `skillchain-<role>` agent types, use them. Otherwise use the normal
+agent type and attach the path printed by
+`node scripts/context-injector.mjs codex <role> --path` to its prompt; a
+non-zero exit means that role is blocked and must not be spawned. A generic
+`general-purpose` spawn gets no bundle unless that path is explicitly passed:
 - US touches only UI (components, pages, styling) → `frontend-implementer` (`skillchain-frontend-implementer`)
 - US touches only server-side (API, DB, server actions) → `backend-implementer` (`skillchain-backend-implementer`)
 - US is full-stack (both UI and server logic) → `implementer` (generic)

@@ -88,8 +88,8 @@ What makes an overnight run trustworthy:
   Micro-fixers and explore agents get nothing by design.
 - **Minimalism ladder.** The third-party
   [Ponytail](https://github.com/DietrichGebert/ponytail) plugin, same
-  version and mode on both providers (parity gated in preflight), scoped
-  to code-writing roles only.
+  version and mode on both providers (parity gated in preflight), uses its
+  native all-subagent path so generic implementation fallbacks are covered.
 - **Hard gates.** P6 cannot seal with open Critical/High findings. P7
   cannot seal unless the docs pass the size caps (form), a docs
   cross-review actually ran during this P7 (evidence), and no blocking

@@ -1071,9 +1071,9 @@ codex plugin marketplace add DietrichGebert/ponytail
 
 - **Mode:** persist `full` as the default on all active providers and
   record the detected plugin version/mode in P0 state.
-- **Scoping:** apply Ponytail only to code-writing roles
-  (`implementer|frontend-implementer|backend-implementer|micro-fixer`);
-  reviewer, QA, and explore lanes do not get the ladder.
+- **Coverage:** leave `PONYTAIL_SUBAGENT_MATCHER` unset so Ponytail reaches
+  every normal subagent, including generic implementation fallbacks. P0
+  rejects scoped matchers because they silently drop that coverage.
 - **No double injection:** our context injector carries NO ladder of
   its own — ponytail is the single source for it.
 - **Debt integration:** ponytail's `ponytail:` comment convention is
