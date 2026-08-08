@@ -82,8 +82,10 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
 
+For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
+
 The script validates:
-1. **Ralph ACs** — every `ac_commands` entry from `3-4_plan/wave-gate-config.json` for wave N exits 0
+1. **Ralph ACs** — every `ac_commands` entry exits 0 **and reports a non-empty selected-test count**. The gate persists each result in `5_progress/ralph-wave-N.json` immediately; reruns skip only recorded-green ACs, and `bash scripts/wave-gate.sh --status <N> <PROJ-X> <theme>` checks its PID/heartbeat without `pgrep`.
 2. **Build** — `build_cmd` from config exits 0
 3. **CodeRabbit** — 0 Critical/High findings against wave start SHA
 4. **Smoke Test** — `agent-browser` passes on every `frontend_routes` entry (skipped if empty)
@@ -405,6 +407,8 @@ if iter == RALPH_CAP and not all ACs pass:
 
 **Rules for the Ralph loop:**
 - Checks must be **deterministic** — run actual test commands, read actual output. No subjective judgment ("this looks like it works").
+- A test that depends on state outside itself — provider rate budget, file order, or clock — must establish that state itself or explicitly assert it. Never accept a green result merely because neighbouring tests primed the bucket or fixture.
+- Treat “nothing happened” as weak evidence: add a positive control that proves the valid session/input/path would have worked, and do not let polling matchers pass on their first attempt without proving the observed transition.
 - Failure output is passed **verbatim** to the fix subagent — not summarized, not interpreted.
 - The loop exits when every AC passes OR when the iteration cap is reached.
 - **Iteration cap: 3.** A stubborn AC after 3 fix attempts signals an architectural or understanding problem the loop cannot crack. Log it, move on. The PROJ-end Quality Gate and Skill 6 QA will catch unresolved issues with fresh eyes — burning the orchestrator on a stuck loop is more expensive than letting one AC carry forward as a known gap.

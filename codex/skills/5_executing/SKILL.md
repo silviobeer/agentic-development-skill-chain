@@ -77,8 +77,10 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
 
+For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
+
 The script validates:
-1. **Ralph ACs** — every `ac_commands` entry from `3-4_plan/wave-gate-config.json` for wave N exits 0
+1. **Ralph ACs** — every `ac_commands` entry exits 0 **and reports a non-empty selected-test count**. The gate persists each result in `5_progress/ralph-wave-N.json` immediately; reruns skip only recorded-green ACs, and `bash scripts/wave-gate.sh --status <N> <PROJ-X> <theme>` checks its PID/heartbeat without `pgrep`.
 2. **Build** — `build_cmd` from config exits 0
 3. **CodeRabbit** — 0 non-advisory findings against wave start SHA. Advisory severities come from `advisory_severities` in `wave-gate-config.json`.
 4. **Smoke Test** — `agent-browser` passes on every `frontend_routes` entry (skipped if empty)
@@ -391,6 +393,8 @@ while not all ACs pass and loop_count < 3:
 
 **Rules for the Ralph loop:**
 - Checks must be **deterministic** — run actual test commands, read actual output. No subjective judgment ("this looks like it works").
+- A test that depends on state outside itself — provider rate budget, file order, or clock — must establish that state itself or explicitly assert it. Never accept a green result merely because neighbouring tests primed the bucket or fixture.
+- Treat “nothing happened” as weak evidence: add a positive control that proves the valid session/input/path would have worked, and do not let polling matchers pass on their first attempt without proving the observed transition.
 - Failure output is passed **verbatim** to the fix subagent — not summarized, not interpreted.
 - The loop exits when every AC passes or after 3 iterations, whichever comes first.
 - If the same AC still fails after 3 iterations: document the unresolved AC, exact commands, failure output, and fix attempts in `progress.md`; continue the wave orchestration instead of escalating or hard-stopping here. The later wave gate still re-runs AC commands and remains the hard proof before the next wave.

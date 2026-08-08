@@ -21,18 +21,27 @@
 #
 set -euo pipefail
 
+STATUS_ONLY=false
+if [[ "${1:-}" == "--status" ]]; then
+  STATUS_ONLY=true
+  shift
+fi
+
 WAVE="${1:-}"
 PROJ="${2:-}"
 THEMA="${3:-}"
 
 if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEMA" ]]; then
-  echo "Usage: $0 <wave-number> <proj-x> <theme>" >&2
+  echo "Usage: $0 [--status] <wave-number> <proj-x> <theme>" >&2
   exit 64
 fi
 
 BASE="specs/PROJ-${PROJ}-${THEMA}"
 PROGRESS="${BASE}/5_progress/PROJ-${PROJ}-progress.md"
 CFG="${BASE}/3-4_plan/wave-gate-config.json"
+RALPH_STATE="${BASE}/5_progress/ralph-wave-${WAVE}.json"
+RALPH_PID="${BASE}/5_progress/ralph-wave-${WAVE}.pid"
+RALPH_HEARTBEAT="${BASE}/5_progress/ralph-wave-${WAVE}.heartbeat"
 
 fail() { echo "❌ Wave ${WAVE} Gate FAILED: $1" >&2 ; exit 1 ; }
 step() { echo "→ [$(date +%H:%M:%S)] $1" ; }
@@ -76,6 +85,92 @@ for pair in "ac_seconds:$AC_TIMEOUT" "build_seconds:$BUILD_TIMEOUT" "coderabbit_
   [[ "$value" =~ ^[0-9]+$ && "$value" -gt 0 ]] || fail "invalid timeout ${key}='${value}' in $CFG"
 done
 
+# Long Ralph runs are resumable. This is deliberately not state.json: it is
+# ephemeral verification evidence, kept beside progress.md and written after
+# every command so an interrupted run never loses already-green ACs.
+RALPH_STALL_SECONDS=$(jq -r '.timeouts.ralph_stall_seconds // .timeouts.ac_seconds' "$CFG")
+RATE_LIMIT_BACKOFF_SECONDS=$(jq -r "${WAVE_KEY}.rate_limit_backoff_seconds // .rate_limit_backoff_seconds // 330" "$CFG")
+AUTH_PACING_SECONDS=$(jq -r "${WAVE_KEY}.auth_pacing_seconds // 0" "$CFG")
+for pair in "ralph_stall_seconds:$RALPH_STALL_SECONDS" "rate_limit_backoff_seconds:$RATE_LIMIT_BACKOFF_SECONDS" "auth_pacing_seconds:$AUTH_PACING_SECONDS"; do
+  key="${pair%%:*}"
+  value="${pair#*:}"
+  [[ "$value" =~ ^[0-9]+$ ]] || fail "invalid ${key}='${value}' in $CFG"
+done
+
+heartbeat() { date +%s > "$RALPH_HEARTBEAT"; }
+
+sleep_with_heartbeat() {
+  local remaining="$1" chunk
+  while [[ "$remaining" -gt 0 ]]; do
+    chunk=$(( remaining > 30 ? 30 : remaining ))
+    sleep "$chunk"
+    remaining=$(( remaining - chunk ))
+    heartbeat
+  done
+}
+
+init_ralph_state() {
+  [[ -f "$RALPH_STATE" ]] && return
+  local tmp
+  tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+  jq -n --arg wave "$WAVE" --arg started "$(date -Iseconds)" \
+    '{version: 1, wave: $wave, started_at: $started, updated_at: $started, ralph_status: "running", commands: []}' \
+    > "$tmp"
+  mv "$tmp" "$RALPH_STATE"
+}
+
+record_ac() {
+  local index="$1" command="$2" attempts="$3" rc="$4" selected="$5" status="$6" log="$7" tmp
+  tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+  jq --argjson index "$index" --arg command "$command" --argjson attempts "$attempts" \
+    --argjson rc "$rc" --argjson selected "$selected" --arg status "$status" \
+    --arg log "$log" --arg updated "$(date -Iseconds)" '
+      .updated_at = $updated |
+      .commands = ((.commands // []) | map(select(.index != $index)) +
+        [{index: $index, command: $command, attempts: $attempts, rc: $rc,
+          selected: $selected, status: $status, log: $log, updated_at: $updated}])
+    ' "$RALPH_STATE" > "$tmp" && mv "$tmp" "$RALPH_STATE"
+}
+
+selected_count() {
+  local log="$1" match
+  match=$(grep -Eo 'Running[[:space:]]+[0-9]+[[:space:]]+tests?' "$log" 2>/dev/null | head -1 || true)
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  match=$(grep -Eo 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' "$log" 2>/dev/null | head -1 || true)
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  match=$(grep -Eo '^#[[:space:]]+tests[[:space:]]+[0-9]+' "$log" 2>/dev/null | head -1 || true)
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | tail -1; return; }
+  match=$(grep -Eo '(^|[^0-9])[0-9]+[[:space:]]+passed([[:space:]]|$)' "$log" 2>/dev/null | head -1 || true)
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  echo 0
+}
+
+provider_rate_limited() {
+  grep -Eiq 'over_request_rate_limit|Request[[:space:]]+rate[[:space:]]+limit[[:space:]]+reached|HTTP(/[0-9.]+)?[[:space:]]+429([^0-9]|$)|"status"[[:space:]]*:[[:space:]]*429([^0-9]|$)|status[[:space:]]*=[[:space:]]*429([^0-9]|$)' "$1"
+}
+
+ralph_status() {
+  [[ -f "$RALPH_STATE" ]] || fail "no Ralph state recorded: $RALPH_STATE"
+  local pid="" heartbeat_at="" age="" heartbeat_age_json=0 state_status
+  [[ -f "$RALPH_PID" ]] && pid=$(tr -cd '0-9' < "$RALPH_PID")
+  [[ -f "$RALPH_HEARTBEAT" ]] && heartbeat_at=$(tr -cd '0-9' < "$RALPH_HEARTBEAT")
+  if [[ -n "$heartbeat_at" ]]; then age=$(( $(date +%s) - heartbeat_at )); heartbeat_age_json="$age"; else age="unknown"; fi
+  jq --arg pid "$pid" --argjson heartbeat_age "$heartbeat_age_json" '. + {pid: ($pid | if . == "" then null else tonumber end), heartbeat_age_seconds: $heartbeat_age}' "$RALPH_STATE"
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    [[ "$age" == "unknown" || "$age" -le "$RALPH_STALL_SECONDS" ]] || fail "Ralph PID ${pid} is alive but made no progress for ${age}s (limit ${RALPH_STALL_SECONDS}s)"
+    return
+  fi
+  state_status=$(jq -r '.ralph_status // "running"' "$RALPH_STATE")
+  [[ -z "$pid" && "$state_status" == complete ]] && return
+  [[ -z "$pid" ]] && fail "Ralph state is ${state_status} but has no PID; rerun the gate to resume from $RALPH_STATE"
+  fail "Ralph PID ${pid} is not alive; rerun the gate to resume from $RALPH_STATE"
+}
+
+if [[ "$STATUS_ONLY" == true ]]; then
+  ralph_status
+  exit 0
+fi
+
 # CodeRabbit findings whose severity is listed here are logged as advisory.
 # Everything else blocks.
 jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null \
@@ -97,11 +192,90 @@ if [[ "$AC_COUNT" -eq 0 ]]; then
   fail "no ac_commands defined for wave ${WAVE}"
 fi
 
-while IFS= read -r cmd; do
-  [[ -z "$cmd" ]] && continue
-  echo "   $ $cmd"
-  run_with_timeout "$AC_TIMEOUT" "AC: $cmd" bash -c "$cmd"
-done < <(jq -r "${WAVE_KEY}.ac_commands[]" "$CFG")
+init_ralph_state
+if [[ -f "$RALPH_PID" ]]; then
+  previous_pid=$(tr -cd '0-9' < "$RALPH_PID")
+  if [[ -n "$previous_pid" ]] && kill -0 "$previous_pid" 2>/dev/null; then
+    ralph_status
+    fail "Ralph is already running as PID ${previous_pid}; use --status, never pgrep"
+  fi
+  echo "   ⚠ stale Ralph PID ${previous_pid:-unknown}; resuming recorded AC results"
+  rm -f "$RALPH_PID"
+fi
+printf '%s\n' "$$" > "$RALPH_PID"
+heartbeat
+trap 'rm -f "$RALPH_PID"' EXIT
+
+LAST_AUTH="${BASE}/5_progress/ralph-wave-${WAVE}.auth-last"
+for ((index = 0; index < AC_COUNT; index++)); do
+  entry=$(jq -c "${WAVE_KEY}.ac_commands[$index]" "$CFG")
+  entry_type=$(jq -r 'type' <<< "$entry")
+  case "$entry_type" in
+    string) command=$(jq -r . <<< "$entry"); auth_consuming=false ;;
+    object)
+      command=$(jq -r '.command // empty' <<< "$entry")
+      auth_consuming=$(jq -r '.auth_consuming // false' <<< "$entry")
+      [[ "$auth_consuming" == true || "$auth_consuming" == false ]] || fail "AC $((index + 1)) auth_consuming must be boolean"
+      ;;
+    *) fail "AC $((index + 1)) must be a command string or {command, auth_consuming}" ;;
+  esac
+  [[ -n "$command" ]] || fail "AC $((index + 1)) command is empty"
+
+  if jq -e --argjson index "$index" '.commands[]? | select(.index == $index and .status == "passed" and .rc == 0 and .selected > 0)' "$RALPH_STATE" >/dev/null; then
+    echo "   ✓ AC $((index + 1)) already green; skipped (recorded state)"
+    continue
+  fi
+
+  if [[ "$auth_consuming" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
+    last_auth=$(tr -cd '0-9' < "$LAST_AUTH")
+    wait_for=$(( AUTH_PACING_SECONDS - ($(date +%s) - last_auth) ))
+    if [[ "$wait_for" -gt 0 ]]; then
+      echo "   ⏳ AC $((index + 1)) consumes auth budget; pacing ${wait_for}s"
+      sleep_with_heartbeat "$wait_for"
+    fi
+  fi
+
+  attempts=$(jq -r --argjson index "$index" '[.commands[]? | select(.index == $index)][0].attempts // 0' "$RALPH_STATE")
+  for retry in 1 2; do
+    attempts=$((attempts + 1))
+    log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index + 1))-attempt-${attempts}.log"
+    effective_timeout=$(( AC_TIMEOUT < RALPH_STALL_SECONDS ? AC_TIMEOUT : RALPH_STALL_SECONDS ))
+    echo "   $ $command"
+    heartbeat
+    [[ "$auth_consuming" == true ]] && date +%s > "$LAST_AUTH"
+    set +e
+    timeout --foreground "$effective_timeout" bash -c "$command" > "$log" 2>&1
+    rc=$?
+    set -e
+    selected=$(selected_count "$log")
+    heartbeat
+    if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then
+      record_ac "$index" "$command" "$attempts" "$rc" "$selected" passed "$log"
+      echo "   ✓ AC $((index + 1)): ${selected} selected test(s), attempt ${attempts}"
+      break
+    fi
+    if [[ "$rc" -eq 0 ]]; then
+      record_ac "$index" "$command" "$attempts" "$rc" "$selected" failed_empty_selection "$log"
+      fail "AC $((index + 1)) selected 0 tests despite rc=0 (log: $log)"
+    fi
+    if [[ "$rc" -eq 124 ]]; then
+      record_ac "$index" "$command" "$attempts" "$rc" "$selected" stalled "$log"
+      fail "AC $((index + 1)) made no completed progress for ${effective_timeout}s (log: $log)"
+    fi
+    if provider_rate_limited "$log" && [[ "$retry" -eq 1 ]]; then
+      record_ac "$index" "$command" "$attempts" "$rc" "$selected" rate_limited "$log"
+      echo "   ⚠ provider rate limit in AC $((index + 1)); pausing ${RATE_LIMIT_BACKOFF_SECONDS}s, then retrying once (log: $log)"
+      sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"
+      continue
+    fi
+    record_ac "$index" "$command" "$attempts" "$rc" "$selected" failed "$log"
+    fail "AC $((index + 1)) failed rc=${rc}, selected=${selected} (log: $log)"
+  done
+done
+rm -f "$RALPH_PID"
+trap - EXIT
+tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+jq --arg updated "$(date -Iseconds)" '.ralph_status = "complete" | .updated_at = $updated' "$RALPH_STATE" > "$tmp" && mv "$tmp" "$RALPH_STATE"
 
 # ─── 2. Build ───────────────────────────────────────────────────────────────
 step "2/6 Build"
@@ -148,18 +322,20 @@ if [[ $rc -ne 0 ]]; then
 fi
 echo "   ✓ coderabbit done in $(( $(date +%s) - CR_START ))s"
 
-BLOCKING=$(grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null | jq -rs --argjson advisory "$ADVISORY_JSON" '
+BLOCKING=$( { grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null || true; } | jq -rs --argjson advisory "$ADVISORY_JSON" '
   [ .[]
     | (.severity? // .priority? // .level? // "" | tostring | ascii_downcase) as $sev
     | select($sev != "" and (($advisory | index($sev)) | not))
   ] | length
-' 2>/dev/null || echo 0)
-ADVISORY=$(grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null | jq -rs --argjson advisory "$ADVISORY_JSON" '
+' 2>/dev/null)
+ADVISORY=$( { grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null || true; } | jq -rs --argjson advisory "$ADVISORY_JSON" '
   [ .[]
     | (.severity? // .priority? // .level? // "" | tostring | ascii_downcase) as $sev
     | select($sev != "" and (($advisory | index($sev)) != null))
   ] | length
-' 2>/dev/null || echo 0)
+' 2>/dev/null)
+BLOCKING=${BLOCKING:-0}
+ADVISORY=${ADVISORY:-0}
 [[ "$ADVISORY" -gt 0 ]] && echo "   ⚠ ${ADVISORY} advisory finding(s): ${ADVISORY_LABEL}"
 
 # Findings ledger ingest (framework runs): all CodeRabbit findings flow

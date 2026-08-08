@@ -197,6 +197,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   "dev_url": "http://localhost:3000",
   "timeouts": {
     "ac_seconds": 300,
+    "ralph_stall_seconds": 300,
     "build_seconds": 600,
     "coderabbit_seconds": 600,
     "browser_seconds": 120
@@ -206,9 +207,10 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
       "codex_effort": "high",
       "advisory_severities": ["medium", "low"],
       "ac_commands": [
-        "npm test -- src/auth/password.test.ts",
+        { "command": "npm test -- src/auth/password.test.ts", "auth_consuming": true },
         "npm test -- src/auth/session.test.ts"
       ],
+      "auth_pacing_seconds": 20,
       "frontend_routes": []
     },
     "2": {
@@ -229,10 +231,12 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 - `dev_url`: dev server URL for agent-browser smoke tests (default `http://localhost:3000`)
 - `timeouts`: required budgets for long-running gate steps. Use seconds. The gate fails if any key is missing:
   - `ac_seconds`: per AC command
+  - `ralph_stall_seconds`: maximum no-progress time for one AC command (optional; defaults to `ac_seconds`)
   - `build_seconds`: full project build
   - `coderabbit_seconds`: per-wave CodeRabbit review
   - `browser_seconds`: per route smoke test
-- `ac_commands[]`: one shell command per AC that exits 0 on pass, non-zero on fail. **Each AC in the wave must map to exactly one command.** The `wave-gate.sh` script runs them in order; first failure blocks.
+- `ac_commands[]`: one shell command per AC. Keep existing string entries, or use `{ "command": "…", "auth_consuming": true }` for a command that spends shared provider/auth budget. **Each AC in the wave must map to exactly one command.** The gate persists `rc`, selected-test count, attempts, command, and log after every AC; it resumes only entries recorded green with a non-empty selection. A command must print a recognizable selected-test count (`Running N tests`, `Tests N passed`, TAP `# tests N`, or `N passed`); zero or unparseable selection blocks even when rc is 0.
+- `auth_pacing_seconds`: optional per-wave minimum gap between `auth_consuming` commands; omit or set `0` when no shared provider budget exists. Do not mark unrelated commands merely to slow the gate.
 - `frontend_routes[]`: URLs touched by the wave. Empty array = backend-only wave → smoke test skipped. Each listed route is gut-checked via `agent-browser`.
 - `advisory_severities`: required list of CodeRabbit severities that do **not** block the wave. Any finding whose normalized severity is not listed blocks.
   - Use `["medium", "low"]` for normal or risky waves. Critical/High/Error/Blocker findings block.
@@ -259,7 +263,7 @@ After writing all wave files, review them with fresh eyes:
 
 Fix issues inline. Move on.
 
-**Config consistency check:** every wave plan has an `Execution` block; `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four `timeouts` keys are present, `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. Mismatch here will block execution.
+**Config consistency check:** every wave plan has an `Execution` block; `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four required `timeouts` keys are present (`ralph_stall_seconds` is optional), `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. For hosted/rate-limited providers, mark only the budget-consuming AC commands and set deliberate `auth_pacing_seconds`; no config may widen a provider limit to make verification green. Mismatch here will block execution.
 
 ### 7. User Review
 
