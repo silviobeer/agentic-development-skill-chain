@@ -434,9 +434,12 @@ bash scripts/cross-review.sh docs <X> <theme> \
   fix each one in the docs, mark it
   (`node scripts/ledger.mjs set-status <X> <theme> <id> fixed <commit>`
   — an unmarked fix keeps blocking; a false "fixed" is reopened on
-  re-report), re-run 7c, then re-run with `--round 2`. Exit 3 again →
-  **stop condition (§8)**: do NOT seal P7 — transition to blocked, write
-  the stop report. There is no round 3.
+  re-report), re-run 7c, then re-run the truth gate with the next
+  `--round N`. Seal only after **two consecutive clean runs**. Stop only
+  when the same blocking set repeats without reduction for two consecutive
+  repair rounds, or a documented hard limit/resource failure is reached;
+  record the repeated finding IDs in the stop report. There is no fixed
+  round cap: a later round may still find a real documentation defect.
 - exit 1 → infrastructure failure: also a stop condition — the truth
   gate did not run, the phase must not seal without it.
 

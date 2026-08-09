@@ -265,6 +265,12 @@ Fix issues inline. Move on.
 
 **Config consistency check:** every wave plan has an `Execution` block; `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four required `timeouts` keys are present (`ralph_stall_seconds` is optional), `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. For hosted/rate-limited providers, mark only the budget-consuming AC commands and set deliberate `auth_pacing_seconds`; no config may widen a provider limit to make verification green. Mismatch here will block execution.
 
+**Platform-authority check:** for each planned deployment/platform value (region,
+runtime, API feature, environment setting), name the platform query, CLI, or
+deployment response that will validate it. Do not compare configuration to a
+handwritten wish-list, and never call a mutating command such as `config:push`
+"verification" unless it reads the deployed value back and compares it.
+
 ### 7. User Review
 
 Present all wave plans for approval. Adjust if needed.

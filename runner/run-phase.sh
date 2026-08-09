@@ -294,6 +294,14 @@ curation_caps_path() { # repo copy first (4b_setup installs it), then skill tree
   fi
 }
 
+quality_gate_proof_path() {
+  local p
+  for p in scripts/quality-gate-proof.sh "$RUNNER_DIR/../claude/skills/5_executing/scripts/quality-gate-proof.sh"; do
+    [ -f "$p" ] && { echo "$p"; return 0; }
+  done
+  return 1
+}
+
 stop_run() { # reason error_file
   local reason="$1" err="${2:-}"
   step "STOP CONDITION: $reason"
@@ -449,6 +457,15 @@ run_generic() {
   [ "$TIMED_OUT" -eq 1 ] && stop_run "$PHASE writer timed out after ${TIMEOUT}s (peer cancelled)" "$writer_out"
   [ "$WRITER_RC" -ne 0 ] && stop_run "$PHASE writer lane ($WRITER) exited $WRITER_RC (peer cancelled)" "$writer_out"
   verify_sealed "$writer_out"
+
+  # Re-run the evidence checker outside the writer lane: a prose checklist
+  # cannot make a skipped Quality Gate look clean.
+  if [ "$PHASE" = "P5" ]; then
+    local quality_proof
+    quality_proof="$(quality_gate_proof_path || true)"
+    [ -n "$quality_proof" ] || stop_run "P5 sealed done but quality-gate-proof.sh is missing — cannot verify Quality Gate evidence" "$writer_out"
+    bash "$quality_proof" "$PROJ" "$THEME" >/dev/null 2>&1 || stop_run "P5 sealed done but Quality Gate proof is missing or invalid (run scripts/quality-gate-proof.sh for details)" "$writer_out"
+  fi
 
   # Hard exit rule (§8, Stage 2): P7:done is not accepted while a curation
   # gate is red — independent re-verification, mirror of the P6 gate. The

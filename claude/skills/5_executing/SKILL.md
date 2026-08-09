@@ -152,6 +152,7 @@ Updated after every task, after every Ralph loop iteration, and whenever a block
 ## Quality Gate — PROJ-X
 
 ### Code Review
+Status: pending | passed
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | P0 Critical | 0 | 0 | 0 |
@@ -160,11 +161,21 @@ Updated after every task, after every Ralph loop iteration, and whenever a block
 | P3 Low | 0 | 0 | 0 |
 
 ### SonarCloud
+Status: pending | ran | skipped (sonar CLI unavailable) | skipped (project not configured)
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | Critical/Major | 0 | 0 | 0 |
 | Minor | 0 | 0 | 0 |
 | Info | 0 | 0 | 0 |
+
+### Build
+Status: pending | passed
+
+### Tests
+Status: pending | passed
+
+### Lint
+Status: pending | passed
 
 ### Fixed Issues
 - [severity]: `file:line` — [issue] → fixed in [commit]
@@ -647,6 +658,7 @@ Update `progress.md` with QA results. Mark this PROJ-X as complete.
 Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
 
 **Framework runs (state.json exists):** seal the phase first —
+`bash scripts/quality-gate-proof.sh <X> <theme>` MUST exit 0 first, then run
 `bash scripts/state.sh transition <X> <theme> P5 done`. The phase runner
 then starts P6 as fresh lanes (read-only QA finder + P6 controller);
 do NOT continue into Skill 6 inside this session.
@@ -654,7 +666,9 @@ do NOT continue into Skill 6 inside this session.
 Before invoking Skill 6 (interactive runs), flush context:
 
 1. Run `/compact`. Wave plans, agent chatter, Ralph iterations, and Quality-Gate review output are all on disk in `progress.md` — reclaim the context budget for Playwright or agent-browser testing + persona reviewers.
-2. Verify `progress.md` Quality-Gate section is complete (code review + build + Sonar findings or explicit Sonar skip reason logged).
+2. Run `bash scripts/quality-gate-proof.sh <X> <theme>`; it rejects a missing
+   section, build evidence, or Sonar disposition, and rejects a Sonar skip when
+   the configured scanner was available.
 3. Suggest that the user run QA with a different model than the one that executed the implementation, for example GPT reviewing Claude-built work or Claude reviewing GPT-built work.
 4. Invoke Skill 6: `/6_qa`. Skill 6 follows its own release gate and hands passing or Medium/Low-only work directly to Skill 7.
 

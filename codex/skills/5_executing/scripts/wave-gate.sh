@@ -305,6 +305,11 @@ echo "   base: $WAVE_BASE"
 COMMITS_SINCE=$(git rev-list --count "${WAVE_BASE}..HEAD" 2>/dev/null || echo "?")
 FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" 2>/dev/null | wc -l | tr -d ' ')
 echo "   diff scope: ${COMMITS_SINCE} commits, ${FILES_CHANGED} files"
+ # CodeRabbit's review ceiling is a hard boundary, not an excuse to omit
+ # review. A green gate must mean the entire wave was reviewable.
+ if [[ "$FILES_CHANGED" -gt 150 ]]; then
+   fail "CodeRabbit review scope is ${FILES_CHANGED} files (limit 150). Split the wave or establish a narrower reviewed base; do not continue without a complete review."
+ fi
 
 CR_OUT=$(mktemp)
 CR_START=$(date +%s)

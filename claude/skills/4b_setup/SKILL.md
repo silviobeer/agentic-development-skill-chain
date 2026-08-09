@@ -59,6 +59,18 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 `~/.claude/skills/5_executing/references/coderabbit-template.yaml` to
 `.coderabbit.yaml` and include it in the setup commit.
 
+### 3a. Verify the verifier
+
+Before trusting an unattended run, prove one applicable gate can reject a
+controlled bad change. Pick the cheapest safe control for this PROJ: temporarily
+break an AC assertion, a rate-limit assertion, an authorization/RLS policy, or
+the build. Run its real gate, observe the expected non-zero result, restore the
+exact file, and re-run it green. Record the command, expected red reason, and
+restored green result under `## Negative controls` in `5_progress/PROJ-<X>-progress.md`.
+Never use a production mutation, a destructive migration, or an assertion whose
+failure proves only a syntax error. If no safe control exists, STOP and record
+why; an untested verifier is not a P0 success.
+
 ### 4. Tool + auth preflight
 
 Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
@@ -117,7 +129,7 @@ files; overwrite older copies and note it in the commit):
 | `5_executing/templates/agent-md-entry.md.tmpl` | `templates/` |
 | `8_delivery/scripts/conflict-probe.sh`, `render-pr-body.mjs`, `ci-poll.sh` | `scripts/` |
 | `8_delivery/templates/pr-body.md.tmpl` | `templates/` |
-| `5_executing/scripts/wave-gate.sh`, `gen-component-registry.mjs` | `scripts/` (as today) |
+| `5_executing/scripts/wave-gate.sh`, `quality-gate-proof.sh`, `gen-component-registry.mjs` | `scripts/` (as today) |
 
 `chmod +x` the shell scripts.
 
@@ -202,6 +214,7 @@ reports, never silent.
 - [ ] SubagentStart injector hook merged into project settings (Claude host)
 - [ ] `scripts/` + `templates/` contain the framework copies, executable
 - [ ] `.coderabbit.yaml` present at repo root
+- [ ] One safe negative control was observed red, restored, and recorded
 - [ ] One setup commit on the PROJ branch
 
 ## Failure Behavior

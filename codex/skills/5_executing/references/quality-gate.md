@@ -135,12 +135,22 @@ Update `5_progress/PROJ-<X>-progress.md` with a Quality Gate section after runni
 ## Quality Gate — PROJ-X
 
 ### Code Review
+Status: passed
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | P0 Critical | 0 | 0 | 0 |
 | P1 High | 2 | 2 | 0 |
 | P2 Medium | 1 | 0 | 1 |
 | P3 Low | 3 | 0 | 3 |
+
+### Build
+Status: passed
+
+### Tests
+Status: passed
+
+### Lint
+Status: passed
 
 ### SonarCloud
 Status: ran | skipped (sonar CLI unavailable) | skipped (project not configured)

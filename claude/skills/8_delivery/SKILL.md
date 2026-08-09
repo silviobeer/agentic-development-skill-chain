@@ -79,9 +79,21 @@ Run `bash scripts/ci-poll.sh <pr-number>`:
 
 ### 5. Seal the autonomous part
 
-`bash scripts/state.sh transition <X> <theme> P8 done` — the run is now
-waiting on the human. In a runner-managed overnight run, the morning
-report picks the PR up from state.json; nothing further happens
+The P8 seal changes the PR head, so the earlier green result no longer proves
+the final commit. Transition, commit, and push the seal, then poll CI again:
+
+```bash
+bash scripts/state.sh transition <X> <theme> P8 done
+git add specs/PROJ-<X>-<theme>/state.json
+git commit -m "chore(PROJ-<X>): seal P8 delivery"
+git push
+bash scripts/ci-poll.sh <pr-number>
+```
+
+Only exit 0 from that final poll makes `P8:done` valid. A red/timeout reopens
+delivery work; do not claim the previous head's CI as evidence for this one.
+The run is then waiting on the human. In a runner-managed overnight run, the
+morning report picks the PR up from state.json; nothing further happens
 autonomously.
 
 → NEXT ACTION: human reviews and merges the PR (Checkpoint 2 — for
