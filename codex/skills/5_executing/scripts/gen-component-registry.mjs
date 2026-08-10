@@ -150,7 +150,12 @@ function collect(root) {
         if (m[1]) exported.add(m[1]);
         for (const name of m[2]?.matchAll(/\b([A-Z]\w*)\b/g) ?? []) exported.add(name[1]);
       }
-      const re = /(\/\*\*[\s\S]*?\*\/\s*)?(?:export\s+(?:default\s+)?){0,1}(?:function|const)\s+([A-Z]\w*)/g;
+      // The doc block may not span its own `*/`. With a plain lazy `[\s\S]*?`
+      // the engine backtracks past the first block's end whenever what follows
+      // is not a component — a `const buttonVariants = cva(…)` between a type's
+      // doc block and the component's own — and the capture then swallows both
+      // comments and the source between them into the purpose text.
+      const re = /(\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*)?(?:export\s+(?:default\s+)?)?(?:function|const)\s+([A-Z]\w*)/g;
       let m;
       while ((m = re.exec(src)) !== null) {
         if (!exported.has(m[2])) continue;
@@ -162,6 +167,9 @@ function collect(root) {
   return found;
 }
 
+// A pipe inside a cell ends the cell — escape it or the row grows columns.
+const cell = (v) => String(v).replace(/\|/g, "\\|");
+
 function render(entries) {
   const lines = [...HEADER()];
   if (entries.length === 0) {
@@ -171,7 +179,9 @@ function render(entries) {
   lines.push(
     "| Component | Import | Purpose | Variants | Sizes | States |",
     "|---|---|---|---|---|---|",
-    ...entries.map((e) => `| ${e.name} | \`${e.import}\` | ${e.purpose || "—"} | ${e.variants} | ${e.sizes} | ${e.states} |`),
+    // `@variants a|b|c` is the common case, and an unescaped pipe silently
+    // splits the row into extra columns.
+    ...entries.map((e) => `| ${[e.name, `\`${e.import}\``, e.purpose || "—", e.variants, e.sizes, e.states].map(cell).join(" | ")} |`),
     "",
   );
   return lines.join("\n");
@@ -236,7 +246,7 @@ function selftest() {
 
   writeFileSync(
     join(root, "src", "components", "ui", "button.tsx"),
-    `/** Actions. Not for navigation — use Link.\n *  @variants primary|ghost  @sizes sm|md\n *  @states hover|disabled */\nexport function Button() {}\n`,
+    `/** Defines button variants. */\nconst buttonVariants = () => null\n/** Actions. Not for navigation — use Link.\n *  @variants primary|ghost  @sizes sm|md\n *  @states hover|disabled */\nexport function Button() {}\n`,
   );
   writeFileSync(
     join(root, "src", "components", "ui", "dialog.tsx"),
@@ -247,7 +257,11 @@ function selftest() {
 
   assert.equal(run(root, false, false), 1, "undocumented component must be reported");
   const md = readFileSync(join(root, "docs", "components.md"), "utf8");
-  assert.match(md, /\| Button \| `@\/components\/ui\/button` \| Actions\. Not for navigation — use Link\. \| primary\|ghost \| sm\|md \| hover\|disabled \|/);
+  // The pipes inside a cell are escaped, and the assertion has to say so:
+  // written unescaped, this pattern is an alternation that matches almost
+  // anything and would pass against a row split into the wrong columns.
+  assert.match(md, /\| Button \| `@\/components\/ui\/button` \| Actions\. Not for navigation — use Link\. \| primary\\\|ghost \| sm\\\|md \| hover\\\|disabled \|/);
+  assert.doesNotMatch(md, /Defines button variants/, "a preceding doc block must not swallow component source");
   assert.match(md, /\| BulkBar \| `@\/features\/orders\/components\/bulk-bar` \| — \| — \| — \| — \|/);
   assert.doesNotMatch(md, /Ignored/, "test files must be skipped");
   assert.match(md, /\| Dialog \|/, "bottom exports must be registered");

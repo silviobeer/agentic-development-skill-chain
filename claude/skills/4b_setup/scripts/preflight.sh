@@ -160,15 +160,28 @@ if [ -f biome.json ]; then
   node - <<'NODE'
 const fs = require("fs");
 const path = "biome.json";
-const config = JSON.parse(fs.readFileSync(path, "utf8"));
+const raw = fs.readFileSync(path, "utf8");
+const config = JSON.parse(raw);
 const ignored = [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs"];
 config.files ??= {};
-config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
-fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");
+// Biome 2 removed `files.ignore` in favour of negated patterns in
+// `files.includes`, and rejects the old key outright — writing it makes
+// `biome check` exit non-zero on configuration alone. Follow whichever form
+// the target repo already uses.
+if (Array.isArray(config.files.includes)) {
+  const negations = ignored.map((f) => `!${f}`);
+  config.files.includes = [...new Set([...config.files.includes, ...negations])];
+} else {
+  config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
+}
+// Keep the target's own indentation: this file is linted by the formatter it
+// configures, so reflowing it to two spaces fails a tab-indented repo's lint.
+const indent = /^\t/m.test(raw) ? "\t" : 2;
+fs.writeFileSync(path, JSON.stringify(config, null, indent) + "\n");
 NODE
   say "✓ Biome ignores merged for framework-owned files"
 elif [ ! -f biome.jsonc ]; then
-  printf '%s\n' '{' '  "files": {' '    "ignore": [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs"]' '  }' '}' > biome.json
+  printf '%b\n' '{' '\t"files": {' '\t\t"includes": [' '\t\t\t"**",' '\t\t\t"!.claude/settings.json",' '\t\t\t"!scripts/compile-context-bundles.mjs",' '\t\t\t"!scripts/context-injector.mjs",' '\t\t\t"!scripts/gen-component-registry.mjs",' '\t\t\t"!scripts/ledger.mjs",' '\t\t\t"!scripts/render-pr-body.mjs"' '\t\t]' '\t}' '}' > biome.json
   say "✓ Biome ignores created for framework-owned files"
 else
   say "⚠ biome.jsonc detected — add framework-owned scripts + .claude/settings.json to files.ignore before the setup commit"
