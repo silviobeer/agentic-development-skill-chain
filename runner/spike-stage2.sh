@@ -200,11 +200,13 @@ step "cross-review mechanics (PATH-shimmed CLIs, deterministic)"
 STUB="$WORK/stub"; mkdir -p "$STUB"
 cat > "$STUB/claude" <<'EOF'
 #!/bin/sh
+[ -z "${QA_STUB_LOG:-}" ] || printf 'claude\n' >> "$QA_STUB_LOG"
 echo '{"severity":"high","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub claude finding"}'
 EOF
 cat > "$STUB/codex" <<'EOF'
 #!/bin/sh
 [ "$1" = "login" ] && exit 0
+[ -z "${QA_STUB_LOG:-}" ] || printf 'codex\n' >> "$QA_STUB_LOG"
 input="$(cat)"
 case "$input" in
   *"## Artifact under review: docs/ARCHITECTURE.md"*) ;;
@@ -220,6 +222,31 @@ XRP="$(jq -r '.cross_review[-1].reviewer_provider' specs/PROJ-96-stage2/state.js
 [ "$RC" -eq 0 ] && [ "$XRP" = "codex" ] && ok "claude-authored -> codex reviews; round recorded in state" || bad "routing rc=$RC reviewer=$XRP"
 LED="$(jq -r '[.findings[] | select((.source == "cross-review") and .provider == "codex")] | length' specs/PROJ-96-stage2/findings.json 2>/dev/null)"
 [ "${LED:-0}" -ge 1 ] && ok "finding landed in the ledger: source=cross-review, provider attributed" || bad "ledger has no attributed cross-review finding"
+# QA evidence authored in Claude gets six *separate* Codex persona workers.
+# They must not be one prompt that merely names six personas.
+QA_LOG="$WORK/qa-personas.log"
+PATH="$STUB:$PATH" QA_STUB_LOG="$QA_LOG" bash scripts/cross-review.sh qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --persist --personas --round 1 >/dev/null 2>&1
+RC=$?
+QA_XR="$(jq -r '.cross_review[-1] | .mode + ":" + .reviewer_provider' specs/PROJ-96-stage2/state.json 2>/dev/null)"
+[ "$RC" -eq 0 ] && [ "$QA_XR" = "qa:codex" ] && [ "$(wc -l < "$QA_LOG" | tr -d ' ')" -eq 6 ] \
+  && ok "Claude QA starts six separate Codex personas and records the review" \
+  || bad "Claude QA persona routing rc=$RC record=$QA_XR workers=$(wc -l < "$QA_LOG" | tr -d ' ')"
+printf '#!/bin/sh\nexit 1\n' > "$STUB/codex"; chmod +x "$STUB/codex"
+QA_FALLBACK_LOG="$WORK/qa-fallback-personas.log"; QA_FALLBACK_OUT="$WORK/qa-fallback.out"
+PATH="$STUB:$PATH" QA_STUB_LOG="$QA_FALLBACK_LOG" bash scripts/cross-review.sh qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --persist --personas >"$QA_FALLBACK_OUT" 2>&1
+RC=$?
+QA_FALLBACK="$(jq -r '.cross_review[-1] | .reviewer_provider + ":" + (.degraded_fallback | tostring)' specs/PROJ-96-stage2/state.json 2>/dev/null)"
+[ "$RC" -eq 3 ] && [ "$QA_FALLBACK" = "claude:true" ] && [ "$(wc -l < "$QA_FALLBACK_LOG" | tr -d ' ')" -eq 6 ] \
+  && grep -q 'Codex unavailable; continuing six QA personas with Claude (degraded)' "$QA_FALLBACK_OUT" \
+  && ok "missing Codex -> six Claude personas, recorded degraded fallback and visible warning" \
+  || bad "Codex fallback wrong rc=$RC record=$QA_FALLBACK workers=$(wc -l < "$QA_FALLBACK_LOG" | tr -d ' ')"
+# Restore the successful adapter stub for the remaining protocol controls.
+cat > "$STUB/codex" <<'EOF'
+#!/bin/sh
+[ "$1" = "login" ] && exit 0
+echo '{"severity":"medium","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub codex finding"}'
+EOF
+chmod +x "$STUB/codex"
 # Before P0 there is no state.json. An explicit author must route the review,
 # embed its input, and report findings only to the human (stdout).
 OUT="$(PATH="$STUB:$PATH" bash scripts/cross-review.sh concept 97 pre-p0 --artifacts docs/ARCHITECTURE.md --author-provider claude 2>/dev/null)"

@@ -39,7 +39,7 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-`cross-review`, `bugfixing`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P7 by the documentation skill and never routed to directly, which is why it carries no chain number. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
+`cross-review`, `bugfixing`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P6 QA and P7 documentation and never routed to directly, which is why it carries no chain number. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
 
 ## Legacy PROJ Folders
 

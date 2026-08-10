@@ -90,6 +90,22 @@ QA has six release gates:
 
 The six-persona panel is a diff-level review source, not a separate QA workflow. Persona findings become normal QA bugs after deduplication and severity assignment. Persona retrospectives are advisory; persona bug findings are not advisory once accepted into the bug list.
 
+### Required Persona Cross-Review (Codex QA)
+
+When this QA skill runs in Codex, it is not complete until six independent opposite-provider persona workers have reviewed the QA evidence. After documenting QA results and before making a release recommendation, run:
+
+```bash
+BASE="specs/PROJ-<X>-<theme>"
+BASE_SHA="$(bash scripts/state.sh get <X> <theme> .base_sha)"
+bash scripts/cross-review.sh qa <X> <theme> \
+  --artifacts "$BASE/5_progress/PROJ-<X>-progress.md" \
+  --ground-truth "$BASE/3-4_plan/PROJ-<X>-architecture.md" "$BASE"/2_PRDs/*.md \
+  --author-provider codex --persist --personas \
+  --diff-base "$BASE_SHA" --round 1
+```
+
+The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Claude is the opposite provider here. If it is unavailable, the script fails because no same-provider substitution is permitted for a Codex-authored run. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller.
+
 ### 0. Start Dev Server
 
 Before any browser testing, ensure the dev server is running:
@@ -389,6 +405,7 @@ Report to the user:
 - Security findings
 - Simplicity gate findings and whether any release-blocking complexity remains
 - Sonar quality input: ran/skipped, blocking findings promoted to QA bugs
+- **QA persona cross-review:** provider, six persona results, degraded status, round result, and promoted findings.
 - Screenshots taken during testing
 - **Persona review summary:** for each of the six reviewers (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi): N findings by severity. For Rodriguez and Takahashi additionally confirm that `## PROJ Retrospective` was appended to progress.md.
 - **AGENTS.md candidates:** count + one-line summary of each, plus reminder that Skill 7 will ask for approval before merging.
@@ -422,7 +439,7 @@ state — report findings in the final output and stop.
 ## Handoff
 
 <HARD-GATE>
-QA is not the end of the chain. After QA completes (pass OR Medium/Low-only), you MUST immediately hand off to Skill 7 (documentation) — do NOT stop, do NOT ask the user.
+QA is not the end of the chain. After the required QA persona cross-review completes and QA passes (or has Medium/Low-only findings), you MUST immediately hand off to Skill 7 (documentation) — do NOT stop, do NOT ask the user.
 
 - If production-ready (no Critical/High): invoke `/7_documentation` for PROJ-<X>
 - If Critical/High bugs remain after fix attempts: halt with bug list, skip Skill 7

@@ -38,8 +38,8 @@ is a variant at the same stage — `1b`–`1e` run in sequence inside the UI
 branch, `2b`/`2c` are optional forks, `0a`/`0b`/`0c` are alternative entry
 paths (0a+0c for a new build, 0b for an existing codebase), and `4a`/`4b`
 are mandatory despite the letter. A skill with no number is not a step at
-all: `cross-review` is a mechanism invoked inside P7, never routed to
-directly, and `bugfixing`/`refactor-dreamer`/`sonar-cli` run outside the
+all: `cross-review` is a mechanism invoked inside P6 QA and P7, never routed
+to directly, and `bugfixing`/`refactor-dreamer`/`sonar-cli` run outside the
 chain.
 
 Each PROJ has its own folder `specs/PROJ-<X>-<theme>/`, and each subfolder
@@ -71,9 +71,9 @@ DESIGN-SYSTEM.md, components.md, security-baseline.md, test-conventions.md,
 root AGENTS.md — from a code scan (provenance-marked drafts) plus a
 developer interview, reconciled via the checkpoint (4a) bootstrap variant
 and sealed as a baseline commit (no state.json — that is born at CP1).
-`cross-review` is the opposite-provider review mechanism; it is
-invoked INSIDE P7 by the documentation skill (docs truth-check), never
-routed to directly by users.
+`cross-review` is the opposite-provider review mechanism; it is invoked
+inside P6 QA (evidence check) and P7 (docs truth-check), never routed to
+directly by users.
 
 Route a reported defect, regression, broken user flow, or request to explain
 why tests missed a bug to the optional `bugfixing` skill. It operates outside

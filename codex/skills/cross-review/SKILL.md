@@ -1,14 +1,15 @@
 ---
 name: cross-review
-description: "Route a concept, architecture, implementation plan, or curated documentation to the provider opposite its author for an adversarial, read-only review. Use after creating a concept (1_brainstorming), architecture (3), wave plans (4_writing-plans), or P7 curated docs when the user elects a cross-model review. Works before P0 without state.json. Not for code-bug testing (use qa) or form/size caps (use curation-caps.sh)."
+description: "Route a concept, architecture, implementation plan, QA evidence, or curated documentation to the provider opposite its author for an adversarial, read-only review. Used inside QA for its required provider-opposite evidence review, and after creating a concept (1_brainstorming), architecture (3), wave plans (4_writing-plans), or P7 curated docs. Works before P0 without state.json. Not a replacement for runtime QA or form/size caps."
 ---
 
 # Cross-Review — Opposite-Provider Gate
 
 Same-model review is an echo chamber. This skill asks the other provider to
 try to break an artifact, with identical severity rules and JSON Lines output
-for every mode. It never starts by itself: the producing skill asks the human
-at handoff, defaulting to yes.
+for every mode. It never starts by itself: the producing skill invokes it at
+handoff. QA and P7 documentation are mandatory gates; earlier artifact reviews
+may still be elected by the user.
 
 ## Modes
 
@@ -17,6 +18,7 @@ at handoff, defaulting to yes.
 | `concept` | `1_brainstorm/PROJ-<X>-concept.md` | product coherence, buildability, boundaries, grounding |
 | `architecture` | `3-4_plan/PROJ-<X>-architecture.md` | decisions, feasibility, traceability, risk |
 | `plan` | wave plans and gate config | executability, coverage, sequencing, scope |
+| `qa` | QA summary/evidence plus implementation diff | evidence integrity, adversarial coverage, finding quality, release decision; `--personas` runs six isolated discipline reviewers |
 | `docs` | curated documentation | factual truth, staleness, cap-gaming, durable-rule quality |
 
 Supply source artifacts that establish truth through `--ground-truth`; the
@@ -47,6 +49,16 @@ After P0, omit `--author-provider` and use `--author-key` to resolve authorship
 from state.json. That is the persistent gate path: findings are added only via
 `ledger.mjs`, and the round is appended only via `state.sh`.
 
+When the caller knows the author but must persist the review, pass both
+`--author-provider <claude|codex>` and `--persist`. `--require-provider codex`
+or `claude` makes an unavailable/opposite fallback fail rather than silently
+replacing the required reviewer. For Claude-authored QA, use `qa --personas`:
+it launches six separate Codex reviews in parallel. If Codex is unavailable,
+the script prints a degraded-mode warning, records `degraded_fallback: true`,
+and runs the same six personas with Claude; the QA caller must tell the user
+that independent-provider review was unavailable. Keep `--require-provider`
+for handoffs where a fallback must instead stop the gate.
+
 ```bash
 bash scripts/cross-review.sh docs <X> <theme> \
   --artifacts docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md \
@@ -65,6 +77,11 @@ round goes to the human. Medium/Low findings are reported or deferred as debt.
   `--joint` runs both independently. If Codex is unavailable, a different
   Claude model may be used only when it is not the author model; that is marked
   as a degraded persistent review.
+- `qa --personas` starts six independent workers (security, principal
+  engineering, performance, reliability, architecture, and minimalism), rather
+  than asking one reviewer to impersonate a panel. The Claude-authored route
+  prefers Codex and falls back loudly to six Claude workers only when Codex is
+  unavailable.
 - Adapters reject zero findings, `review-blocked`, recognizable Bubblewrap or
   user-namespace failures, and any output that mixes `review-clean` with a
   finding.
