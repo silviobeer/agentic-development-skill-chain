@@ -39,7 +39,7 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-`cross-review`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P7 by the documentation skill and never routed to directly, which is why it carries no chain number. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
+`cross-review`, `bugfixing`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P7 by the documentation skill and never routed to directly, which is why it carries no chain number. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
 
 ## Legacy PROJ Folders
 
@@ -135,5 +135,6 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 
 | Skill | Purpose |
 |---|---|
+| bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run bounded Ralph verification, and explain why prior tests missed it |
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
 | sonar-cli | Set up and operate SonarScanner CLI and SonarQube CLI for project analysis, quality gates, and issue triage |

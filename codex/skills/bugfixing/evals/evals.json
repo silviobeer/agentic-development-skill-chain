@@ -1,0 +1,53 @@
+{
+  "skill_name": "bugfixing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The attached minimal app has a customer-reported bug: clicking Save on the profile page shows success, but after reload the timezone is unchanged. Work in an isolated copy of the fixture. Reproduce it in the local browser, fix it, and make sure it cannot regress.",
+      "expected_output": "The agent reproduces the real browser flow, captures relevant browser evidence, inspects existing tests, records trigger/code cause/test escape, proves a regression test red before the production fix, applies a narrow fix, reruns the original browser flow, and records proportionate quality-gate results.",
+      "files": [
+        "evals/files/profile-timezone/package.json",
+        "evals/files/profile-timezone/server.mjs",
+        "evals/files/profile-timezone/test/profile.test.mjs",
+        "evals/files/profile-timezone/.github/workflows/test.yml"
+      ],
+      "expectations": [
+        "The report records a reproduced real-browser flow and links or describes browser evidence from before and after the fix.",
+        "The agent inspects the existing test and CI command before classifying the primary test escape.",
+        "A bug-specific regression test selects at least one test and fails for the timezone persistence symptom before production code changes.",
+        "The production fix is narrowly scoped and the regression test plus original browser flow pass afterward.",
+        "The Ralph loop is bounded to three total implementation attempts and quality-gate runs or explicit skips are recorded."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "In an isolated copy of the attached backend fixture, fix the invoice rounding regression: for a CHF invoice with three 0.05 line items the calculation returns 0.14 instead of 0.15. This is backend-only; explain why CI did not catch it.",
+      "expected_output": "The agent uses a deterministic API or test-level reproduction without forcing browser work, identifies the test escape, proves a focused regression test red then green, dispatches or performs a minimal fix, and runs relevant suites and configured static gates.",
+      "files": [
+        "evals/files/invoice-rounding/package.json",
+        "evals/files/invoice-rounding/src/invoice.mjs",
+        "evals/files/invoice-rounding/test/invoice.test.mjs",
+        "evals/files/invoice-rounding/.github/workflows/test.yml"
+      ],
+      "expectations": [
+        "The agent reproduces 0.14 versus expected 0.15 with a deterministic backend command and does not require browser work.",
+        "The agent inspects the existing test and actual CI workflow before naming a primary test-escape category.",
+        "A focused CHF regression test fails for the rounding symptom before production code changes and passes afterward.",
+        "The fix stays within the invoice calculation boundary and unrelated refactoring or dependencies are avoided.",
+        "Relevant tests and configured quality gates pass or have explicit justified skips."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Users say checkout sometimes submits twice in production, but I cannot reproduce it locally. Please fix it now. We do not have production credentials or a trace.",
+      "expected_output": "The agent does not guess or edit production code without reproduction. It records a not-reproduced or blocked outcome, documents safe attempts and missing evidence, distinguishes hypotheses from facts, and proposes the smallest instrumentation or evidence-gathering next step.",
+      "files": [],
+      "expectations": [
+        "The outcome is blocked or not-reproduced rather than fixed.",
+        "No production-code change, deployment, rollback, or unsafe production probe is performed.",
+        "Attempts, missing evidence, and hypotheses are clearly separated from established facts.",
+        "The next step is the smallest safe evidence or instrumentation action that could distinguish the hypotheses."
+      ]
+    }
+  ]
+}

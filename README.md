@@ -114,9 +114,15 @@ documentation skill. It is required, not optional.
 ## Optional Skills
 
 ```text
+bugfixing
 refactor-dreamer
 sonar-cli
 ```
+
+`bugfixing` is a focused repair workflow outside the feature chain: intake,
+browser or deterministic reproduction, test-escape analysis, a red-before-green
+regression test, a narrow `micro-fixer`, bounded Ralph verification, and reuse of
+the existing CodeRabbit/Sonar gates.
 
 `refactor-dreamer` is a separate long-run/overnight skill that scans a
 grown codebase for architecture drift, refactor opportunities, and ADR

@@ -39,7 +39,8 @@ branch, `2b`/`2c` are optional forks, `0a`/`0b`/`0c` are alternative entry
 paths (0a+0c for a new build, 0b for an existing codebase), and `4a`/`4b`
 are mandatory despite the letter. A skill with no number is not a step at
 all: `cross-review` is a mechanism invoked inside P7, never routed to
-directly, and `refactor-dreamer`/`sonar-cli` run outside the chain.
+directly, and `bugfixing`/`refactor-dreamer`/`sonar-cli` run outside the
+chain.
 
 Each PROJ has its own folder `specs/PROJ-<X>-<theme>/`, and each subfolder
 carries the number of the skill that writes it — `1c_design/` is written by
@@ -73,6 +74,10 @@ and sealed as a baseline commit (no state.json — that is born at CP1).
 `cross-review` is the opposite-provider review mechanism; it is
 invoked INSIDE P7 by the documentation skill (docs truth-check), never
 routed to directly by users.
+
+Route a reported defect, regression, broken user flow, or request to explain
+why tests missed a bug to the optional `bugfixing` skill. It operates outside
+the numbered feature flow and does not create a PROJ for an ordinary repair.
 
 **Autonomous full-chain runs** go through the phase runner: after
 `checkpoint` (4a) seals `CP1:approved`, `runner/run-phase.sh auto <X> <theme>`

@@ -26,6 +26,7 @@ CORE_SKILLS=(
   cross-review
 )
 OPTIONAL_SKILLS=(
+  bugfixing
   refactor-dreamer
   sonar-cli
 )
@@ -96,6 +97,10 @@ check_identical "$ROOT/claude/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/claude/skills/0b_intake/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/0b_intake/scripts/curation-caps.sh"
+while IFS= read -r bugfix_file; do
+  bugfix_rel="${bugfix_file#"$ROOT/codex/skills/bugfixing/"}"
+  check_identical "$bugfix_file" "$ROOT/claude/skills/bugfixing/$bugfix_rel"
+done < <(find "$ROOT/codex/skills/bugfixing" -type f | sort)
 for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
          4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
          4b_setup/scripts/context-injector.mjs \
@@ -118,6 +123,8 @@ done
 for schema in "$ROOT/runner/schemas/state.schema.json" "$ROOT/runner/schemas/findings.schema.json" "$ROOT/runner/schemas/context-manifest.schema.json"; do
   jq empty "$schema" 2>/dev/null || fail "schema does not parse: $schema"
 done
+jq empty "$ROOT/codex/skills/bugfixing/evals/evals.json" 2>/dev/null || \
+  fail "bugfixing evals do not parse"
 while IFS= read -r sh; do
   bash -n "$sh" || fail "bash syntax error: $sh"
 done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" "$ROOT/scripts" -name '*.sh' -type f)

@@ -1,0 +1,8 @@
+{
+  "name": "bugfixing-eval-invoice-rounding",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
