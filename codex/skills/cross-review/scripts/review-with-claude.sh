@@ -38,9 +38,9 @@ MODEL_ARGS=()
 # the user's subscription OAuth while disabling user/project customization
 # (plugins, hooks, skills, MCP); strict MCP prevents configured connectors from
 # re-entering. `--tools ""` then disables the built-in tool set as well.
-setsid claude -p "$(cat "$PROMPT")" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
+setsid claude -p ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
   --safe-mode --strict-mcp-config --tools "" --max-turns 1 --effort low \
-  --no-session-persistence </dev/null >"$RAW" 2>&1 &
+  --no-session-persistence <"$PROMPT" >"$RAW" 2>&1 &
 PID=$!
 trap 'kill_tree "$PID"; exit 1' INT TERM
 

@@ -201,6 +201,17 @@ STUB="$WORK/stub"; mkdir -p "$STUB"
 cat > "$STUB/claude" <<'EOF'
 #!/bin/sh
 [ -z "${QA_STUB_LOG:-}" ] || printf 'claude\n' >> "$QA_STUB_LOG"
+input="$(cat)"
+case "$input" in
+  *"## Artifact under review:"*) ;;
+  *) exit 9 ;;
+esac
+if [ "${REQUIREMENTS_STUB:-0}" -eq 1 ]; then
+  case "$input" in
+    *"Testability:"*"Cross-PRD consistency:"*) ;;
+    *) exit 10 ;;
+  esac
+fi
 echo '{"severity":"high","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub claude finding"}'
 EOF
 cat > "$STUB/codex" <<'EOF'
@@ -255,6 +266,21 @@ printf '%s\n' "$OUT" | jq -e 'select(.provider == "codex" and .source == "cross-
   && [ "$RC" -eq 0 ] && [ ! -e specs/PROJ-97-pre-p0/findings.json ] \
   && ok "pre-P0 explicit author reports to human without state.json or ledger" \
   || bad "pre-P0 explicit-author path failed (rc=$RC)"
+# Requirements is a first-class pre-P0 mode. A prompt above the former 128 KiB
+# default must stream to Claude through stdin; an explicitly configured cap
+# remains enforceable.
+awk 'BEGIN { for (i = 0; i < 150000; i++) printf "x" }' > docs/large-requirements.md
+REQUIREMENTS_STUB=1 PATH="$STUB:$PATH" bash scripts/cross-review.sh requirements 97 pre-p0 \
+  --artifacts docs/large-requirements.md --author-provider codex >/dev/null 2>&1
+RC=$?
+[ "$RC" -eq 3 ] \
+  && ok "requirements mode streams >128 KiB to Claude without an artificial default cap" \
+  || bad "large requirements review failed before provider review (rc=$RC)"
+CROSS_REVIEW_MAX_CONTEXT_BYTES=1024 PATH="$STUB:$PATH" \
+  bash scripts/cross-review.sh requirements 97 pre-p0 \
+  --artifacts docs/large-requirements.md --author-provider codex >/dev/null 2>&1
+[ $? -eq 1 ] && ok "explicit cross-review context cap remains enforceable" \
+  || bad "explicit cross-review context cap was ignored"
 PATH="$STUB:$PATH" bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --round 3 >/dev/null 2>&1
 [ $? -eq 64 ] && ok "round 3 refused (max 2 rounds, then §8)" || bad "round 3 not refused"
 
@@ -418,8 +444,15 @@ else
   LIVE_PROMPT="$WORK/live-prompt.md"
   cat > "$LIVE_PROMPT" <<EOF
 You are a read-only adversarial docs reviewer in a verification spike, in
-the directory $FIX. Compare the claim in docs/ARCHITECTURE.md about
-src/queue.js with the actual content of src/queue.js. Do not modify anything.
+the directory $FIX. Compare the following embedded files. Do not run commands
+or modify anything.
+
+## Artifact under review: docs/ARCHITECTURE.md
+$(cat "$FIX/docs/ARCHITECTURE.md")
+
+## Ground truth: src/queue.js
+$(cat "$FIX/src/queue.js")
+
 Your ENTIRE final answer must be findings as JSON lines — one object per
 line, no prose, no fences:
 {"source":"cross-review","severity":"high","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"..."}
@@ -428,7 +461,7 @@ EOF
   LIVE_TIMEOUT=300
   if command -v claude >/dev/null 2>&1; then
     OUT="$(bash scripts/review-with-claude.sh --prompt "$LIVE_PROMPT" --model "${CLAUDE_REVIEW_MODEL:-sonnet}" --timeout "$LIVE_TIMEOUT" 2>/dev/null)"
-    N="$(grep -c '^{' <<<"$OUT" 2>/dev/null || echo 0)"
+    N="$(grep -c '^{' <<<"$OUT" 2>/dev/null || true)"
     [ "${N:-0}" -ge 1 ] && ok "live claude adapter: $N valid JSON line(s) (codex-authored -> claude direction / model-opposite fallback)" \
                         || bad "live claude adapter produced no valid lines"
   else
@@ -436,7 +469,7 @@ EOF
   fi
   if command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1; then
     OUT="$(bash scripts/review-with-codex.sh --prompt "$LIVE_PROMPT" --timeout "$LIVE_TIMEOUT" 2>/dev/null)"
-    N="$(grep -c '^{' <<<"$OUT" 2>/dev/null || echo 0)"
+    N="$(grep -c '^{' <<<"$OUT" 2>/dev/null || true)"
     [ "${N:-0}" -ge 1 ] && ok "live codex adapter: $N valid JSON line(s) (claude-authored -> codex direction)" \
                         || bad "live codex adapter produced no valid lines"
   else

@@ -170,11 +170,50 @@ Template:
 
 Each user story owns its own acceptance criteria. Do not create one global acceptance-criteria section. Derive ACs directly from the story's Given/When/Then/And clauses and make them testable.
 
-### 5. Review With The User
+### 5. Review With The User And Opposite Provider
 
 Ask the user to review the PRDs. If changes are requested, update the PRDs and present them again.
 
-Also ask the user to review the PRD artifacts with a different model before approval, for example GPT reviewing Claude output or Claude reviewing GPT output. This second-model review should focus on missing user stories, weak acceptance criteria, ambiguous edge cases, and scope drift.
+After incorporating the user's first review, run the required opposite-provider
+cross-review before handoff. Do not ask the user to copy PRDs into another
+model manually. Review the complete PRD set; omitting one PRD makes dependency
+and consistency findings unreliable.
+
+Build the ground-truth list from files that exist. Always include the concept.
+For UI work, add the compact UI contracts (`implementation-handoff.md`,
+`sitemap.html`, layout decision, and design language) rather than every mockup
+HTML file unless a disputed detail requires it:
+
+```bash
+BASE="specs/PROJ-<X>-<theme>"
+GROUND_TRUTH=("$BASE/1_brainstorm/PROJ-<X>-concept.md")
+for candidate in \
+  "$BASE/1d_mockups/implementation-handoff.md" \
+  "$BASE/1d_mockups/sitemap.html" \
+  "$BASE/1b_visual-companion/layout-decision.md" \
+  "$BASE/1c_design/design-language.md"; do
+  [ ! -f "$candidate" ] || GROUND_TRUTH+=("$candidate")
+done
+bash scripts/cross-review.sh requirements <X> <theme> \
+  --artifacts "$BASE"/2_PRDs/*.md \
+  --ground-truth "${GROUND_TRUTH[@]}" \
+  --author-provider <current-writer> --round 1
+```
+
+The review must test concept/UI traceability, missing or contradictory stories,
+acceptance-criteria testability, edge and permission behavior, cross-PRD
+consistency, scope drift, and premature architecture.
+
+- Exit `0`: show Medium/Low findings to the user, apply accepted changes, and
+  obtain final approval.
+- Exit `3`: resolve every Critical/High finding with the user, update the PRDs,
+  and run one final `--round 2`. If a blocking finding remains, stop the
+  handoff and present the unresolved decision; never silently ignore it.
+- Exit `1`: the review did not run. Fix the infrastructure problem before
+  handoff.
+
+Two rounds is the maximum. The review is read-only and does not replace final
+product-owner approval.
 
 ### 6. Handoff
 
@@ -192,6 +231,8 @@ Also ask the user to review the PRD artifacts with a different model before appr
 - [ ] At least 3-5 edge cases documented where feature size warrants it
 - [ ] PRD ID assigned and file saved in the correct folder
 - [ ] Delivery track determined (full chain vs. discovery / Linear handoff)
+- [ ] Required opposite-provider PRD cross-review completed
+- [ ] No unresolved Critical/High cross-review finding remains
 - [ ] User reviewed and approved the PRD
 
 ## Git Commit Format

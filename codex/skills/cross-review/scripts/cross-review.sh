@@ -7,7 +7,7 @@
 # findings are printed for the human and no state.json/ledger is required.
 #
 # Usage:
-#   cross-review.sh <concept|architecture|plan|qa|docs> <proj-x> <theme>
+#   cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme>
 #     --artifacts <file...> [--ground-truth <file...>]
 #     [--author-provider claude|codex] [--author-model M] [--author-key K]
 #     [--joint] [--personas] [--persist] [--require-provider claude|codex]
@@ -19,15 +19,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 usage() {
-  echo "Usage: cross-review.sh <concept|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round 1|2] [--diff-base SHA] [--timeout S]" >&2
+  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round 1|2] [--diff-base SHA] [--timeout S]" >&2
   exit 64
 }
 [ -n "$MODE" ] && [ -n "$PROJ" ] && [ -n "$THEME" ] || usage
 shift 3
-case "$MODE" in concept|architecture|plan|qa|docs) ;; *) echo "cross-review.sh: unknown mode '$MODE'" >&2; exit 64 ;; esac
+case "$MODE" in concept|requirements|architecture|plan|qa|docs) ;; *) echo "cross-review.sh: unknown mode '$MODE'" >&2; exit 64 ;; esac
 
 ARTIFACTS=(); GROUND_TRUTH=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
-ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-131072}"
+ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-0}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --artifacts) shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do ARTIFACTS+=("$1"); shift; done ;;
@@ -47,6 +47,7 @@ while [ $# -gt 0 ]; do
 done
 [ ${#ARTIFACTS[@]} -gt 0 ] || { echo "cross-review.sh: --artifacts required" >&2; usage; }
 [[ "$ROUND" =~ ^[12]$ ]] || { echo "cross-review.sh: --round must be 1 or 2" >&2; exit 64; }
+[[ "$MAX_CONTEXT_BYTES" =~ ^[0-9]+$ ]] || { echo "cross-review.sh: CROSS_REVIEW_MAX_CONTEXT_BYTES must be a non-negative integer" >&2; exit 64; }
 [ "$QA_PERSONAS" -eq 0 ] || { [ "$MODE" = qa ] && [ "$JOINT" -eq 0 ]; } || { echo "cross-review.sh: --personas is only valid for qa without --joint" >&2; exit 64; }
 case "$AUTHOR_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --author-provider must be claude or codex" >&2; exit 64 ;; esac
 case "$REQUIRED_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --require-provider must be claude or codex" >&2; exit 64 ;; esac
@@ -98,6 +99,7 @@ fi
 FOCUS=""
 case "$MODE" in
   concept) FOCUS='- Product coherence: goal, users, scope, non-goals, success criteria and risks agree.\n- Buildability: no decision-critical ambiguity is deferred or disguised as a later concern.\n- Boundary discipline: do not smuggle PRDs, UI design, architecture or implementation plans into the concept.\n- Grounding: claims about the existing product agree with the supplied context.' ;;
+  requirements) FOCUS='- Coverage and traceability: every approved concept, role, flow, state, constraint and mockup contract is represented exactly once; flag omissions, contradictions and invented scope.\n- Testability: Given/When/Then and acceptance criteria are observable, unambiguous, independently verifiable and include meaningful negative outcomes.\n- Edge behavior: permissions, empty and invalid data, failures, retries, limits, concurrency and security-sensitive paths have explicit expected behavior where relevant.\n- Cross-PRD consistency: identifiers, terminology, dependencies, preconditions and outcomes agree across the full PRD set.\n- Boundary discipline: requirements state product behavior and non-functional constraints without prematurely choosing architecture or implementation.' ;;
   architecture) FOCUS='- Decision completeness: architecture resolves the cross-cutting choices required by the concept and PRDs.\n- Feasibility: proposed data, integrations, APIs, ownership and operations fit the supplied system truth.\n- Traceability: no requirement or constraint is silently lost, contradicted, or overbuilt.\n- Risk: identify unsafe assumptions, missing failure paths, migration concerns, and non-functional gaps.' ;;
   plan) FOCUS='- Executability: each task has clear file ownership, dependencies, acceptance criteria and verification.\n- Coverage: every relevant requirement and architecture decision is implemented exactly once.\n- Sequencing: waves are dependency-safe and expose shared-file or integration hazards.\n- Scope: reject invented work, hidden technical decisions, and plans that cannot be validated.' ;;
   qa) FOCUS='- Evidence integrity: QA claims are tied to supplied browser/test evidence, not implementation assertions or an empty selection.\n- Adversarial coverage: acceptance criteria, edge cases, security and regressions have meaningful attempts and negative controls.\n- Finding quality: severity, reproduction and anchors are actionable; do not silently downgrade a release-blocking result.\n- Release decision: reject READY when supplied evidence or the implementation diff leaves a Critical/High risk unaddressed.' ;;
@@ -121,8 +123,8 @@ if [ -n "$DIFF_BASE" ]; then
   MATERIAL+=$'\n```\n'
 fi
 CONTEXT_BYTES="$(printf '%s' "$MATERIAL" | wc -c | tr -d ' ')"
-if [ "$CONTEXT_BYTES" -gt "$MAX_CONTEXT_BYTES" ]; then
-  echo "cross-review.sh: embedded context is ${CONTEXT_BYTES} bytes, above ${MAX_CONTEXT_BYTES}; narrow inputs or set CROSS_REVIEW_MAX_CONTEXT_BYTES explicitly" >&2
+if [ "$MAX_CONTEXT_BYTES" -gt 0 ] && [ "$CONTEXT_BYTES" -gt "$MAX_CONTEXT_BYTES" ]; then
+  echo "cross-review.sh: embedded context is ${CONTEXT_BYTES} bytes, above configured limit ${MAX_CONTEXT_BYTES}; narrow inputs or raise CROSS_REVIEW_MAX_CONTEXT_BYTES" >&2
   exit 1
 fi
 

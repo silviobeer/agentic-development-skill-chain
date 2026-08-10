@@ -108,8 +108,9 @@ import, worktree parallelism) is not built yet.
 ## Outside the Chain
 
 `cross-review` is not a chain step and is never routed to directly: it is
-the symmetric opposite-provider review mechanism, invoked inside P6 QA and P7
-documentation. Both are required gates, not optional.
+the symmetric opposite-provider review mechanism, invoked by the producing
+skills. Requirements, P6 QA, and P7 documentation use it as a required gate;
+concept, architecture, and plan reviews are opt-in with a default of yes.
 
 ## Optional Skills
 

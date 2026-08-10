@@ -39,7 +39,7 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-`cross-review`, `bugfixing`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is required, but it is invoked inside P6 QA and P7 documentation and never routed to directly, which is why it carries no chain number. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
+`cross-review`, `bugfixing`, `refactor-dreamer` and `sonar-cli` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Requirements, P6 QA, and P7 documentation require it; concept, architecture, and plan reviews are opt-in with a default of yes. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage.
 
 ## Legacy PROJ Folders
 
@@ -125,9 +125,11 @@ Stage 2 adds the bootstrap and the full context system:
   reviews the docs delta against the PROJ diff; Critical/High block the
   phase, max 2 rounds). The runner re-verifies both gates after the seal.
 - **`cross-review`:** symmetric opposite-provider review mechanism
-  (Claude-authored → `codex exec`, Codex-authored → `claude -p`;
-  degraded fallback = model-opposite, always flagged). Active call site:
-  P7 docs. P3 pre-mortem / P4 plan review call sites are Stage 3.
+  (Claude-authored → `codex exec`, Codex-authored → streamed `claude -p`;
+  degraded fallback = model-opposite, always flagged). Active call sites:
+  required PRD review in Step 2, optional concept/architecture/plan reviews,
+  required P6 QA evidence review, and the P7 docs truth gate. Review prompts
+  have no artificial default byte cap; callers may set an explicit safety cap.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 

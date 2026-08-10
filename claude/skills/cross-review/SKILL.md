@@ -1,6 +1,6 @@
 ---
 name: cross-review
-description: "Route a concept, architecture, implementation plan, QA evidence, or curated documentation to the provider opposite its author for an adversarial, read-only review. Used inside QA for its required provider-opposite evidence review, and after creating a concept (1_brainstorming), architecture (3), wave plans (4_writing-plans), or P7 curated docs. Works before P0 without state.json. Not a replacement for runtime QA or form/size caps."
+description: "Route a concept, PRD set, architecture, implementation plan, QA evidence, or curated documentation to the provider opposite its author for an adversarial, read-only review. Used by requirements-engineer before PRD handoff, inside QA for its required evidence review, and after creating a concept, architecture, wave plans, or P7 curated docs. Works before P0 without state.json. Not a replacement for runtime QA or form/size caps."
 ---
 
 # Cross-Review — Opposite-Provider Gate
@@ -8,14 +8,15 @@ description: "Route a concept, architecture, implementation plan, QA evidence, o
 Same-model review is an echo chamber. This skill asks the other provider to
 try to break an artifact, with identical severity rules and JSON Lines output
 for every mode. It never starts by itself: the producing skill invokes it at
-handoff. QA and P7 documentation are mandatory gates; earlier artifact reviews
-may still be elected by the user.
+handoff. Requirements, QA, and P7 documentation are mandatory gates; concept,
+architecture, and plan reviews may still be elected by the user.
 
 ## Modes
 
 | Mode | Artifact | Review focus |
 |---|---|---|
 | `concept` | `1_brainstorm/PROJ-<X>-concept.md` | product coherence, buildability, boundaries, grounding |
+| `requirements` | the complete `2_PRDs/*.md` set | concept and UI traceability, story/AC testability, edge behavior, cross-PRD consistency, architecture leakage |
 | `architecture` | `3-4_plan/PROJ-<X>-architecture.md` | decisions, feasibility, traceability, risk |
 | `plan` | wave plans and gate config | executability, coverage, sequencing, scope |
 | `qa` | QA summary/evidence plus implementation diff | evidence integrity, adversarial coverage, finding quality, release decision; `--personas` runs six isolated discipline reviewers |
@@ -36,6 +37,18 @@ bash scripts/cross-review.sh concept <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
   --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
   --author-provider claude --author-model <writer-model> --round 1
+```
+
+For requirements, review the complete PRD set against the concept and the
+compact UI contracts that exist. Prefer `implementation-handoff.md`, sitemap,
+layout decision, and design language over embedding every mockup HTML file:
+
+```bash
+bash scripts/cross-review.sh requirements <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/2_PRDs/*.md \
+  --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+    specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md \
+  --author-provider <current-writer> --round 1
 ```
 
 Use `architecture` with the concept, every PRD in `2_PRDs/`, and the curated
@@ -88,6 +101,7 @@ round goes to the human. Medium/Low findings are reported or deferred as debt.
 - Findings are deduplicated by `category + file + line + summary` before they
   reach stdout or the ledger. `review-clean` is a liveness marker, never a
   finding.
-- The default 128 KiB embedded-context limit fails explicitly if exceeded.
-  Narrow the review inputs, or deliberately set
-  `CROSS_REVIEW_MAX_CONTEXT_BYTES` for a reviewed larger prompt.
+- Review prompts stream to both provider CLIs and have no artificial default
+  byte cap; the selected model's context window is authoritative. Set
+  `CROSS_REVIEW_MAX_CONTEXT_BYTES` to a positive integer only when a caller
+  deliberately wants a stricter local safety limit (`0` also means unlimited).

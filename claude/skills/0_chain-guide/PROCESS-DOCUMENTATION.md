@@ -67,8 +67,9 @@ together. Product-level artifacts live outside the PROJ folder —
 | 7 | `documentation` | Required before closeout | `docs/PROJECT.md` and related docs |
 | 8 | `delivery` | Required to ship | PR with rendered body, CI green, CP2 reconcile |
 
-`cross-review` carries no number: it is a mechanism invoked inside P6 QA and
-P7, not a step anyone routes to.
+`cross-review` carries no number: producing skills invoke it. It is required
+for requirements, P6 QA, and P7 documentation, and optional after concept,
+architecture, and plans; it is not a step anyone routes to.
 
 ## UI Branch Rules
 
