@@ -10,9 +10,10 @@
 #                        (no PRD/progress.md content in any bundle), stale-hash refusal
 #   curation caps      — pass + per-cap fail fixtures, --require-baseline
 #   ponytail gate      — parity ok / version mismatch / absent (enforce on+off)
-#   cross-review       — deterministic routing via PATH-shimmed CLIs (opposite
-#                        provider, ledger attribution, round cap, same-model refusal),
-#                        adapter process-group kill on timeout,
+#   cross-review       — symmetric deterministic routing via PATH-shimmed CLIs
+#                        (opposite provider, six-persona parity, auth preflight,
+#                        structured output, ledger attribution, protocol controls,
+#                        round cap, same-model refusal), process-group timeout,
 #                        LIVE adapter smoke per available direction (+ degraded
 #                        model-opposite fallback), degraded flag in the morning report
 #   P7 runner gate     — stubbed lanes seal P7:done; failing caps park the run,
@@ -200,6 +201,7 @@ step "cross-review mechanics (PATH-shimmed CLIs, deterministic)"
 STUB="$WORK/stub"; mkdir -p "$STUB"
 cat > "$STUB/claude" <<'EOF'
 #!/bin/sh
+[ "${1:-}" != auth ] || { [ "${CLAUDE_AUTH_FAIL:-0}" -eq 0 ]; exit; }
 [ -z "${QA_STUB_LOG:-}" ] || printf 'claude\n' >> "$QA_STUB_LOG"
 input="$(cat)"
 case "$input" in
@@ -212,7 +214,9 @@ if [ "${REQUIREMENTS_STUB:-0}" -eq 1 ]; then
     *) exit 10 ;;
   esac
 fi
-echo '{"severity":"high","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub claude finding"}'
+severity="${CLAUDE_STUB_SEVERITY:-high}"
+category="${CLAUDE_STUB_CATEGORY:-claude-stale-claim}"
+printf '{"is_error":false,"structured_output":{"findings":[{"severity":"%s","category":"%s","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub claude finding"}]}}\n' "$severity" "$category"
 EOF
 cat > "$STUB/codex" <<'EOF'
 #!/bin/sh
@@ -226,13 +230,42 @@ esac
 echo '{"severity":"medium","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"stub codex finding"}'
 EOF
 chmod +x "$STUB/claude" "$STUB/codex"
-bash scripts/state.sh set 96 stage2 .authorship '{"docs-delta":{"author_provider":"claude","author_model":"opus"}}' >/dev/null
+bash scripts/state.sh set 96 stage2 .authorship '{"docs-delta":{"author_provider":"claude","author_model":"opus"},"codex-delta":{"author_provider":"codex","author_model":"gpt-5.6"}}' >/dev/null
 PATH="$STUB:$PATH" bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --round 1 >/dev/null 2>&1
 RC=$?
 XRP="$(jq -r '.cross_review[-1].reviewer_provider' specs/PROJ-96-stage2/state.json 2>/dev/null)"
 [ "$RC" -eq 0 ] && [ "$XRP" = "codex" ] && ok "claude-authored -> codex reviews; round recorded in state" || bad "routing rc=$RC reviewer=$XRP"
 LED="$(jq -r '[.findings[] | select((.source == "cross-review") and .provider == "codex")] | length' specs/PROJ-96-stage2/findings.json 2>/dev/null)"
 [ "${LED:-0}" -ge 1 ] && ok "finding landed in the ledger: source=cross-review, provider attributed" || bad "ledger has no attributed cross-review finding"
+# Mirror the normal persistent route: Codex-authored material must reach an
+# authenticated Claude reviewer, be provider-stamped, and land in state/ledger.
+PATH="$STUB:$PATH" CLAUDE_STUB_SEVERITY=medium bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key codex-delta --round 1 >/dev/null 2>&1
+RC=$?
+XRP="$(jq -r '.cross_review[-1].reviewer_provider' specs/PROJ-96-stage2/state.json 2>/dev/null)"
+LED="$(jq -r '[.findings[] | select((.source == "cross-review") and .provider == "claude")] | length' specs/PROJ-96-stage2/findings.json 2>/dev/null)"
+[ "$RC" -eq 0 ] && [ "$XRP" = "claude" ] && [ "${LED:-0}" -ge 1 ] \
+  && ok "codex-authored -> authenticated Claude review is recorded and ingested" \
+  || bad "Codex->Claude persistent routing rc=$RC reviewer=$XRP ledger=$LED"
+# Codex QA must start six separate Claude persona workers, not one simulated
+# panel. Authentication probes are excluded from the worker count.
+QA_CLAUDE_LOG="$WORK/qa-claude-personas.log"
+PATH="$STUB:$PATH" QA_STUB_LOG="$QA_CLAUDE_LOG" CLAUDE_STUB_SEVERITY=medium \
+  bash scripts/cross-review.sh qa 96 stage2 --artifacts docs/ARCHITECTURE.md \
+  --author-provider codex --persist --personas --round 1 >/dev/null 2>&1
+RC=$?
+QA_XR="$(jq -r '.cross_review[-1] | .mode + ":" + .reviewer_provider' specs/PROJ-96-stage2/state.json 2>/dev/null)"
+[ "$RC" -eq 0 ] && [ "$QA_XR" = "qa:claude" ] && [ "$(wc -l < "$QA_CLAUDE_LOG" | tr -d ' ')" -eq 6 ] \
+  && ok "Codex QA starts six separate Claude personas and records the review" \
+  || bad "Codex QA persona routing rc=$RC record=$QA_XR workers=$(wc -l < "$QA_CLAUDE_LOG" | tr -d ' ')"
+# A Codex-authored run has no same-provider fallback. Fail before rendering or
+# invoking a reviewer when Claude authentication is unavailable.
+CLAUDE_AUTH_OUT="$WORK/claude-auth-fail.out"
+PATH="$STUB:$PATH" CLAUDE_AUTH_FAIL=1 bash scripts/cross-review.sh docs 97 pre-p0 \
+  --artifacts docs/ARCHITECTURE.md --author-provider codex >"$CLAUDE_AUTH_OUT" 2>&1
+RC=$?
+[ "$RC" -eq 1 ] && grep -q 'Claude is required.*unavailable or unauthenticated' "$CLAUDE_AUTH_OUT" \
+  && ok "Codex->Claude fails early and clearly when Claude auth is unavailable" \
+  || bad "Claude auth preflight did not fail closed (rc=$RC)"
 # QA evidence authored in Claude gets six *separate* Codex persona workers.
 # They must not be one prompt that merely names six personas.
 QA_LOG="$WORK/qa-personas.log"
@@ -323,6 +356,45 @@ DEG="$(jq -r '.cross_review[-1] | (.degraded_fallback|tostring) + ":" + .reviewe
 [ "$DEG" = "true:sonnet" ] && ok "degraded: model-opposite fallback used and flagged in state" || bad "degraded record wrong: $DEG"
 PATH="$STUB:$PATH" CLAUDE_REVIEW_MODEL=opus bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta >/dev/null 2>&1
 [ $? -eq 1 ] && ok "reviewer model == author model refused (gate never same-model)" || bad "same-model review not refused"
+
+# Claude's adapter must enforce the same protocol controls as Codex while
+# consuming Claude Code's validated structured_output envelope.
+cat > "$STUB/claude" <<'EOF'
+#!/bin/sh
+echo '{"is_error":false,"structured_output":{"findings":[{"severity":"medium","category":"duplicate","file":"docs/ARCHITECTURE.md","line":2,"summary":"same finding"},{"severity":"medium","category":"duplicate","file":"docs/ARCHITECTURE.md","line":2,"summary":"same finding"}]}}'
+EOF
+chmod +x "$STUB/claude"
+OUT="$(PATH="$STUB:$PATH" bash scripts/review-with-claude.sh --prompt "$WORK/p.md" --timeout 10 2>/dev/null)"
+[ "$(printf '%s\n' "$OUT" | grep -c '^{' || true)" -eq 1 ] \
+  && printf '%s\n' "$OUT" | jq -e 'select(.provider == "claude")' >/dev/null 2>&1 \
+  && ok "Claude adapter parses structured output, stamps provider, and deduplicates" \
+  || bad "Claude adapter structured-output normalization failed"
+cat > "$STUB/claude" <<'EOF'
+#!/bin/sh
+echo '{"is_error":false,"structured_output":{"findings":[{"severity":"low","category":"review-clean","summary":"clean"},{"severity":"medium","category":"contradiction","summary":"not clean"}]}}'
+EOF
+chmod +x "$STUB/claude"
+PATH="$STUB:$PATH" bash scripts/review-with-claude.sh --prompt "$WORK/p.md" --timeout 10 >/dev/null 2>&1
+[ $? -eq 1 ] && ok "Claude adapter rejects review-clean plus findings" || bad "Claude adapter accepted contradictory clean output"
+cat > "$STUB/claude" <<'EOF'
+#!/bin/sh
+echo '{"is_error":false,"result":"review-blocked: sandbox failed","structured_output":{"findings":[{"severity":"medium","category":"false-success","summary":"must not pass"}]}}'
+EOF
+chmod +x "$STUB/claude"
+PATH="$STUB:$PATH" bash scripts/review-with-claude.sh --prompt "$WORK/p.md" --timeout 10 >/dev/null 2>&1
+[ $? -eq 1 ] && ok "Claude adapter rejects infrastructure false-success output" || bad "Claude adapter accepted infrastructure false-success"
+cat > "$STUB/claude" <<'EOF'
+#!/bin/sh
+echo '{"is_error":true,"terminal_reason":"api_error","result":"Not logged in"}'
+EOF
+chmod +x "$STUB/claude"
+PATH="$STUB:$PATH" bash scripts/review-with-claude.sh --prompt "$WORK/p.md" --timeout 10 >/dev/null 2>&1
+[ $? -eq 1 ] && ok "Claude adapter rejects rc=0 API/auth error envelopes" || bad "Claude adapter accepted an API/auth error envelope"
+truncate -s 10000001 "$WORK/over-claude-stdin-limit.md"
+PATH="$STUB:$PATH" bash scripts/review-with-claude.sh --prompt "$WORK/over-claude-stdin-limit.md" --timeout 10 >"$WORK/claude-size.out" 2>&1
+[ $? -eq 1 ] && grep -q 'stdin is limited to 10 MB' "$WORK/claude-size.out" \
+  && ok "Claude adapter reports the provider's 10 MB stdin ceiling explicitly" \
+  || bad "Claude adapter did not explain the provider stdin ceiling"
 
 # adapter timeout kills the whole process group
 cat > "$STUB/claude" <<'EOF'
@@ -453,8 +525,9 @@ $(cat "$FIX/docs/ARCHITECTURE.md")
 ## Ground truth: src/queue.js
 $(cat "$FIX/src/queue.js")
 
-Your ENTIRE final answer must be findings as JSON lines — one object per
-line, no prose, no fences:
+Your entire final answer must use the adapter's machine-readable findings
+transport, with no prose or fences. When a validated schema is supplied,
+populate its findings array; otherwise emit one JSON object per line:
 {"source":"cross-review","severity":"high","category":"stale-claim","file":"docs/ARCHITECTURE.md","line":2,"summary":"..."}
 If (and only if) everything is accurate: {"source":"cross-review","severity":"low","category":"review-clean","summary":"clean"}
 EOF

@@ -23,6 +23,16 @@ done
 [ -n "$PROMPT" ] && [ -f "$PROMPT" ] || { echo "review-with-claude.sh: --prompt <file> required" >&2; exit 64; }
 command -v claude >/dev/null 2>&1 || { echo "review-with-claude.sh: claude CLI not found" >&2; exit 1; }
 
+# Claude Code's documented stdin ceiling is 10 MB. Detect it here so callers
+# get a precise infrastructure error instead of a provider-specific parse or
+# transport failure after the review has started.
+PROMPT_BYTES="$(wc -c <"$PROMPT" | tr -d ' ')"
+CLAUDE_STDIN_MAX_BYTES=10000000
+if [ "$PROMPT_BYTES" -gt "$CLAUDE_STDIN_MAX_BYTES" ]; then
+  echo "review-with-claude.sh: rendered prompt is ${PROMPT_BYTES} bytes; Claude Code stdin is limited to 10 MB" >&2
+  exit 1
+fi
+
 RAW="$(mktemp)"
 trap 'rm -f "$RAW"' EXIT
 
@@ -34,13 +44,18 @@ kill_tree() { # whole process group, TERM then KILL (mirrors run-phase.sh kill_g
 
 MODEL_ARGS=()
 [ -n "$MODEL" ] && MODEL_ARGS=(--model "$MODEL")
+# Validated structured output removes the text/Markdown parsing ambiguity of
+# non-interactive Claude responses. The runner converts this array back to the
+# common JSON Lines protocol after schema validation succeeds.
+SCHEMA='{"type":"object","properties":{"findings":{"type":"array","minItems":1,"items":{"type":"object","properties":{"severity":{"type":"string","enum":["critical","high","medium","low"]},"category":{"type":"string","minLength":1},"file":{"type":"string","minLength":1},"line":{"type":"integer","minimum":1},"summary":{"type":"string","minLength":1}},"required":["severity","category","summary"],"additionalProperties":false}}},"required":["findings"],"additionalProperties":false}'
 # The prompt embeds every review input and forbids commands. Safe mode keeps
 # the user's subscription OAuth while disabling user/project customization
 # (plugins, hooks, skills, MCP); strict MCP prevents configured connectors from
 # re-entering. `--tools ""` then disables the built-in tool set as well.
 setsid claude -p ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
   --safe-mode --strict-mcp-config --tools "" --max-turns 1 --effort low \
-  --no-session-persistence <"$PROMPT" >"$RAW" 2>&1 &
+  --no-session-persistence --output-format json --json-schema "$SCHEMA" \
+  <"$PROMPT" >"$RAW" 2>&1 &
 PID=$!
 trap 'kill_tree "$PID"; exit 1' INT TERM
 
@@ -61,10 +76,24 @@ if [ "$RC" -ne 0 ]; then
   exit 1
 fi
 
-NORMALIZED="$(grep '^{' "$RAW" 2>/dev/null | jq -cs '
-  map(select(type == "object" and .severity? and .summary?) + {provider: "claude"})
+# A nominally successful CLI process can still return a structured API/auth
+# failure. Infrastructure markers must never coexist with a finding and pass.
+if grep -Eqi 'review-blocked|bubblewrap|user namespaces|sandbox[[:space:]]+(error|failed)|failed[[:space:]]+to.*sandbox' "$RAW"; then
+  echo "review-with-claude.sh: sandbox/infrastructure failure — reviewer did not reliably read the embedded material" >&2
+  tail -n 5 "$RAW" >&2 || true
+  exit 1
+fi
+if ! jq -e '.is_error == false and (.structured_output.findings | type == "array") and (.structured_output.findings | length > 0)' "$RAW" >/dev/null 2>&1; then
+  echo "review-with-claude.sh: Claude returned no validated structured findings" >&2
+  jq -r '.result // .terminal_reason // "invalid Claude JSON response"' "$RAW" 2>/dev/null | tail -n 3 >&2 || tail -n 5 "$RAW" >&2
+  exit 1
+fi
+
+NORMALIZED="$(jq -c '
+  .structured_output.findings
+  | map(. + {provider: "claude"})
   | unique_by([(.category // ""), (.file // ""), (.line // 0), .summary])[]
-' 2>/dev/null || true)"
+' "$RAW" 2>/dev/null || true)"
 VALID="$(printf '%s\n' "$NORMALIZED" | grep -c '^{' || true)"
 
 if [ "$VALID" -eq 0 ]; then

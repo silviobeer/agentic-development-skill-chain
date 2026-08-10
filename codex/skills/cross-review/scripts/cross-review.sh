@@ -80,6 +80,7 @@ fi
 [ -n "$AUTHOR_PROVIDER" ] || { echo "cross-review.sh: supply --author-provider before P0, or a resolvable state.json author" >&2; exit 1; }
 
 codex_available() { command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1; }
+claude_available() { command -v claude >/dev/null 2>&1 && claude auth status >/dev/null 2>&1; }
 REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"; REVIEWERS=(); DEGRADED_FALLBACK=false
 if [ "$REQUIRED_PROVIDER" = codex ] && ! codex_available; then
   echo "cross-review.sh: Codex is required for this review but is unavailable or unauthenticated" >&2
@@ -91,6 +92,12 @@ elif [ "$AUTHOR_PROVIDER" = claude ]; then
   if codex_available; then REVIEWERS=("codex:"); else REVIEWERS=("claude:${REVIEW_MODEL}"); DEGRADED_FALLBACK=true; fi
 else REVIEWERS=("claude:${REVIEW_MODEL}"); fi
 [ -z "$REQUIRED_PROVIDER" ] || [ "${REVIEWERS[0]%%:*}" = "$REQUIRED_PROVIDER" ] || { echo "cross-review.sh: required reviewer $REQUIRED_PROVIDER was not selected" >&2; exit 1; }
+for reviewer in "${REVIEWERS[@]}"; do
+  if [ "${reviewer%%:*}" = claude ] && ! claude_available; then
+    echo "cross-review.sh: Claude is required for this review but is unavailable or unauthenticated" >&2
+    exit 1
+  fi
+done
 if [ "$DEGRADED_FALLBACK" = true ] && [ -n "$AUTHOR_MODEL" ] && [ "$REVIEW_MODEL" = "$AUTHOR_MODEL" ]; then
   echo "cross-review.sh: fallback reviewer equals author model" >&2; exit 1
 fi
@@ -158,7 +165,7 @@ if [ "$QA_PERSONAS" -eq 1 ]; then
   for i in "${!PERSONAS[@]}"; do
     persona="${PERSONAS[$i]%%|*}"; focus="${PERSONAS[$i]#*|}"
     persona_prompt="$QA_PERSONA_DIR/$i.prompt"; persona_out="$QA_PERSONA_DIR/$i.out"
-    { cat "$PROMPT_FILE"; printf '\n## Assigned QA persona\nYou are %s. %s\nReview only this discipline; emit the strict JSON Lines contract.\n' "$persona" "$focus"; } > "$persona_prompt"
+    { cat "$PROMPT_FILE"; printf '\n## Assigned QA persona\nYou are %s. %s\nReview only this discipline; emit the strict machine-readable findings contract.\n' "$persona" "$focus"; } > "$persona_prompt"
     run_adapter "${REVIEWERS[0]}" "$persona_out" "$persona_prompt" & PIDS+=("$!")
     OUT_FILES+=("$persona_out")
   done

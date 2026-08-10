@@ -125,11 +125,14 @@ Stage 2 adds the bootstrap and the full context system:
   reviews the docs delta against the PROJ diff; Critical/High block the
   phase, max 2 rounds). The runner re-verifies both gates after the seal.
 - **`cross-review`:** symmetric opposite-provider review mechanism
-  (Claude-authored → `codex exec`, Codex-authored → streamed `claude -p`;
-  degraded fallback = model-opposite, always flagged). Active call sites:
+  (Claude-authored → `codex exec`, Codex-authored → authenticated, isolated
+  `claude -p` with validated structured output; degraded fallback =
+  model-opposite, always flagged). Active call sites:
   required PRD review in Step 2, optional concept/architecture/plan reviews,
   required P6 QA evidence review, and the P7 docs truth gate. Review prompts
   have no artificial default byte cap; callers may set an explicit safety cap.
+  The Claude adapter reports Claude Code's hard 10 MB stdin ceiling rather
+  than truncating review material.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 

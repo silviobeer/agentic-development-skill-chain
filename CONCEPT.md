@@ -476,10 +476,11 @@ decisions, wrote the code, and curated the docs will grade its own
 summaries as accurate. The-fool personas vary the PROMPT, but not the
 provider — blind spots survive persona rotation. This skill is
 symmetric: Claude-authored artifacts go to Codex (`codex exec`) and
-Codex-authored artifacts go to Claude (`claude -p`). Both invocations
-are headless, strictly read-only, and bounded. `state.json` records the
-authoring lane for every reviewed artifact; a review from the same
-provider does not satisfy the gate.
+Codex-authored artifacts go to authenticated Claude (`claude -p`). Both
+invocations are headless, strictly read-only, and bounded. Claude uses a
+validated JSON Schema and the adapters normalize both providers into the
+same JSON-lines contract. `state.json` records the authoring lane for every
+reviewed artifact; a review from the same provider does not satisfy the gate.
 
 **Pattern sources:** grill-me-codex
 (github.com/chaseai-yt/grill-me-codex) for the adversarial-review thesis;
@@ -510,11 +511,14 @@ subsequent PROJ. Hence BLOCKING, not advisory.
 template (mode + file list), reads `author_provider` from `state.json`,
 and routes to `review-with-codex.sh` or `review-with-claude.sh`. Each
 adapter normalizes its provider output into the same findings JSON-lines
-contract → `ledger.mjs`. For joint artifacts the runner invokes both
-adapters concurrently and deduplicates only after source attribution is
-preserved. No new severity rules: Critical/High block phase completion
-(fix spawn + ONE cross-review re-review round; still red → existing
-escalation rules §8 apply), Medium/Low auto-defer as debt.
+contract → `ledger.mjs`. The Claude route verifies `claude auth status`
+before launch, requests validated structured output, rejects API/auth error
+envelopes even when the CLI exits zero, and reports Claude Code's 10 MB stdin
+ceiling explicitly. For joint artifacts the runner invokes both adapters
+concurrently and deduplicates only after source attribution is preserved. No
+new severity rules: Critical/High block phase completion (fix spawn + ONE
+cross-review re-review round; still red → existing escalation rules §8
+apply), Medium/Low auto-defer as debt.
 
 **Degraded mode (provider unavailable):** provider-opposite is the
 PREFERRED reviewer, not a hard prerequisite. If the opposite provider's
@@ -1119,7 +1123,7 @@ silently at render time.
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
 | `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
-| `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes `claude -p` read-only; validates output; timeout/cancel as one process group |
+| `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes OAuth-preserving isolated `claude -p` read-only with validated JSON Schema; rejects structured API/auth errors; detects the 10 MB stdin ceiling; timeout/cancel as one process group |
 | `review-with-codex.sh` (cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
 | `curation-caps.sh` (7_documentation) | `docs/*`, `src/**/agent.md` | cap report | exit ≠ 0 on any cap breach (PRODUCT ½ page, ARCHITECTURE 200 lines, DESIGN-SYSTEM 80 lines, agent.md 100 lines) — curation must shrink before P7 completes |

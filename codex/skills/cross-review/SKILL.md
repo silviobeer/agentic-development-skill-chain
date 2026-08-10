@@ -6,10 +6,11 @@ description: "Route a concept, PRD set, architecture, implementation plan, QA ev
 # Cross-Review — Opposite-Provider Gate
 
 Same-model review is an echo chamber. This skill asks the other provider to
-try to break an artifact, with identical severity rules and JSON Lines output
-for every mode. It never starts by itself: the producing skill invokes it at
-handoff. Requirements, QA, and P7 documentation are mandatory gates; concept,
-architecture, and plan reviews may still be elected by the user.
+try to break an artifact, with identical severity rules and normalized JSON
+Lines output for every mode. It never starts by itself: the producing skill
+invokes it at handoff. Requirements, QA, and P7 documentation are mandatory
+gates; concept, architecture, and plan reviews may still be elected by the
+user.
 
 ## Modes
 
@@ -69,7 +70,9 @@ replacing the required reviewer. For Claude-authored QA, use `qa --personas`:
 it launches six separate Codex reviews in parallel. If Codex is unavailable,
 the script prints a degraded-mode warning, records `degraded_fallback: true`,
 and runs the same six personas with Claude; the QA caller must tell the user
-that independent-provider review was unavailable. Keep `--require-provider`
+that independent-provider review was unavailable. Codex-authored QA launches
+six separate Claude reviews and fails closed when `claude auth status` is not
+green; it never substitutes Codex for its own work. Keep `--require-provider`
 for handoffs where a fallback must instead stop the gate.
 
 ```bash
@@ -89,15 +92,18 @@ round goes to the human. Medium/Low findings are reported or deferred as debt.
 - Claude-authored artifacts go to Codex; Codex-authored artifacts go to Claude.
   `--joint` runs both independently. If Codex is unavailable, a different
   Claude model may be used only when it is not the author model; that is marked
-  as a degraded persistent review.
+  as a degraded persistent review. Any route that selects Claude verifies CLI
+  availability and authentication before launching the review.
 - `qa --personas` starts six independent workers (security, principal
   engineering, performance, reliability, architecture, and minimalism), rather
   than asking one reviewer to impersonate a panel. The Claude-authored route
   prefers Codex and falls back loudly to six Claude workers only when Codex is
   unavailable.
-- Adapters reject zero findings, `review-blocked`, recognizable Bubblewrap or
-  user-namespace failures, and any output that mixes `review-clean` with a
-  finding.
+- The Claude adapter requests validated `--output-format json` plus a JSON
+  Schema, then normalizes `structured_output.findings` to the shared JSON Lines
+  contract. Both adapters reject zero findings, `review-blocked`, recognizable
+  Bubblewrap or user-namespace failures, and any output that mixes
+  `review-clean` with a finding.
 - Findings are deduplicated by `category + file + line + summary` before they
   reach stdout or the ledger. `review-clean` is a liveness marker, never a
   finding.
@@ -105,3 +111,6 @@ round goes to the human. Medium/Low findings are reported or deferred as debt.
   byte cap; the selected model's context window is authoritative. Set
   `CROSS_REVIEW_MAX_CONTEXT_BYTES` to a positive integer only when a caller
   deliberately wants a stricter local safety limit (`0` also means unlimited).
+  Claude Code itself imposes a 10 MB stdin transport ceiling; the Claude
+  adapter detects it before launch and fails with the exact cause rather than
+  truncating or silently narrowing review scope.

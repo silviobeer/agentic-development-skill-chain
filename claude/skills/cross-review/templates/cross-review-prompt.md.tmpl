@@ -20,14 +20,17 @@ use in findings.
 
 ## Output contract (STRICT)
 
-Print findings only as JSON Lines: one object per line, no prose and no code
-fences. `file` and `line` must point to an artifact under review, never a
+Return findings only in the machine-readable transport selected by the
+adapter, with no prose or code fences. When the runtime supplies a validated
+schema, populate its `findings` array. Otherwise print JSON Lines, one object
+per line. `file` and `line` must point to an artifact under review, never a
 ground-truth input.
 
 {"source":"cross-review","severity":"critical|high|medium|low","category":"<kebab-slug>","file":"<path>","line":<n>,"summary":"<one sentence: what is wrong and why>"}
 
 Use Critical or High only when the artifact would materially mislead a later
 decision or implementation. If, after genuinely trying to break it, there are
-no findings, print exactly this one line and nothing else:
+no findings, return exactly one finding with these values (as the sole
+schema-array entry or JSON line):
 
 {"source":"cross-review","severity":"low","category":"review-clean","summary":"cross-review clean — no findings"}
