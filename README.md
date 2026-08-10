@@ -32,7 +32,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `ui-mockup` (UI req.) | HTML sitemap + per-screen mockups + implementation handoff |
 | 1e | `concept-sync` (opt) | Reconcile iterated mockups back into the concept |
-| 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases |
+| 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases, required opposite-provider review before handoff |
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |
 | 3 | `architecture` | PROJ-level tech design across all PRDs |
@@ -40,7 +40,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
 | 4b | `setup` | P0 once per PROJ: branch, preflight, framework scripts into the repo, context bundles |
 | 5 | `executing` | Implement wave by wave with TDD, wave gates, debt markers |
-| 6 | `qa` | End-to-end QA; read-only finder in framework runs, findings into the ledger |
+| 6 | `qa` | End-to-end QA plus required six-persona opposite-provider evidence review; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
 
@@ -79,8 +79,12 @@ What makes an overnight run trustworthy:
   `ledger.mjs`).
 - **Cross-model review.** Review routes to the provider OPPOSITE the
   artifact's author; a review gate is never satisfied by the model that
-  authored the artifact. If one provider is down, the run degrades to a
-  model-opposite reviewer — recorded and flagged, never silent.
+  authored the artifact. Claude-authored work goes to Codex, while
+  Codex-authored work goes to an authenticated, isolated Claude process
+  with validated structured output. Review inputs are not silently
+  truncated: there is no artificial default cap, and Claude's hard 10 MB
+  stdin ceiling is reported explicitly. Any permitted model-opposite
+  fallback is recorded and flagged, never silent.
 - **Context bundles.** P0 compiles one canonical, token-budgeted context
   bundle per agent role from the curated `docs/` baseline (budget breach
   fails P0). Claude subagents get their bundle via a SubagentStart hook,
@@ -102,8 +106,9 @@ What makes an overnight run trustworthy:
 
 Details: [runner/README.md](runner/README.md),
 [docs/skill-chain.md](docs/skill-chain.md), and `CONCEPT.md` for the full
-model. Stage 3+ of the concept (P3 rework, pre-mortem call sites, Jira
-import, worktree parallelism) is not built yet.
+model. Stage 3+ of the concept (P3 runner rework, deeper pre-mortem
+orchestration, Jira import, worktree parallelism) is not built yet; the
+producing-skill cross-review handoffs themselves are already wired.
 
 ## Outside the Chain
 
@@ -111,6 +116,10 @@ import, worktree parallelism) is not built yet.
 the symmetric opposite-provider review mechanism, invoked by the producing
 skills. Requirements, P6 QA, and P7 documentation use it as a required gate;
 concept, architecture, and plan reviews are opt-in with a default of yes.
+P6 uses six isolated discipline reviewers rather than one reviewer playing a
+panel. A Codex-authored QA run fails closed when Claude is unavailable;
+Claude-authored QA may fall back loudly to six Claude reviewers when Codex is
+unavailable.
 
 ## Optional Skills
 
@@ -123,7 +132,10 @@ sonar-cli
 `bugfixing` is a focused repair workflow outside the feature chain: intake,
 browser or deterministic reproduction, test-escape analysis, a red-before-green
 regression test, a narrow `micro-fixer`, bounded Ralph verification, and reuse of
-the existing CodeRabbit/Sonar gates.
+the existing CodeRabbit/Sonar gates. Standalone runs keep the evidence in
+`specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md`; Ralph is
+capped at three repair attempts, CodeRabbit runs only when available, and Sonar
+is reused only when the repository is already configured for it.
 
 `refactor-dreamer` is a separate long-run/overnight skill that scans a
 grown codebase for architecture drift, refactor opportunities, and ADR

@@ -13,7 +13,7 @@ flowchart LR
   S1C --> S1D
   S1D -->|prompt iterations + iteration-log| S1D
   S1D --> S1E[1e concept-sync]
-  S1E --> S2[2 requirements-engineer · Linear handoff]
+  S1E --> S2[2 requirements-engineer · PRDs + required cross-review]
   S2 --> S2B[2b handoff-package · optional]
   S2 --> LIN([Linear handoff])
   S2B --> EXT([Standalone package · UI expert + devs])
@@ -57,11 +57,18 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the HTML; every concept-affecting change is recorded in `iteration-log.md` |
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
-| 2 | requirements-engineer | Produce developer-ready PRDs for the handoff |
+| 2 | requirements-engineer | Produce developer-ready PRDs and pass the required opposite-provider review before handoff |
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
 | 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
 
 ## The review-reconcile loop
+
+Before any first handoff, `requirements-engineer` routes the complete PRD set
+to the provider opposite its author and checks it against the approved concept
+plus compact UI contracts. Critical/High findings must be resolved; one fresh
+round verifies the repair. This adversarial quality gate is distinct from
+`review-reconcile`: the latter handles gaps later returned by a human developer
+or stakeholder and records the resulting product decisions.
 
 The Linear/handoff endpoint is rarely one-shot. A developer reviewing the PRDs typically returns a list of gaps, contradictions, and open questions. `review-reconcile` (2c) closes that loop:
 
@@ -95,7 +102,7 @@ Stakeholder agreement is reached *on the mockups*. Because changes are prompted 
 
 ## Linear handoff
 
-In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories, acceptance criteria, edge cases) but omits in-repo implementation detail. The developer who picks up the work owns architecture and implementation.
+In Linear handoff mode, `requirements-engineer` writes normal PRDs (user stories, acceptance criteria, edge cases), passes the required opposite-provider PRD review, but omits in-repo implementation detail. The developer who picks up the work owns architecture and implementation.
 
 ## Standalone handoff package
 

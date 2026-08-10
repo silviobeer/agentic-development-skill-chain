@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.20 — under iteration (leading version; the German
+**Status:** Draft v0.21 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -46,8 +46,21 @@ cost reconciled via model tiering per role; Mode 2 restored as the
 cheap shared-checkout middle tier inside the writer lane; gotcha
 channel and gate enforcement given provider-neutral mechanisms;
 P3 authorship and state.sh sequencing specified)*
-**Date:** 2026-07-14
-**Basis:** the repository's aligned Codex + Claude SkillChain 0–7
+*(v0.20: product level above the PROJ — `0a_product-vision`
+(docs/PRODUCT.md + numbered PROJ map in specs/product-roadmap.md) and
+`0c_bootstrap` (stack into docs/ARCHITECTURE.md § Stack as the single
+source of truth, real scaffold verified green, root AGENTS.md +
+CLAUDE.md pointer); the design-system showcase gets a fixed structure
+and a drift gate)*
+*(v0.21: focused `bugfixing` workflow outside the feature chain;
+opposite-provider review expanded to required Requirements and six-persona
+QA gates plus optional concept/architecture/plan reviews; Codex → Claude
+hardened with auth preflight, isolated validated structured output, no
+artificial default input cap, and explicit handling of Claude's 10 MB stdin
+ceiling)*
+
+**Date:** 2026-08-10
+**Basis:** the repository's aligned Codex + Claude SkillChain 0–8
 (`codex/skills/`, `claude/skills/`) at the current main branch
 
 **Settled decisions (v0.2):**
@@ -62,17 +75,10 @@ P3 authorship and state.sh sequencing specified)*
 
 ---
 
-*(v0.20: product level above the PROJ — `0a_product-vision`
-(docs/PRODUCT.md + numbered PROJ map in specs/product-roadmap.md) and
-`0c_bootstrap` (stack into docs/ARCHITECTURE.md § Stack as the single
-source of truth, real scaffold verified green, root AGENTS.md +
-CLAUDE.md pointer); the design-system showcase gets a fixed structure
-and a drift gate)*
-
 ## Executive Summary
 
 **What:** An agent workflow framework built on the existing
-SkillChain 0–7 that turns PRDs into production-ready, reviewed,
+SkillChain 0–8 that turns PRDs into production-ready, reviewed,
 documented pull requests fully automatically — including overnight.
 PRDs arrive via one of two intake modes: written directly into the repo
 (the existing structure — the DEFAULT for the first runs) or imported
@@ -101,16 +107,17 @@ and a merge gate (Mode 3) are opt-in, enabled only if telemetry proves
 the nightly window overflows. All review sources flow
 into ONE deduplicated findings ledger with a single fix queue;
 Medium/Low findings are automatically deferred as marked debt instead
-of prompting the user. Pre-mortems and the curated docs additionally
-pass provider-opposite adversarial review via `cross-review`: Claude
+of prompting the user. Requirements, QA evidence, pre-mortems, and curated
+docs additionally pass provider-opposite adversarial review via
+`cross-review`: Claude
 reviews Codex-authored artifacts and Codex reviews Claude-authored
 artifacts. Joint artifacts receive independent reviews from both lanes
 before reconciliation, so an authoring model never grades its own work
-alone. If a provider is unavailable, the run DEGRADES instead of
-stopping: it continues single-provider, review falls back to
-MODEL-opposite (a different model of the surviving provider — e.g.
-Sonnet 5 reviewing Fable-authored artifacts), and the degradation is
-flagged in the morning report and the PR body.
+alone. If the degradable Codex lane is unavailable, the run continues with
+Claude and a model-opposite reviewer (for example Sonnet reviewing
+Fable-authored artifacts); the degradation is flagged in the morning report
+and PR body. Claude remains the hard host dependency, and Codex-authored gates
+that require Claude fail closed when Claude review is unavailable.
 
 **Why it stays cheap:** Context is the most expensive resource. Hence:
 curated half-page docs instead of full texts, injection only by spawn
@@ -495,15 +502,21 @@ JSON-lines contract, ledger integration, budgets, and identical failure
 semantics in both directions; it does not make either third-party plugin
 a core dependency.
 
-**Three call sites (analogous to `4a_checkpoint`):**
+**Producing-skill call sites (analogous to `4a_checkpoint`):**
 
 | Call site | Artifacts reviewed | Review focus |
 |---|---|---|
-| P3 pre-mortem | architecture-delta + PRDs | wrong/missing decisions, unstated assumptions, contradictions with the baseline |
-| P4 plan review | wave plans + wave-gate-config + api-contracts | unsafe ordering, weak AC commands, missing contracts |
-| P7 docs review | curated docs delta (+ full capped docs) vs. the PROJ diff | factual accuracy ("does ARCHITECTURE.md describe what was actually BUILT?"), stale claims, cap-gaming (shrinking docs by deleting true load-bearing statements) |
+| Concept review (optional, default yes) | approved concept | missing assumptions, contradictions, scope and feasibility risks |
+| Requirements review (required) | complete PRD set + approved concept + compact UI contracts | gaps in stories/ACs/edge cases, contradictions, untestable requirements |
+| P3 pre-mortem (optional, default yes) | architecture-delta + PRDs | wrong/missing decisions, unstated assumptions, contradictions with the baseline |
+| P4 plan review (optional, default yes) | wave plans + wave-gate-config + api-contracts | unsafe ordering, weak AC commands, missing contracts |
+| P6 QA review (required) | QA summary/evidence + implementation diff | evidence integrity, release decision, security, architecture, performance, reliability, cross-wave drift, minimalism |
+| P7 docs review (required) | curated docs delta (+ full capped docs) vs. the PROJ diff | factual accuracy ("does ARCHITECTURE.md describe what was actually BUILT?"), stale claims, cap-gaming (shrinking docs by deleting true load-bearing statements) |
 
-The P7 call site is the critical one: curated docs are injected into
+Requirements, P6, and P7 are blocking gates; the other three call sites are
+opt-in with a default of yes. P6 runs six isolated discipline reviewers rather
+than asking one process to simulate a panel. The P7 call site is especially
+critical: curated docs are injected into
 every future implementer — a wrong statement there poisons every
 subsequent PROJ. Hence BLOCKING, not advisory.
 
@@ -520,16 +533,35 @@ new severity rules: Critical/High block phase completion (fix spawn + ONE
 cross-review re-review round; still red → existing escalation rules §8
 apply), Medium/Low auto-defer as debt.
 
-**Degraded mode (provider unavailable):** provider-opposite is the
-PREFERRED reviewer, not a hard prerequisite. If the opposite provider's
-CLI is missing or unauthenticated, the review falls back to
-MODEL-opposite within the surviving provider: a DIFFERENT model than
-the author's (recorded as `author_model` in `state.json`) — e.g.
-Sonnet 5 reviewing Fable- or Opus-authored artifacts via
-`claude -p --model`. The invariant that survives degradation is: the
+**Degraded mode (Codex unavailable):** provider-opposite is the PREFERRED
+reviewer, but Claude-authored work may fall back to MODEL-opposite within the
+surviving Claude provider: a DIFFERENT model than the author's (recorded as
+`author_model` in `state.json`) — e.g. Sonnet 5 reviewing Fable- or
+Opus-authored artifacts via `claude -p --model`. The invariant that survives degradation is: the
 gate is never satisfied by the same model that authored the artifact.
 Every degraded review is logged and flagged in the morning report and
-the PR body ("cross-review: model-opposite fallback") — never silent.
+the PR body ("cross-review: model-opposite fallback") — never silent. For
+six-persona QA, Claude-authored evidence may fall back loudly to six Claude
+workers if Codex is unavailable. Codex-authored QA fails closed if Claude is
+unavailable; a same-provider Codex substitution cannot satisfy the gate.
+
+### Focused Bug Repair Skill `bugfixing` (optional)
+
+Reported defects do not need a feature PROJ, new PRDs, architecture, or wave
+plans unless diagnosis reveals feature-sized scope. `bugfixing` owns one defect
+from normalized intake through safe baseline checks, deterministic or real-
+browser reproduction, code-root-cause analysis, and explicit test-escape
+analysis. Standalone evidence is written to
+`specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md`; when invoked inside a
+framework PROJ, findings use the existing ledger and state machinery.
+
+The repair contract is red-before-green: add or correct the smallest regression
+test, prove it fails for the reported behavior before production code changes,
+then dispatch a narrow `micro-fixer`. Re-run the original reproduction path and
+the relevant suite after every repair. A Ralph loop is bounded to three repair
+attempts; CodeRabbit is used only when available, and Sonar only when already
+configured. Completion requires the original path green, regression proof, and
+a recorded explanation of why the previous tests missed the defect.
 
 ### P4 — Planning (= Skill 4, extended)
 
@@ -1122,7 +1154,7 @@ silently at render time.
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check, component-registry `--check`; any Critical/High → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
-| `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; fallback: model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
+| `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; for Claude-authored work only, unavailable Codex may fall back model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
 | `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes OAuth-preserving isolated `claude -p` read-only with validated JSON Schema; rejects structured API/auth errors; detects the 10 MB stdin ceiling; timeout/cancel as one process group |
 | `review-with-codex.sh` (cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
@@ -1144,7 +1176,7 @@ silently at render time.
 | `progress-blocks.md.tmpl` (5_executing) | state.json | the structured blocks in progress.md (wave gate PASSED, Ralph iterations, QA results) | after each gate/loop |
 | `jira-comment.md.tmpl` (2d_prd-import, Mode B) | state.json + findings.json | status/PR-link/debt comments on tickets | sync-back (TODO) |
 | `agent-md-entry.md.tmpl` (5_executing) | learning (free text) + date + commit SHA | uniform agent.md entry block | on write — the one place where LLM content flows in, but inside a fixed frame |
-| `cross-review-prompt.md.tmpl` (cross-review) | mode + artifact list + author provider | provider-neutral adversarial prompt rendered for either CLI | P3, P4, P7 |
+| `cross-review-prompt.md.tmpl` (cross-review) | mode + artifact list + author provider | provider-neutral adversarial prompt rendered for either CLI | concept, requirements, architecture, plan, QA, docs |
 
 Free-form LLM text still exists — analysis, findings verification,
 architecture prose, agent.md learnings — but it always lands INSIDE a
@@ -1237,7 +1269,7 @@ notification failure never loses or invalidates the report.
 | Fresh Claude + Codex lanes per phase (host-neutral runner) | one long host session with /compact points |
 | Spawn tiering (micro-fixes without a pack) | the same context for every spawn |
 | Dedup/rendering as scripts | ledger/report work in the LLM context |
-| Provider-opposite Claude ↔ Codex review of pre-mortems + curated docs | same-model persona review only; docs content never reviewed |
+| Provider-opposite Claude ↔ Codex review of requirements, QA evidence, pre-mortems, and curated docs | same-model persona review only; docs content never reviewed |
 
 Unchanged and explicitly preserved: the current pre-PRD Skills 1–2
 flow, both delivery tracks, immutable generated `2b_handoff/` packages,
@@ -1270,10 +1302,13 @@ agent-browser smoke tests.
    context-injector adapters (define the
    manifest schema following the claude-skills frontmatter taxonomy),
    install + parity-check Ponytail on Claude and Codex (§7), agent.md protocol +
-   P7 curation, `cross-review` skill (mechanism + the P7 docs call
-   site — it ships with the curation it guards)
-3. **Stage 3:** P3 rework (baseline/delta), pre-mortem reviews in
-   P3/P4 (including wiring the Stage 2 `cross-review` into both).
+   P7 curation, and the symmetric `cross-review` mechanism. The current
+   producing skills now wire optional concept/architecture/plan reviews and
+   required Requirements/P6/P7 gates. The optional focused `bugfixing` workflow
+   is also built outside the numbered chain.
+3. **Stage 3:** P3 runner rework (baseline/delta) and deeper pre-mortem
+   orchestration. The skill-level cross-review handoffs already exist; this
+   stage concerns their runner integration and richer risk inputs.
    **Jira intake Mode B = TODO within this stage:**
    `2d_prd-import` (fetch, snapshot, ID mapping, AC check, sync-back;
    mechanism decision MCP vs. CLI/REST) — built only after the chain
@@ -1311,7 +1346,8 @@ agent-browser smoke tests.
 | Morning report | file in `specs/` (canonical) + best-effort notification at run end |
 | Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
-| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → Claude, joint → both independently; fallback when a provider is unavailable: MODEL-opposite within the surviving provider (e.g. Sonnet 5 reviews Fable-authored artifacts), flagged — same-model review never satisfies the gate; findings → ledger, blocking per §8 |
+| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and optional-by-default for concept/architecture/plans; no artificial default input cap, explicit Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |
+| Focused bug repair | `bugfixing` stays outside the feature chain: reproduce first (real browser for UI), trace code cause + test escape, prove a regression test red before the fix, dispatch a micro-fixer, and stop after at most three Ralph repair attempts; CodeRabbit/Sonar are proportional existing gates, not new dependencies |
 | P6 QA/fix ownership | Skill 6 is a strictly read-only finder. The P6 phase controller deduplicates and verifies findings, dispatches tier-0 fix lanes, and requires fresh provider-opposite QA re-verification; three failed Critical/High repair attempts trigger the stop policy |
 
 New questions arise during the detailed planning of each stage and are

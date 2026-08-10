@@ -55,7 +55,7 @@ together. Product-level artifacts live outside the PROJ folder —
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
 | 1d | `ui-mockup` | UI only | `1d_mockups/sitemap.html`, screen mockups, `implementation-handoff.md` |
 | 1e | `concept-sync` | After mockup iterations | reconciled `1_brainstorm/PROJ-<X>-concept.md` |
-| 2 | `requirements-engineer` | Required | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
+| 2 | `requirements-engineer` | Required, including opposite-provider PRD review | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
 | 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
 | 2c | `review-reconcile` | PRD review returned gaps | `2_PRDs/*-review-decisions.md`, `review-changelog.md` |
 | 3 | `architecture` | Required | `3-4_plan/PROJ-<X>-architecture.md` |
@@ -63,7 +63,7 @@ together. Product-level artifacts live outside the PROJ folder —
 | 4a | `checkpoint` | Required | `decisions.md`, `state.json` sealed `CP1:approved` |
 | 4b | `setup` | Required | PROJ branch, preflight, framework scripts, context bundles |
 | 5 | `executing` | Required | Code, tests, `5_progress/PROJ-<X>-progress.md` |
-| 6 | `qa` | Required before release | QA results appended to PRDs/progress |
+| 6 | `qa` | Required before release, including six-persona opposite-provider evidence review | QA results appended to PRDs/progress |
 | 7 | `documentation` | Required before closeout | `docs/PROJECT.md` and related docs |
 | 8 | `delivery` | Required to ship | PR with rendered body, CI green, CP2 reconcile |
 
@@ -94,7 +94,7 @@ Brainstorming may split one broad seed into several PROJs. Downstream skills the
 
 - Step 1 hands UI features to `visual-companion`; backend/API features go to `requirements-engineer`.
 - Step 1d must be complete before Step 2 for UI features.
-- Step 2 PRDs must be approved before Step 3.
+- Step 2 PRDs must pass their required opposite-provider review and be approved before Step 3 or an external handoff.
 - Step 3 architecture must be approved before Step 4 plans.
 - Step 4 plans drive Step 5 execution.
 - Step 5 hands off to Step 6 after implementation and quality gates.
@@ -108,6 +108,13 @@ Reference skills are not process steps. They are expertise modules used inside p
 - `tailwind-css`: UI mockups, architecture, planning, execution, and QA when Tailwind is present
 - `nextjs-app-router-patterns`: architecture, planning, and execution for Next.js App Router projects
 - `accessibility`: QA and UI-related implementation checks when accessibility risk is present
+
+Optional workflows are also outside the numbered chain. Use `bugfixing` for
+one reported defect: reproduce it (in a real browser for browser-facing UI),
+trace both the code cause and why the tests missed it, prove a regression test
+red before the repair, then run a narrow fixer and at most three Ralph repair
+attempts. Standalone evidence lives in
+`specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md`.
 
 ## Tooling Expectations
 

@@ -12,7 +12,7 @@ files on disk. No conversation history crosses a phase boundary.
 | `run-phase.sh` | run one phase (`P0 P5 P6 P7 P8`) or `auto` (all remaining phases → morning report) |
 | `render-report.mjs` | `morning` (scan all PROJs → `specs/morning-report-<date>.md` + one-liner) and `stop` (stop report) |
 | `spike-dual-lane.sh` | Stage 1 release gate: concurrent lanes, read-only enforcement, JSONL capture, attribution, kill-tree cancellation |
-| `spike-stage2.sh` | Stage 2 release gate: bundle determinism/budgets/projection parity, injector tier matrix, caps + cross-review gates, P7 runner gate |
+| `spike-stage2.sh` | Stage 2 release gate: bundle determinism/budgets/projection parity, injector tier matrix, symmetric authenticated cross-review (including six-persona QA, structured Claude output, and 10 MB transport failure), P7 runner gate |
 | `prompts/lane-prompt.md.tmpl` | generic lane prompt (role rules, state discipline) |
 | `prompts/p6-controller.md` | the P6 phase-controller contract (ledger triage, fix dispatch, opposite re-verification) |
 | `templates/morning-report.md.tmpl`, `templates/stop-report.md.tmpl` | report frames — reports are rendered, never hand-written |

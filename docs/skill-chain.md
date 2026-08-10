@@ -76,7 +76,7 @@ After decomposition:
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | ui-mockup | Create lightweight mockups and implementation handoff; track stakeholder iterations |
 | 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
-| 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; Linear handoff mode for discovery |
+| 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery track) |
 | 3 | architecture | Produce PM-friendly technical architecture |
@@ -84,7 +84,7 @@ After decomposition:
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
 | 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight (codex degradable), framework scripts copied into the repo |
 | 5 | executing | Implement waves with TDD and quality gates |
-| 6 | qa | Run E2E QA, security, persona review, and simplicity review; strictly read-only finder in framework runs |
+| 6 | qa | Run E2E QA, security, required six-persona opposite-provider evidence review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR with a body rendered from state.json + findings.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 
@@ -132,7 +132,9 @@ Stage 2 adds the bootstrap and the full context system:
   required P6 QA evidence review, and the P7 docs truth gate. Review prompts
   have no artificial default byte cap; callers may set an explicit safety cap.
   The Claude adapter reports Claude Code's hard 10 MB stdin ceiling rather
-  than truncating review material.
+  than truncating review material. The QA gate launches one isolated worker per
+  persona: Codex-authored QA fails closed without Claude, while Claude-authored
+  QA may fall back loudly to six Claude workers when Codex is unavailable.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 
@@ -140,6 +142,6 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 
 | Skill | Purpose |
 |---|---|
-| bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run bounded Ralph verification, and explain why prior tests missed it |
+| bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run at most three Ralph repair attempts, and explain why prior tests missed it; standalone evidence lives in `specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md` |
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
 | sonar-cli | Set up and operate SonarScanner CLI and SonarQube CLI for project analysis, quality gates, and issue triage |
