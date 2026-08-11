@@ -34,7 +34,7 @@ fi
 
 # One raw finding per marker; summary = the marker text after "ponytail:".
 jq -R -c '
-  capture("^(?<file>[^:]+):(?<line>[0-9]+):(?<rest>.*)$")
+  capture("^(?<file>.+):(?<line>[0-9]+):(?<rest>.*)$")
   | (.rest | (capture("ponytail:\\s*(?<note>.*)") // {note: .})) as $m
   | {
       source: "debt",

@@ -62,10 +62,13 @@ check_skill_set claude
 [ -f "$ROOT/CLAUDE.md" ] || fail "missing CLAUDE.md"
 grep -q 'AGENTS.md' "$ROOT/CLAUDE.md" || fail "CLAUDE.md must point to AGENTS.md"
 
-if grep -R -n 'CLAUDE\.md Candidates\|CLAUDE-PROJ' "$ROOT/codex" "$ROOT/claude" "$ROOT/docs" >/tmp/skill-chain-stale.txt; then
-  cat /tmp/skill-chain-stale.txt >&2
+stale_candidates="$(mktemp)"
+if grep -R -n 'CLAUDE\.md Candidates\|CLAUDE-PROJ' "$ROOT/codex" "$ROOT/claude" "$ROOT/docs" >"$stale_candidates"; then
+  cat "$stale_candidates" >&2
+  rm -f "$stale_candidates"
   fail "stale CLAUDE.md candidate convention found"
 fi
+rm -f "$stale_candidates"
 
 if find "$ROOT/claude/skills" "$ROOT/codex/skills" -maxdepth 1 -type d -name autonomous-execution | grep -q .; then
   fail "autonomous-execution must not be included"

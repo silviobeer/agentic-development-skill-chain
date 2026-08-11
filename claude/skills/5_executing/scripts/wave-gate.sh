@@ -282,7 +282,11 @@ for ((index=0; index<REG_COUNT; index++)); do
   [[ "$rc" -eq 0 ]] || { record_regression "$label" "$command" "$tests" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "regression ${label} failed rc=${rc}"; }
   if [[ "$require_selection" == true && "$selected" -le 0 ]]; then record_regression "$label" "$command" "$tests" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "regression ${label} selected 0 tests"; fi
   record_regression "$label" "$command" "$tests" 0 "$selected" passed "$log" "$VERIFIED_HEAD"
-  echo "   ✓ ${label}${require_selection:+ (${selected} selected)}"
+  if [[ "$require_selection" == true ]]; then
+    echo "   ✓ ${label} (${selected} selected)"
+  else
+    echo "   ✓ ${label}"
+  fi
   assert_verified_head
   assert_clean_worktree
 done
@@ -306,7 +310,11 @@ CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-nor
   set +e; timeout --foreground "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW"; CR_RC=$?; set -e
 : >"$CR_NORMALIZED"
 if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
-  fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
+  if [[ "$CR_RC" -eq 124 ]]; then
+    fail "CodeRabbit timed out and its output is not valid JSONL (raw: $CR_RAW)"
+  else
+    fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
+  fi
 fi
 RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
 NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
@@ -332,7 +340,16 @@ fi
 assert_verified_head; assert_clean_worktree
 
 step "5/7 Sonar local scan"
+SONAR_STARTED_AT=$(date +%s)
 run_with_timeout "$SONAR_TIMEOUT" sonar_cmd bash -c "$SONAR_CMD"
+# sonar-scanner always writes .scannerwork/report-task.txt on ANY completed
+# analysis submission (even ones that later fail server-side); the `sonar`
+# operator CLI does not. Its absence or staleness proves sonar_cmd exited 0
+# without a real scanner run completing — a no-op or wrong CLI would still
+# exit 0 and must not be reported green.
+[[ -f .scannerwork/report-task.txt ]] || fail "sonar_cmd exited 0 but .scannerwork/report-task.txt is missing — sonar-scanner did not actually run"
+REPORT_TASK_MTIME=$(date -r .scannerwork/report-task.txt +%s 2>/dev/null || echo 0)
+[[ "$REPORT_TASK_MTIME" -ge "$SONAR_STARTED_AT" ]] || fail "sonar_cmd exited 0 but .scannerwork/report-task.txt is stale (from an earlier run) — sonar-scanner did not run this time"
 SONAR_STATUS=green
 assert_verified_head; assert_clean_worktree
 

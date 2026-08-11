@@ -104,7 +104,7 @@ const values = {
 };
 
 let out = readFileSync(templatePath, "utf8");
-for (const [k, v] of Object.entries(values)) out = out.replaceAll(`{{${k}}}`, String(v));
+for (const [k, v] of Object.entries(values)) out = out.replaceAll(`{{${k}}}`, () => String(v));
 
 const left = out.match(/{{[A-Z_]+}}/g);
 if (left) { console.error(`render-pr-body.mjs: unreplaced placeholders: ${[...new Set(left)].join(", ")}`); process.exit(1); }

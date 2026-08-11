@@ -560,7 +560,7 @@ The lead also runs `build_cmd` from `wave-gate-config.json` once for the assembl
 
 **After both teammates report — Handling Findings with Technical Rigor:**
 
-Do NOT blindly implement every finding. Apply the `receiving-code-review` discipline:
+Do NOT blindly implement every finding. Apply this discipline:
 
 1. **READ** each finding carefully — understand what the reviewer is flagging
 2. **VERIFY** — Does this finding apply? Check the actual code. Reviewers (human or automated) can be wrong.
@@ -730,7 +730,7 @@ Escalate to main agent only if a fix requires spec/architecture changes.
 
 ## When Something Breaks
 
-Do NOT guess. Consult the `systematic-debugging` reference skill:
+Do NOT guess. Follow `references/debugging.md`:
 
 **Phase 1 — Root Cause Investigation:**
 1. Read the full error message and stack trace — not a summary

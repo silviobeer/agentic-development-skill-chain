@@ -72,6 +72,14 @@ const sleepMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0
 
 // Mutations run under a lock directory: mkdir is atomic, so concurrent
 // writers serialize instead of overwriting each other's read-modify-write.
+// process.exit() inside fn() (e.g. via fail()) skips finally blocks below the
+// exit call, but 'exit' handlers still run — release the lock there too so a
+// validation failure mid-mutation can't leak the lock directory.
+let heldLock = null;
+process.on("exit", () => {
+  if (heldLock) { try { rmdirSync(heldLock); } catch { /* already released */ } }
+});
+
 function withLock(fn) {
   const lock = join(base, ".findings.lock");
   const deadline = Date.now() + 15000;
@@ -86,7 +94,8 @@ function withLock(fn) {
       sleepMs(25);
     }
   }
-  try { return fn(); } finally { try { rmdirSync(lock); } catch { /* already released */ } }
+  heldLock = lock;
+  try { return fn(); } finally { try { rmdirSync(lock); } catch { /* already released */ } heldLock = null; }
 }
 
 function load({ mustExist = false } = {}) {

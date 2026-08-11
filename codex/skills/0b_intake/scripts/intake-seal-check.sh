@@ -23,8 +23,6 @@ BASELINE=(
   docs/PRODUCT.md
   docs/ARCHITECTURE.md
   docs/GUIDELINES.md
-  docs/DESIGN-SYSTEM.md
-  docs/components.md
   docs/security-baseline.md
   docs/test-conventions.md
   AGENTS.md
@@ -37,6 +35,28 @@ for f in "${BASELINE[@]}"; do
     FAIL=1
   fi
 done
+
+# DESIGN-SYSTEM.md and components.md are UI-only baseline files: a backend-only
+# repo never has a component directory and must not be blocked from sealing
+# because of it (mirrors curation-caps.sh's own DESIGN-SYSTEM.md optionality).
+HAS_COMPONENTS=false
+if [ -d src/components ]; then
+  HAS_COMPONENTS=true
+elif find src/features -maxdepth 2 -type d -name components 2>/dev/null | grep -q .; then
+  HAS_COMPONENTS=true
+fi
+if [ "$HAS_COMPONENTS" = true ]; then
+  for f in docs/DESIGN-SYSTEM.md docs/components.md; do
+    if [ -f "$f" ]; then
+      echo "OK      $f exists"
+    else
+      echo "MISSING $f — components exist under src/ but $f was not drafted"
+      FAIL=1
+    fi
+  done
+else
+  echo "OK      docs/DESIGN-SYSTEM.md, docs/components.md not required — no src/components or src/features/*/components found (backend-only repo)"
+fi
 
 # (b) residual provenance markers — drafts carry them, the sealed baseline never does
 MARKERS="$(grep -rn -e '\[extracted:' -e '\[assumed\]' -e '\[gap' docs/ AGENTS.md 2>/dev/null || true)"

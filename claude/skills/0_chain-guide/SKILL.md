@@ -156,7 +156,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'`: `CP1:approved` → step 4a done; `P0:done` → step 4b done; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
 9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
    - Has every wave marked complete? → step 5 done
-   - Has "QA Results" section at top level? → step 6 done
+   - Has "QA Test Results" section at top level? → step 6 done
 10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
 11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
 
@@ -281,14 +281,13 @@ These skills are not process steps — they are **reference expertise** consulte
 
 | Skill | Consulted at | Purpose |
 |-------|-------------|---------|
-| `systematic-debugging` | 5, 6 | Root cause investigation, 4-phase debugging, 3-fix rule |
-| `verification-before-completion` | 5, 6 | Gate function: run → read → verify → then claim |
+| (inlined in skill 5) | 5, 6 | Root-cause debugging discipline and verify-before-claiming-done discipline are written directly into `5_executing/SKILL.md` (see `references/debugging.md`) rather than factored into separate reference skills |
 
 ### Tech Stack (project-specific)
 
 | Skill | Consulted at | Purpose |
 |-------|-------------|---------|
-| `tailwind-css` | 2b, 3, 5 | Responsive utilities, dark mode, component patterns |
+| `tailwind-css` | 1d, 3, 5 | Responsive utilities, dark mode, component patterns |
 | `nextjs-app-router-patterns` | 3, 4, 5 | Server vs. Client Components, routing, data fetching, caching |
 
 When to recommend them:

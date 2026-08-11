@@ -39,7 +39,7 @@ const safeP8Resume = (s) => {
 };
 const fill = (template, values) => {
   let out = template;
-  for (const [k, v] of Object.entries(values)) out = out.replaceAll(`{{${k}}}`, String(v));
+  for (const [k, v] of Object.entries(values)) out = out.replaceAll(`{{${k}}}`, () => String(v));
   const left = out.match(/{{[A-Z_]+}}/g);
   if (left) { console.error(`render-report.mjs: unreplaced placeholders: ${[...new Set(left)].join(", ")}`); process.exit(1); }
   return out;

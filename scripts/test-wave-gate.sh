@@ -27,6 +27,7 @@ case_dir() {
     '[[ -z "${WORKTREE_LOCK_LOG:-}" ]] || printf "locked\n" >>"$WORKTREE_LOCK_LOG"' \
     'exec "$@"' >"$CASE/scripts/worktree.sh"
   chmod +x "$CASE/bin/coderabbit" "$CASE/bin/agent-browser" "$CASE/bin/curl" "$CASE/scripts/worktree.sh"
+  printf '.scannerwork/\n' >"$CASE/.gitignore"
   git -C "$CASE" init -q
   git -C "$CASE" config user.email test@example.invalid
   git -C "$CASE" config user.name test
@@ -34,7 +35,7 @@ case_dir() {
 }
 
 default_config() {
-  printf '%s' '{"build_cmd":"true","sonar_cmd":"true","timeouts":{"ac_seconds":5,"build_seconds":5,"coderabbit_seconds":5,"browser_seconds":5,"sonar_seconds":5},"waves":{"1":{"advisory_severities":[],"ac_commands":[{"id":"AC-1","task":"T-1","command":"printf '\''Running 1 test\\n1 passed\\n'\''; printf x >> \"$CASE_LOG\"","test_files":["tests/ac.test.ts"],"auth_consuming":false}],"regression_commands":[{"label":"broad","command":"printf '\''Running 2 tests\\n2 passed\\n'\''","test_files":["tests/regression.test.ts"],"auth_consuming":false,"require_non_empty_selection":true}]}}}'
+  printf '%s' '{"build_cmd":"true","sonar_cmd":"mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt","timeouts":{"ac_seconds":5,"build_seconds":5,"coderabbit_seconds":5,"browser_seconds":5,"sonar_seconds":5},"waves":{"1":{"advisory_severities":[],"ac_commands":[{"id":"AC-1","task":"T-1","command":"printf '\''Running 1 test\\n1 passed\\n'\''; printf x >> \"$CASE_LOG\"","test_files":["tests/ac.test.ts"],"auth_consuming":false}],"regression_commands":[{"label":"broad","command":"printf '\''Running 2 tests\\n2 passed\\n'\''","test_files":["tests/regression.test.ts"],"auth_consuming":false,"require_non_empty_selection":true}]}}}'
 }
 
 write_config() { printf '%s\n' "$1" >"$CASE/specs/PROJ-1-test/3-4_plan/wave-gate-config.json"; }
@@ -88,7 +89,7 @@ run_suite() {
 
   case_dir sonar-current-worktree
   SONAR_CWD_LOG="$TMP/$PLATFORM-sonar-cwd"; export SONAR_CWD_LOG
-  config=$(default_config | jq '.sonar_cmd="pwd -P > \"$SONAR_CWD_LOG\""')
+  config=$(default_config | jq '.sonar_cmd="pwd -P > \"$SONAR_CWD_LOG\"; mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt"')
   write_config "$config"; commit_case; run_gate >/dev/null
   [[ -s "$SONAR_CWD_LOG" ]] || fail "$LABEL: configured sonar_cmd was not executed"
   [[ $(cat "$SONAR_CWD_LOG") == "$CASE" ]] || fail "$LABEL: sonar_cmd did not run in the current PROJ worktree cwd"
@@ -105,14 +106,26 @@ run_suite() {
   grep -q 'sonar_cmd failed with exit 23' "$GATE_OUT" || fail "$LABEL: non-zero sonar_cmd did not block"
 
   case_dir sonar-changes-head
-  config=$(default_config | jq '.sonar_cmd="git commit --allow-empty -m sonar-moved-head >/dev/null"')
+  config=$(default_config | jq '.sonar_cmd="mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt; git commit --allow-empty -m sonar-moved-head >/dev/null"')
   write_config "$config"; commit_case; expect_fail run_gate
   grep -q 'HEAD changed during gate verification' "$GATE_OUT" || fail "$LABEL: sonar_cmd was allowed to move certified HEAD"
 
   case_dir sonar-dirties-worktree
-  config=$(default_config | jq '.sonar_cmd="mkdir -p src; printf dirty > src/sonar-output.txt"')
+  config=$(default_config | jq '.sonar_cmd="mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt; mkdir -p src; printf dirty > src/sonar-output.txt"')
   write_config "$config"; commit_case; expect_fail run_gate
   grep -q 'commit them before certification' "$GATE_OUT" || fail "$LABEL: sonar_cmd dirty output escaped the worktree invariant"
+
+  case_dir sonar-no-report-task
+  config=$(default_config | jq '.sonar_cmd="true"')
+  write_config "$config"; commit_case; expect_fail run_gate
+  grep -q 'sonar-scanner did not actually run' "$GATE_OUT" || fail "$LABEL: sonar_cmd exiting 0 without a scanner report was accepted as green"
+
+  case_dir sonar-stale-report-task
+  config=$(default_config | jq '.sonar_cmd="true"')
+  write_config "$config"; commit_case
+  mkdir -p "$CASE/.scannerwork"; printf stale >"$CASE/.scannerwork/report-task.txt"; touch -d '@1000000000' "$CASE/.scannerwork/report-task.txt"
+  expect_fail run_gate
+  grep -q 'sonar-scanner did not run this time' "$GATE_OUT" || fail "$LABEL: a stale scanner report from an earlier run was accepted as fresh evidence"
 
   case_dir regression-empty
   config=$(default_config | jq '.waves["1"].regression_commands[0].command="printf '\''Running 0 tests\\n'\''"')

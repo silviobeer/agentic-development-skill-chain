@@ -7,7 +7,7 @@ re-verification. Protect your own context: scripts first, spawns for
 judgment, verdicts only inline.
 
 Ownership boundary — never blur it:
-- Skill 6 / peer lane: tests, reviews, WRITES findings. Read-only.
+- Skill 6 / peer lane: tests, reviews, EMITS findings as JSON lines (the runner writes them to the ledger). Read-only on the repository.
 - You (controller): dedupe, verify, dispatch fixes, re-verify, decide.
 
 ## Loop
@@ -18,7 +18,7 @@ Ownership boundary — never blur it:
    `node scripts/ledger.mjs stats` and the fix queue with
    `node scripts/ledger.mjs queue` (open Critical/High, clustered by file).
 2. **Verifier batches:** spawn read-only verifier agents per cluster to
-   weed out false positives (receiving-code-review discipline). You
+   weed out false positives. You
    receive only verdicts. False positives →
    `node scripts/ledger.mjs set-status <id> false-positive`.
 3. **Fix spawns (tier 0)** per confirmed cluster: BEFORE dispatching a

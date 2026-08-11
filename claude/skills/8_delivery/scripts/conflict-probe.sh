@@ -23,6 +23,15 @@ fi
 
 BRANCH="proj/PROJ-${PROJ}"
 git rev-parse --verify --quiet "$BRANCH" >/dev/null || { echo "conflict-probe.sh: branch $BRANCH not found" >&2; exit 1; }
+
+# Best-effort: refresh the target ref from its remote-tracking upstream before
+# probing, so a stale local main does not report a false "no conflicts". Not
+# fatal — some contexts (test fixtures, no remote) legitimately have none.
+if remote_ref="$(git rev-parse --abbrev-ref --symbolic-full-name "${TARGET}@{upstream}" 2>/dev/null)"; then
+  remote="${remote_ref%%/*}"
+  git fetch --quiet "$remote" "${TARGET}:${TARGET}" 2>/dev/null || echo "conflict-probe.sh: could not refresh $TARGET from $remote (continuing with local ref)" >&2
+fi
+
 git rev-parse --verify --quiet "$TARGET" >/dev/null || { echo "conflict-probe.sh: target $TARGET not found" >&2; exit 1; }
 
 WT="$(mktemp -d)/probe"
@@ -33,7 +42,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-git worktree add --detach "$WT" "$TARGET" >/dev/null 2>&1
+if ! git worktree add --detach "$WT" "$TARGET" >/dev/null 2>"$(dirname "$WT")/worktree-add.err"; then
+  echo "conflict-probe.sh: failed to create probe worktree for $TARGET:" >&2
+  cat "$(dirname "$WT")/worktree-add.err" >&2
+  exit 1
+fi
 
 CONFLICTS=""
 if ! git -C "$WT" merge --no-commit --no-ff "$BRANCH" >/dev/null 2>&1; then

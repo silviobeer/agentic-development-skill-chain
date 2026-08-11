@@ -328,7 +328,7 @@ After all six persona reviews complete:
    - The BUG-IDs + anchors for its cluster
    - The relevant feature's `agent.md` excerpt
    - For simplicity bugs: the required reduction target (delete, inline, merge, reuse, collapse state, remove option) and the rule that the fix should reduce code/indirection before adding new code
-   - The `verification-before-completion` reminder
+   - A verify-before-claiming-done reminder: run the check, read the actual output, only then report status
    - ≤ 2000 tokens total
 4. **Disjoint-file invariant:** if clustering leaves bugs that span multiple files, assign to the primary file's cluster and document the cross-file touch in the prompt. Never split a single bug across subagents.
 5. **Lead-owned control plane:** the lead alone updates `progress.md`, stages, and commits while parallel fixers run.

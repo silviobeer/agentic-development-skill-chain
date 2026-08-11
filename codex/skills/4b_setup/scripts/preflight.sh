@@ -156,6 +156,27 @@ if have sonar; then
   fi
 fi
 
+# --- mandatory wave sonar_cmd: hard preflight, never silently green (§7) ----
+# `sonar` (the operator CLI) can exit 0 while running a no-op local scan with
+# no language analyzer installed — it "checks off" every file without ever
+# analyzing it. sonar-scanner is the actual analysis engine; wave-gate.sh's
+# sonar_cmd is mandatory (validate-wave-plan.mjs requires it non-empty), so a
+# broken scanner/auth setup must stop P0 here instead of surfacing later as a
+# false-green wave gate. sonar_cmd is commonly wrapped (`npm run sonar`), so
+# this checks the real prerequisites (binary + token in the environment) —
+# not the command string, which can't be statically resolved through a wrapper.
+if [ -f "$GATE_CFG" ] && jq -e '.sonar_cmd | select(type=="string" and test("\\S"))' "$GATE_CFG" >/dev/null 2>&1; then
+  if ! have sonar-scanner; then
+    say "❌ sonar-scanner MISSING (hard — wave-gate-config.json declares a mandatory sonar_cmd)"
+    HARD_MISSING+=("sonar-scanner")
+  elif [ -z "${SONAR_TOKEN:-}" ]; then
+    say "❌ SONAR_TOKEN not set (hard — sonar-scanner needs it; \`sonar auth status\` alone does not authenticate the scanner, see sonar-cli skill)"
+    HARD_MISSING+=("sonar-scanner-auth")
+  else
+    say "✓ sonar-scanner present, SONAR_TOKEN set (mandatory wave sonar_cmd)"
+  fi
+fi
+
 # Framework-owned files are versioned for the run but must not inherit the
 # target repo's formatting policy. Keep the lock out of git as well.
 if [ -f biome.json ]; then
@@ -188,7 +209,10 @@ elif [ ! -f biome.jsonc ]; then
 else
   say "⚠ biome.jsonc detected — add framework-owned scripts + .claude/settings.json to files.ignore before the setup commit"
 fi
-grep -qxF '.state.lock' .gitignore 2>/dev/null || printf '.state.lock\n' >> .gitignore
+if ! grep -qxF '.state.lock' .gitignore 2>/dev/null; then
+  [ -s .gitignore ] && [ -z "$(tail -c1 .gitignore)" ] || printf '\n' >> .gitignore
+  printf '.state.lock\n' >> .gitignore
+fi
 
 # --- context injector hook (host-neutral, idempotent) ---------------------
 # Keep the context hook deterministic. Ponytail deliberately has no matcher:
@@ -241,7 +265,7 @@ if PONYTAIL_SH="$(resolve_helper ponytail-check.sh)"; then
       say "⚠ ponytail gate failed but PONYTAIL_ENFORCE=0 — run continues WITHOUT the ladder (recorded enforced:false; flagged)"
     fi
   else
-    say "❌ ponytail MISSING, mode not '$( echo "${PONYTAIL_REQUIRED_MODE:-full}")', or parity mismatch (hard) — run 'bash $PONYTAIL_SH' for the install commands"
+    say "❌ ponytail MISSING, mode not '${PONYTAIL_REQUIRED_MODE:-full}', or parity mismatch (hard) — run 'bash $PONYTAIL_SH' for the install commands"
     HARD_MISSING+=("ponytail")
   fi
 else

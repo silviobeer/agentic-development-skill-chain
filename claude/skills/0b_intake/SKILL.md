@@ -31,6 +31,11 @@ forward. This is a collaborative session, not a batch job.
 | `docs/test-conventions.md` | test runner, layout, naming, what must be tested | — |
 | `AGENTS.md` (root) | initial durable agent rules | ≤40 non-blank lines |
 
+`docs/DESIGN-SYSTEM.md` and `docs/components.md` are only required to seal
+when the repo has a component directory (`src/components` or
+`src/features/*/components`); backend-only repos skip both (see
+`scripts/intake-seal-check.sh`).
+
 **Existing AGENTS.md (or other curated docs) are baseline truth, never
 overwritten.** If a file already exists, the draft is a MERGE: every
 existing rule/statement is kept unless an interview decision explicitly

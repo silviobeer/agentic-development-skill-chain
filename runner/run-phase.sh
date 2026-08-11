@@ -196,6 +196,9 @@ providers). Rules:
   do not hand-assemble context."
   fi
   tpl="$(cat "$RUNNER_DIR/prompts/lane-prompt.md.tmpl")"
+  local patsub_was_on=0
+  shopt -q patsub_replacement && patsub_was_on=1
+  shopt -u patsub_replacement
   tpl="${tpl//'{{PROJ_NUMBER}}'/$PROJ}"
   tpl="${tpl//'{{PROJ}}'/PROJ-$PROJ}"
   tpl="${tpl//'{{THEME}}'/$THEME}"
@@ -204,6 +207,7 @@ providers). Rules:
   tpl="${tpl//'{{TASK}}'/$task}"
   tpl="${tpl//'{{ROLE_RULES}}'/$rules}"
   tpl="${tpl//'{{CONTEXT_BUNDLES}}'/$ctx}"
+  [ "$patsub_was_on" -eq 1 ] && shopt -s patsub_replacement
   printf '%s\n' "$tpl" >"$out"
   printf -v "$out_var" '%s' "$out"
 }
@@ -322,6 +326,14 @@ quality_gate_proof_path() {
   return 1
 }
 
+ci_poll_path() {
+  local p
+  for p in scripts/ci-poll.sh "$RUNNER_DIR/../claude/skills/8_delivery/scripts/ci-poll.sh"; do
+    [ -f "$p" ] && { echo "$p"; return 0; }
+  done
+  return 1
+}
+
 stop_run() { # reason error_file
   local reason="$1" err="${2:-}"
   step "STOP CONDITION: $reason"
@@ -407,7 +419,7 @@ run_p6() {
   local ts finder_out finder_prompt finder_pid finder_start tree_before tree_after
   ts="$(date +%Y%m%d-%H%M%S)"
   finder_out="$LANE_DIR/P6-${PEER}-finder-${ts}.out"
-  render_prompt peer "Load and execute the QA skill qa (6_qa) READ-ONLY for specs/PROJ-${PROJ}-${THEME}: find bugs, do not fix anything. Also write every finding as a ledger record (node scripts/ledger.mjs add ${PROJ} ${THEME})." finder_prompt
+  render_prompt peer "Load and execute the QA skill qa (6_qa) READ-ONLY for specs/PROJ-${PROJ}-${THEME}: find bugs, do not fix anything. Emit each finding as one JSON line on stdout ({\"source\":\"qa\",\"severity\":...,\"summary\":...}); the runner ingests them into the ledger — you must not write files or run mutating commands." finder_prompt
   tree_before="$(git status --porcelain 2>/dev/null | sha1sum)"
   step "P6 finder lane (sequential, before controller): $PEER — output $finder_out"
   launch_lane "$PEER" peer "$finder_prompt" "$finder_out"
@@ -449,8 +461,10 @@ finalize_p8_cleanup() { # evidence file used if the post-seal finalization stops
   [ -n "$pr_number" ] || stop_run "P8 sealed but state.pr.number is missing — final CI cannot be verified" "$evidence_file"
   final_head="$(git rev-parse HEAD)"
   final_poll_out="$LANE_DIR/P8-final-ci-${final_head:0:12}.out"
+  local ci_poll
+  ci_poll="$(ci_poll_path)" || stop_run "P8 sealed but ci-poll.sh is missing (repo and skill tree) — final CI cannot be verified" "$evidence_file"
   set +e
-  bash scripts/ci-poll.sh "$pr_number" 1800 "$final_head" >"$final_poll_out" 2>&1
+  bash "$ci_poll" "$pr_number" 1800 "$final_head" >"$final_poll_out" 2>&1
   final_poll_rc=$?
   set -e
   if [ "$final_poll_rc" -ne 0 ]; then
