@@ -33,8 +33,10 @@
 #       PEER_GRACE           seconds a peer may keep running after the writer finished (default: 300)
 # Exit: 0 phase(s) done · 1 stop condition (run parked) · 64 usage
 set -euo pipefail
+export SKILLCHAIN_RUNNER_MANAGED=1
 
 RUNNER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNNER_ARGS=("$@")
 
 PHASE_ARG="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 if [ -z "$PHASE_ARG" ] || [ -z "$PROJ" ] || [ -z "$THEME" ]; then
@@ -87,8 +89,26 @@ LEDGER=""
 [ -f scripts/ledger.mjs ] && LEDGER="scripts/ledger.mjs"
 [ -z "$LEDGER" ] && [ -f "$RUNNER_DIR/../claude/skills/6_qa/scripts/ledger.mjs" ] && LEDGER="$RUNNER_DIR/../claude/skills/6_qa/scripts/ledger.mjs"
 
+WORKTREE_HELPER=""
+for candidate in scripts/worktree.sh \
+  "$RUNNER_DIR/../claude/skills/4b_setup/scripts/worktree.sh" \
+  "$RUNNER_DIR/../codex/skills/4b_setup/scripts/worktree.sh"; do
+  if [ -x "$candidate" ]; then WORKTREE_HELPER="$(realpath -m "$candidate")"; break; fi
+done
+WORKTREE_WAS_REMOVED=0
+WORKTREE_REMOVAL_SUMMARY=""
+
 step() { echo "→ [$(date -Iseconds)] $*"; }
 state_get() { "$STATE_SH" get "$PROJ" "$THEME" "$1"; }
+
+# A runner re-entered after P0 must really be in the state-recorded worktree.
+# This guard is both a topology check and the loop breaker.
+if [ "${SKILLCHAIN_WORKTREE_REEXEC:-0}" = 1 ]; then
+  expected_worktree="$(state_get '.worktree.path // empty')"
+  [ -n "$expected_worktree" ] || { echo "run-phase.sh: re-exec guard is set but state.worktree.path is missing" >&2; exit 1; }
+  [ "$(realpath -m "$PWD")" = "$(realpath -m "$expected_worktree")" ] \
+    || { echo "run-phase.sh: re-exec guard path mismatch (cwd=$PWD, expected=$expected_worktree)" >&2; exit 1; }
+fi
 
 phase_index() {
   local p="$1" i
@@ -422,6 +442,50 @@ Substitute <X>=${PROJ} and <theme>=${THEME} in every command above."
   [ "$blocking" = "0" ] || stop_run "P6 sealed done but ledger has ${blocking} open Critical/High finding(s)" "$ctl_out"
 }
 
+finalize_p8_cleanup() { # evidence file used if the post-seal finalization stops
+  local evidence_file="${1:-}" pr_number final_head current_pr_head control_path cleanup_reason final_poll_out final_poll_rc
+  [ -n "$WORKTREE_HELPER" ] || stop_run "P8 sealed but worktree.sh is missing — safe cleanup cannot be evaluated" "$evidence_file"
+  pr_number="$(state_get '.pr.number // empty')"
+  [ -n "$pr_number" ] || stop_run "P8 sealed but state.pr.number is missing — final CI cannot be verified" "$evidence_file"
+  final_head="$(git rev-parse HEAD)"
+  final_poll_out="$LANE_DIR/P8-final-ci-${final_head:0:12}.out"
+  set +e
+  bash scripts/ci-poll.sh "$pr_number" 1800 "$final_head" >"$final_poll_out" 2>&1
+  final_poll_rc=$?
+  set -e
+  if [ "$final_poll_rc" -ne 0 ]; then
+    case "$final_poll_rc" in
+      1) cleanup_reason="final CI was red or no longer matched sealed head $final_head" ;;
+      2) cleanup_reason="final CI timed out for sealed head $final_head" ;;
+      *) cleanup_reason="final CI poll exited $final_poll_rc for sealed head $final_head" ;;
+    esac
+    "$WORKTREE_HELPER" retain "$PROJ" "$THEME" "$cleanup_reason" || true
+    stop_run "$cleanup_reason" "$final_poll_out"
+  fi
+  if [ "$(git rev-parse HEAD)" != "$final_head" ]; then
+    cleanup_reason="local HEAD changed after final CI polling (expected $final_head, found $(git rev-parse HEAD))"
+    "$WORKTREE_HELPER" retain "$PROJ" "$THEME" "$cleanup_reason" || true
+    stop_run "$cleanup_reason" "$final_poll_out"
+  fi
+  current_pr_head="$(gh pr view "$pr_number" --json headRefOid --jq .headRefOid 2>>"$final_poll_out" || true)"
+  if [ "$current_pr_head" != "$final_head" ]; then
+    cleanup_reason="PR head changed after final CI polling (expected $final_head, found ${current_pr_head:-unavailable})"
+    "$WORKTREE_HELPER" retain "$PROJ" "$THEME" "$cleanup_reason" || true
+    stop_run "$cleanup_reason" "$final_poll_out"
+  fi
+  control_path="$(state_get .worktree.control_path)"
+  if "$WORKTREE_HELPER" cleanup "$PROJ" "$THEME" --ci-verified-head "$final_head"; then
+    WORKTREE_WAS_REMOVED=1
+    WORKTREE_REMOVAL_SUMMARY="P8 done; final CI green at ${final_head}; persistent worktree removed; branch proj/PROJ-${PROJ} retained"
+    cd "$control_path"
+    step "$WORKTREE_REMOVAL_SUMMARY"
+  else
+    cleanup_reason="$(jq -r '.worktree.cleanup_reason // "cleanup safety predicate failed"' "$BASE/state.json")"
+    WORKTREE_REMOVAL_SUMMARY="P8 blocked; PROJ worktree retained: ${cleanup_reason}. Safe next action: runner/run-phase.sh P8 $PROJ $THEME (reseal, push, exact-head CI, guarded cleanup)"
+    stop_run "$WORKTREE_REMOVAL_SUMMARY" "$final_poll_out"
+  fi
+}
+
 run_generic() {
   local skill ts writer_out peer_out writer_prompt peer_prompt writer_pid peer_pid=""
   skill="$(phase_skill "$PHASE")"
@@ -446,6 +510,39 @@ run_generic() {
   fi
 
   wait_lanes "$writer_pid" ${peer_pid:+"$peer_pid"}
+
+  # P0 creates the persistent PROJ worktree. Do not append lane evidence to
+  # the stale control-checkout state: after a successful sealed P0, re-exec
+  # this exact invocation once from the registered worktree. In auto mode the
+  # new process skips P0 and continues with P5; an explicit P0 invocation
+  # simply verifies/skips the completed phase and exits.
+  if [ "$PHASE" = P0 ]; then
+    [ "$TIMED_OUT" -eq 1 ] && stop_run "P0 writer timed out after ${TIMEOUT}s" "$writer_out"
+    [ "$WRITER_RC" -ne 0 ] && stop_run "P0 writer lane ($WRITER) exited $WRITER_RC" "$writer_out"
+    [ -n "$WORKTREE_HELPER" ] || stop_run "P0 writer exited but worktree.sh is missing — cannot re-enter the PROJ worktree" "$writer_out"
+    [ "${SKILLCHAIN_WORKTREE_REEXEC:-0}" != 1 ] || stop_run "P0 attempted a second worktree re-exec (loop guard)" "$writer_out"
+    local proj_worktree sealed
+    proj_worktree="$("$WORKTREE_HELPER" locate "$PROJ")" \
+      || stop_run "P0 writer exited but proj/PROJ-${PROJ} has no registered worktree" "$writer_out"
+    sealed="$(jq -r '.phase + ":" + .status' "$proj_worktree/specs/PROJ-${PROJ}-${THEME}/state.json" 2>/dev/null || true)"
+    [ "$sealed" = P0:done ] || stop_run "P0 writer exited but worktree state is ${sealed:-missing}, expected P0:done" "$writer_out"
+    step "P0 done — re-entering persistent PROJ worktree exactly once: $proj_worktree"
+    cd "$proj_worktree"
+    exec env SKILLCHAIN_WORKTREE_REEXEC=1 SKILLCHAIN_RUNNER_MANAGED=1 \
+      "$RUNNER_DIR/run-phase.sh" "${RUNNER_ARGS[@]}"
+  fi
+
+  # P8 runner-managed cleanup happens only after independently polling the
+  # final sealed commit. P8 lane prompts/output live outside the worktree and
+  # the lane record is intentionally not appended after the seal: either
+  # mutation would make the pushed, CI-verified worktree dirty.
+  if [ "$PHASE" = P8 ]; then
+    [ "$TIMED_OUT" -eq 1 ] && stop_run "P8 writer timed out after ${TIMEOUT}s" "$writer_out"
+    [ "$WRITER_RC" -ne 0 ] && stop_run "P8 writer lane ($WRITER) exited $WRITER_RC" "$writer_out"
+    verify_sealed "$writer_out"
+    finalize_p8_cleanup "$writer_out"
+    return 0
+  fi
 
   record_lane "$WRITER" writer "$writer_model" "$writer_start" "$(date -Iseconds)" "$WRITER_RC" "$writer_out"
   if [ -n "$peer_pid" ]; then
@@ -492,9 +589,43 @@ run_generic() {
 run_one_phase() {
   PHASE="$1"
   phase_skill "$PHASE" >/dev/null || { echo "run-phase.sh: phase $PHASE not runnable (use P0/P5/P6/P7/P8)" >&2; exit 64; }
+  if [ "$PHASE" = P0 ] && [ "${SKILLCHAIN_WORKTREE_REEXEC:-0}" != 1 ] && [ -n "$WORKTREE_HELPER" ]; then
+    local existing_worktree existing_lifecycle existing_topology existing_advanced
+    existing_worktree="$("$WORKTREE_HELPER" locate "$PROJ" 2>/dev/null || true)"
+    if [ -n "$existing_worktree" ]; then
+      existing_lifecycle="$(jq -r '.phase + ":" + .status' "$existing_worktree/specs/PROJ-${PROJ}-${THEME}/state.json" 2>/dev/null || true)"
+      existing_topology="$(jq -r --arg control "$(realpath -m "$PWD")" --arg path "$(realpath -m "$existing_worktree")" --arg branch "proj/PROJ-${PROJ}" \
+        '(.worktree.control_path == $control and .worktree.path == $path and .worktree.branch == $branch)' \
+        "$existing_worktree/specs/PROJ-${PROJ}-${THEME}/state.json" 2>/dev/null || true)"
+      case "$existing_lifecycle" in
+        P0:done|P5:*|P6:*|P7:*|P8:*|done:done) existing_advanced=1 ;;
+        *) existing_advanced=0 ;;
+      esac
+      if [ "$existing_advanced" -eq 1 ] && [ "$existing_topology" = true ]; then
+        step "registered PROJ worktree is already ${existing_lifecycle} before runner restart — re-entering without launching another P0 writer: $existing_worktree"
+        cd "$existing_worktree"
+        exec env SKILLCHAIN_WORKTREE_REEXEC=1 SKILLCHAIN_RUNNER_MANAGED=1 \
+          "$RUNNER_DIR/run-phase.sh" "${RUNNER_ARGS[@]}"
+      fi
+    fi
+  fi
+  if { [ "$PHASE" = P0 ] && [ "${SKILLCHAIN_WORKTREE_REEXEC:-0}" != 1 ]; } || [ "$PHASE" = P8 ]; then
+    # P0's control checkout must remain clean until worktree.sh prepare runs.
+    # Prompt and lane output therefore live outside the repository.
+    LANE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/skillchain-P0-PROJ-${PROJ}.XXXXXX")"
+  else
+    LANE_DIR="$BASE/5_progress/lanes"
+  fi
   mkdir -p "$LANE_DIR"
   check_precondition
-  [ "$SKIP_PHASE" -eq 1 ] && return 0
+  if [ "$SKIP_PHASE" -eq 1 ]; then
+    if [ "$PHASE" = P8 ] && [ "$(state_get '.worktree.cleanup_status // empty')" = removed ] \
+      && [ -d "$(state_get '.worktree.path // empty')" ]; then
+      step "P8 seal already exists but worktree cleanup is unfinished — resuming final CI/cleanup only"
+      finalize_p8_cleanup
+    fi
+    return 0
+  fi
   setup_providers
   if [ "$PHASE" = "P6" ]; then run_p6; else run_generic; fi
   step "$PHASE done"
@@ -505,11 +636,22 @@ if [ "$PHASE_ARG" = "auto" ]; then
     cur_phase="$(state_get .phase)"; cur_status="$(state_get .status)"
     ci="$(phase_index "$cur_phase")"; ti="$(phase_index "$ph")"
     [ "$ti" -lt "$ci" ] && continue                       # already past it
-    [ "$ti" -eq "$ci" ] && [ "$cur_status" = "done" ] && continue
+    if [ "$ti" -eq "$ci" ] && [ "$cur_status" = "done" ]; then
+      if [ "$ph" != P8 ] || [ "$(state_get '.worktree.cleanup_status // empty')" != removed ] \
+        || [ ! -d "$(state_get '.worktree.path // empty')" ]; then
+        continue
+      fi
+    fi
     run_one_phase "$ph"
   done
   step "run complete — rendering morning report"
-  ONELINER="$(node "$RUNNER_DIR/render-report.mjs" morning specs | head -n 1)"
+  if [ "$WORKTREE_WAS_REMOVED" -eq 1 ]; then
+    # The final state is durable on the retained PROJ branch; the filesystem
+    # worktree is intentionally gone, so a path-scanning renderer cannot run.
+    ONELINER="$WORKTREE_REMOVAL_SUMMARY"
+  else
+    ONELINER="$(node "$RUNNER_DIR/render-report.mjs" morning specs | head -n 1)"
+  fi
   command -v notify-send >/dev/null 2>&1 && notify-send "SkillChain run" "$ONELINER" || true
   echo "$ONELINER"
 else

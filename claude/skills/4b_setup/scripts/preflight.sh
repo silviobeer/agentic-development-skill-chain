@@ -4,12 +4,13 @@
 # Checks presence AND auth state (not just command -v), including a bounded
 # live probe per provider (claude hard, codex degradable). Behavior per §7:
 #   - HARD tool missing/unauth -> exit 1 = stop condition, never skipped silently
-#     (git, gh + auth, claude + live probe, node, jq, coderabbit + auth)
-#   - skippable tool missing   -> logged skip (sonar [+ auth], sonar-scanner, supabase)
+#     (git, gh + auth, claude + live probe, node, jq, coderabbit + auth,
+#      realpath, flock)
+#   - skippable tool missing   -> logged skip (optional PROJ-end sonar tooling, supabase)
 #   - codex missing/unauth/probe-fail -> NOT fatal: degraded single-provider
 #                                 run, recorded in state.json and flagged in
 #                                 the morning report + PR body (never silent)
-#   - agent-browser            -> hard only if any wave has frontend_routes
+#   - agent-browser            -> hard when legacy frontend_routes or structured frontend.routes exist
 # Env: PREFLIGHT_PROBE_TIMEOUT (default 90) · PREFLIGHT_SKIP_LIVE_PROBE=1 · PREFLIGHT_CODEX_INACTIVE=1
 #      skips the LLM probes (test use only — never for real overnight runs)
 # Writes the preflight block into state.json via state.sh when it exists;
@@ -29,6 +30,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_SH="$SCRIPT_DIR/state.sh"
 BASE="specs/PROJ-${PROJ}-${THEME}"
 GATE_CFG="$BASE/3-4_plan/wave-gate-config.json"
+[ -f "$GATE_CFG" ] || GATE_CFG="$BASE/6_plan/wave-gate-config.json"
 
 # Sibling Stage 2 helpers may not be next to this script yet (preflight runs
 # BEFORE the framework copy step on a fresh target): fall back to the
@@ -59,7 +61,7 @@ agent_browser_contract() {
 echo "→ P0 preflight (PROJ-${PROJ}-${THEME})"
 
 # --- hard tools ---------------------------------------------------------
-for tool in git gh claude node jq coderabbit; do
+for tool in git gh claude node jq coderabbit realpath flock unlink; do
   if have "$tool"; then say "✓ $tool"; else say "❌ $tool MISSING (hard)"; HARD_MISSING+=("$tool"); fi
 done
 
@@ -70,8 +72,8 @@ else
   say "– npm/pnpm: no package.json, not required"
 fi
 
-# agent-browser — hard only if any planned wave has frontend routes
-if [ -f "$GATE_CFG" ] && jq -e '[.waves[]?.frontend_routes[]?] | length > 0' "$GATE_CFG" >/dev/null 2>&1; then
+# agent-browser — hard for legacy per-wave routes and structured top-level routes
+if [ -f "$GATE_CFG" ] && jq -e '[.waves[]?.frontend_routes[]?, .frontend.routes[]?] | length > 0' "$GATE_CFG" >/dev/null 2>&1; then
   if have agent-browser && agent_browser_contract; then
     say "✓ agent-browser (frontend waves planned; open/read/errors contract)"
   else
@@ -149,7 +151,7 @@ if have sonar; then
   if [ -n "${SONAR_TOKEN:-}" ] || sonar auth status >/dev/null 2>&1; then
     say "✓ sonar auth (SONAR_TOKEN or auth status)"
   else
-    say "– sonar present but auth unverified (no SONAR_TOKEN) — wave-gate sonar stage will skip with a log entry"
+    say "– optional PROJ-end sonar auth unverified (no SONAR_TOKEN); mandatory wave sonar_cmd must still provide working auth and fail closed"
     SKIPPED+=("sonar-auth")
   fi
 fi

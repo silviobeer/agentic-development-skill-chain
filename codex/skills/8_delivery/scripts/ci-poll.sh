@@ -6,11 +6,12 @@
 # every workflow on that commit. This deliberately treats "no run yet" as red:
 # queued concurrency-group work has no PR check to watch.
 #
-# Usage:  ci-poll.sh <pr-number> [timeout-seconds]   (default: 1800)
+# Usage:  ci-poll.sh <pr-number> [timeout-seconds] [expected-head]
+#         expected-head binds the poll to the exact local seal commit.
 # Exit:   0 all checks green · 1 at least one check red · 2 timeout · 64 usage
 set -euo pipefail
 
-PR="${1:-}"; TIMEOUT="${2:-1800}"
+PR="${1:-}"; TIMEOUT="${2:-1800}"; EXPECTED_HEAD="${3:-}"
 if [ -z "$PR" ]; then
   echo "Usage: $0 <pr-number> [timeout-seconds]" >&2
   exit 64
@@ -19,6 +20,10 @@ case "$TIMEOUT" in (*[!0-9]*|'') echo "ci-poll.sh: timeout must be a positive in
 
 HEAD_SHA="$(gh pr view "$PR" --json headRefOid --jq .headRefOid)"
 [ -n "$HEAD_SHA" ] || { echo "ci-poll.sh: could not resolve the head commit of PR #${PR}" >&2; exit 1; }
+if [ -n "$EXPECTED_HEAD" ] && [ "$HEAD_SHA" != "$EXPECTED_HEAD" ]; then
+  echo "ci-poll.sh: PR head $HEAD_SHA does not match expected sealed head $EXPECTED_HEAD" >&2
+  exit 1
+fi
 echo "→ [$(date -Iseconds)] polling PR #${PR} at ${HEAD_SHA:0:7} (timeout ${TIMEOUT}s)"
 
 # Push and pull_request can produce two runs. The newest per workflow is the
@@ -61,6 +66,11 @@ if grep -qE $'\tfail\t' <<<"$CHECKS"; then
   grep -E $'\tfail\t' <<<"$CHECKS" | sed 's/^/   /' >&2
 fi
 if [ "$RED" -eq 0 ]; then
+  CURRENT_PR_HEAD="$(gh pr view "$PR" --json headRefOid --jq .headRefOid)"
+  if [ "$CURRENT_PR_HEAD" != "$HEAD_SHA" ]; then
+    echo "ci-poll.sh: PR head changed during polling ($HEAD_SHA -> $CURRENT_PR_HEAD); result is stale" >&2
+    exit 1
+  fi
   echo "✓ every workflow completed successfully on ${HEAD_SHA:0:7}, and no PR check is red"
   jq -r '.[] | "   \(.name): \(.conclusion)"' <<<"$RUNS"
   exit 0

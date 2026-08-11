@@ -82,7 +82,7 @@ After decomposition:
 | 3 | architecture | Produce PM-friendly technical architecture |
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
-| 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight (codex degradable), framework scripts copied into the repo |
+| 4b | setup | P0 once per PROJ: persistent PROJ worktree + branch/BASE_SHA, tool/auth preflight, reproducible dependency install, framework scripts copied into the repo |
 | 5 | executing | Implement waves with TDD and quality gates |
 | 6 | qa | Run E2E QA, security, required six-persona opposite-provider evidence review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
@@ -99,6 +99,22 @@ branch + stop report, and a rendered morning report at run end. If the
 single-provider with a model-opposite review lane — flagged in the
 morning report and PR body, never silent. See [runner/README.md](../runner/README.md)
 and CONCEPT.md for the full model.
+
+P0 creates or resumes a persistent sibling worktree for `proj/PROJ-X`; the
+runner re-enters it before P5 and keeps it through P8. Source and dependencies
+are isolated. `.env.local` is an ignored symlink to the control checkout, while
+the development database and hosted-auth budget are explicitly shared. P8
+removes the worktree only after green final CI, an identical pushed upstream
+commit, and a clean tree; otherwise reports retain its path, cleanup reason,
+and the safe P8 resume command that reseals before retrying cleanup.
+
+Wave plans carry structured AC/test-file mappings, a broad regression suite,
+auth-budget metadata, and deterministic frontend route expectations. Planning,
+Checkpoint 1, and P0 run the same consistency validator. A green wave gate
+certifies current ACs plus declared regressions—not every earlier AC command.
+Legacy string AC entries remain readable by the runtime for standalone use, but
+cannot pass the framework's evidence gate; they must be upgraded in Writing
+Plans and reapproved instead of being identified by their old array position.
 
 Stage 2 adds the bootstrap and the full context system:
 

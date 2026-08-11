@@ -30,6 +30,13 @@ const usage = () => {
 };
 
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
+const shellQuote = (value) => `'${String(value).replaceAll("'", `'"'"'`)}'`;
+const safeP8Resume = (s) => {
+  if (!s.worktree?.path) return null;
+  const projX = String(s.proj ?? "").replace(/^PROJ-/, "");
+  if (!/^\d+$/.test(projX) || typeof s.theme !== "string") return null;
+  return `(cd ${shellQuote(s.worktree.path)} && ${shellQuote(join(here, "run-phase.sh"))} P8 ${shellQuote(projX)} ${shellQuote(s.theme)})`;
+};
 const fill = (template, values) => {
   let out = template;
   for (const [k, v] of Object.entries(values)) out = out.replaceAll(`{{${k}}}`, String(v));
@@ -60,6 +67,10 @@ if (mode === "morning") {
     const deferred = f.filter((x) => x.status === "deferred");
     const openBlocking = f.filter((x) => x.status === "open" && (x.severity === "critical" || x.severity === "high"));
     const gaps = Object.entries(s.waves?.stories ?? {}).filter(([, st]) => st === "gap");
+    const wt = s.worktree;
+    const cleanupDisplay = wt?.cleanup_status === "removed" && existsSync(wt.path)
+      ? "removal sealed; awaiting guarded cleanup"
+      : (wt?.cleanup_status ?? "pending");
     if (s.pr?.url) prs++;
     if (s.status === "blocked") stops++;
     if (s.phase === "P8" && s.status === "done" || s.phase === "done") done++;
@@ -69,8 +80,15 @@ if (mode === "morning") {
       "",
       s.pr?.url ? `- **PR:** ${s.pr.url} (CI: ${s.pr.ci ?? "unknown"})` : "- **PR:** not created",
       `- **Waves:** ${s.waves?.current ?? "—"}/${s.waves?.total ?? "—"}`,
+      "- **Wave-gate scope:** current ACs plus each wave's declared broad regressions; earlier AC commands are not implicitly rerun",
       `- **Findings:** ${f.length} total · ${openBlocking.length} open blocking · ${deferred.length} deferred debt`,
       `- **Known gaps:** ${gaps.length ? gaps.map(([us]) => us).join(", ") : "none"}`,
+      wt
+        ? `- **Worktree:** \`${wt.path}\` (${cleanupDisplay}${wt.cleanup_reason ? ` — ${wt.cleanup_reason}` : ""})`
+        : "- **Worktree:** not recorded",
+      wt
+        ? `- **Isolation:** dependencies ${wt.dependency_install ?? "unknown"}; .env.local ${wt.env_link_status ?? "unknown"}; database/auth infrastructure shared; dev port ${wt.dev_port ?? "—"}`
+        : "- **Isolation:** legacy run",
       s.degraded
         ? `- **Degradation:** ⚠ single-provider run (${s.degraded_reason ?? "codex unavailable"}) — cross-review: model-opposite fallback`
         : "- **Degradation:** none",
@@ -78,6 +96,12 @@ if (mode === "morning") {
     if (s.status === "blocked") {
       lines.push(`- **STOPPED:** ${s.stop?.reason ?? "unknown"} — report: ${s.stop?.report ?? "missing"}`);
       if (s.stop?.rescue_branch) lines.push(`- **Cleanup:** rescue branch \`${s.stop.rescue_branch}\` to inspect/merge/delete`);
+    }
+    if (wt?.cleanup_status === "retained") {
+      const retry = safeP8Resume(s);
+      lines.push(retry
+        ? `- **Safe cleanup resume (reseals, pushes, and re-polls exact HEAD):** \`${retry}\``
+        : "- **Cleanup:** resume through P8 and obtain final green CI before running the guarded worktree helper");
     }
     if (deferred.length) {
       lines.push("", "  Deferred debt (decide at CP2):");
@@ -108,6 +132,9 @@ if (mode === "morning") {
   const base = `specs/PROJ-${projX}-${theme}`;
   if (!existsSync(join(base, "state.json"))) { console.error(`render-report.mjs: ${base}/state.json missing`); process.exit(2); }
   const s = readJson(join(base, "state.json"));
+  const cleanupDisplay = s.worktree?.cleanup_status === "removed" && existsSync(s.worktree.path)
+    ? "removal sealed; awaiting guarded cleanup"
+    : (s.worktree?.cleanup_status ?? "pending");
 
   let errorOutput = "(no captured output)";
   if (errFile && existsSync(errFile)) {
@@ -121,16 +148,26 @@ if (mode === "morning") {
   const stateSummary = [
     `- Phase/status: ${s.phase}:${s.status}`,
     `- Branch: \`${s.branch ?? "—"}\` (base ${s.base_sha ?? "—"})`,
+    s.worktree
+      ? `- Worktree: \`${s.worktree.path}\` from control \`${s.worktree.control_path}\` (${cleanupDisplay}${s.worktree.cleanup_reason ? ` — ${s.worktree.cleanup_reason}` : ""})`
+      : "- Worktree: not recorded (legacy run)",
+    s.worktree
+      ? `- Isolation: dependencies ${s.worktree.dependency_install ?? "unknown"}; .env.local ${s.worktree.env_link_status ?? "unknown"}; database/auth infrastructure shared; dev port ${s.worktree.dev_port ?? "—"}`
+      : null,
     `- Waves: ${s.waves?.current ?? "—"}/${s.waves?.total ?? "—"}; stories: ${
       Object.entries(s.waves?.stories ?? {}).map(([us, st]) => `${us}=${st}`).join(", ") || "—"
     }`,
     ...lanes,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   const cleanup = [
     s.stop?.rescue_branch ? `- Rescue branch \`${s.stop.rescue_branch}\`: inspect, salvage, delete` : null,
     `- Lane output files under \`${base}/5_progress/lanes/\`: review, then remove`,
-    "- Open worktrees / dev servers (if any): documented above — evidence, do not delete before reading",
+    s.worktree?.path
+      ? (safeP8Resume(s)
+          ? `- Retained PROJ worktree \`${s.worktree.path}\`: after resolving the stop, resume P8 (reseal, push, exact-head CI, guarded cleanup) with \`${safeP8Resume(s)}\``
+          : `- Retained PROJ worktree \`${s.worktree.path}\`: resume through P8 and obtain final green CI before running \`scripts/worktree.sh cleanup\``)
+      : "- Open worktrees / dev servers (if any): documented above — evidence, do not delete before reading",
   ].filter(Boolean).join("\n");
 
   const out = fill(tmpl("stop-report.md.tmpl"), {

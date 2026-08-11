@@ -74,6 +74,17 @@ const docChanges = (state.docs_changed ?? []).length
   ? state.docs_changed.map((d) => `- ${d}`).join("\n")
   : "—";
 
+const worktreeIsolation = state.worktree
+  ? `dependencies: ${state.worktree.dependency_install ?? "unknown"}; ` +
+    `.env.local: ${state.worktree.env_link_status ?? "unknown"}; ` +
+    `database/auth infrastructure: shared; dev port: ${state.worktree.dev_port ?? "—"}`
+  : "legacy run — no PROJ worktree metadata";
+
+const worktreeCleanup = state.worktree
+  ? `${state.worktree.cleanup_status ?? "pending"}` +
+    (state.worktree.cleanup_reason ? ` — ${state.worktree.cleanup_reason}` : "")
+  : "not applicable";
+
 const values = {
   PROJ: state.proj,
   PROJ_NUMBER: projX,
@@ -86,6 +97,8 @@ const values = {
   KNOWN_GAPS: knownGaps,
   DEBT_SECTION: debtSection,
   DEGRADATIONS: degradations,
+  WORKTREE_ISOLATION: worktreeIsolation,
+  WORKTREE_CLEANUP: worktreeCleanup,
   DOC_CHANGES: docChanges,
   RENDERED_AT: new Date().toISOString(),
 };

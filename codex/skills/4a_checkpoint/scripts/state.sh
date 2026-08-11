@@ -79,6 +79,21 @@ validate() {
     and (($s.degraded // false) | type == "boolean")
     and (($s.context // {}) | type == "object")
     and (($s.cross_review // []) | type == "array")
+    and ((($s | has("worktree")) | not) or (
+      ($s.worktree | type == "object")
+      and (["control_path","path","branch","env_link_status","database_mode","dev_port","dependency_install","cleanup_status","cleanup_reason"]
+           | all(. as $k | $s.worktree | has($k)))
+      and ($s.worktree.control_path | type == "string")
+      and ($s.worktree.path | type == "string")
+      and ($s.worktree.branch | type == "string" and test("^proj/PROJ-[0-9]+$"))
+      and (["linked","not_present"] | index($s.worktree.env_link_status) != null)
+      and ($s.worktree.database_mode == "shared")
+      and (($s.worktree.dev_port == null) or
+           ($s.worktree.dev_port | type == "number" and floor == . and . >= 1 and . <= 65535))
+      and (["installed","not_applicable"] | index($s.worktree.dependency_install) != null)
+      and (["pending","retained","removed"] | index($s.worktree.cleanup_status) != null)
+      and (($s.worktree.cleanup_reason == null) or ($s.worktree.cleanup_reason | type == "string"))
+    ))
     and ([($s.lanes // [])[] | select((.provider? // "") as $p | ["claude","codex"] | index($p) | not)] | length == 0)
   ' "$1" >/dev/null 2>&1
 }

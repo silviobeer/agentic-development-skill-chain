@@ -1,6 +1,6 @@
 # Executing Skill
 
-**Last updated:** 2026-06-16
+**Last updated:** 2026-08-11
 
 The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification after each user story and hard gates between waves.
 
@@ -34,7 +34,7 @@ Outputs:
 
 ```mermaid
 flowchart TD
-  A[Preflight] --> B[Create progress.md and record BASE_SHA]
+  A[P0 creates or resumes persistent PROJ worktree] --> B[Re-enter worktree and record BASE_SHA]
   B --> C[Read PRDs, architecture, and wave plans]
   C --> D[Start wave N and tag wave base]
   D --> E[Implement each user story with TDD]
@@ -58,6 +58,11 @@ Before implementation starts, the skill checks the project environment because l
 
 Required setup includes:
 
+- A clean, committed control checkout at the approved CP1 HEAD.
+- A registered persistent sibling worktree on `proj/PROJ-X`; P5–P8 execute there.
+- Worktree-local dependencies installed reproducibly from the detected lockfile.
+- An ignored `.env.local` source symlinked from the control checkout. Development
+  data and hosted-auth budgets remain shared and use the configured common lock.
 - CodeRabbit config at `.coderabbit.yaml` or `.coderabbit.yml`, with focused path filters.
 - Supabase CLI or equivalent Supabase tooling when the project uses Supabase.
 - Playwright MCP when planned frontend routes require full QA later.
@@ -194,16 +199,32 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 The script validates:
 
-- Every `ac_commands` entry for the wave exits 0.
+- Every structured `ac_commands` entry for the wave exits 0 and selects tests.
+- A cached AC pass matches its ID, command, positive selected count, and committed `verified_head`.
+- Every declared `regression_commands` entry runs before build; selection-aware suites cannot pass empty.
 - The configured `build_cmd` exits 0.
-- CodeRabbit reports no non-advisory findings for the wave diff.
-- The `sonar` local scan and secrets check report nothing blocking.
-- `agent-browser` smoke tests pass for configured frontend routes.
+- CodeRabbit archives unique raw and normalized evidence for every attempt,
+  ingests validated finding records, and leaves no cumulative open blocking ledger findings.
+- The required top-level `sonar_cmd` runs with a timeout in the current
+  persistent PROJ worktree and reports nothing blocking. It may invoke
+  `sonar-scanner`, an npm script, or a project wrapper; the gate does not use a
+  `command -v sonar` shortcut or skip a missing command.
+- The gate reuses or starts the configured dev server. Anonymous routes retain
+  the expected URL and text; redirects fail. Protected routes use auth state or
+  are covered by an authenticated E2E regression.
 - `gen-component-registry.mjs --check` passes: `docs/components.md` is current, every component carries its doc block, and every component has its `id="<kebab-name>"` section on the showcase page.
 
 If the script exits non-zero, execution stops at that gate, fixes the failure, and reruns the script. Only a passing script allows the next wave to start.
 
 On success, the script appends the canonical passed block to `progress.md`.
+That proof means current ACs plus the declared broad regression suite passed;
+it does not imply that all earlier waves' AC commands were rerun.
+
+The runtime parser still accepts legacy string AC entries for standalone older
+projects. Framework planning gates intentionally do not certify those entries:
+they lack stable AC/task/test-file evidence and a mandatory regression suite.
+Before CP1/P0, reopen the plan in Writing Plans, add the structured metadata,
+and reapprove it; the framework never infers AC identity from an old array index.
 
 ## Build Policy
 
@@ -216,9 +237,9 @@ If a build fails, the fix gets the verbatim compiler output and the failing gate
 
 ## CodeRabbit and Smoke Tests
 
-CodeRabbit is mandatory per wave, but it is owned by the wave gate. The lead does not run a second separate per-wave CodeRabbit review.
+CodeRabbit is mandatory per wave, but it is owned by the wave gate. The lead does not run a second separate per-wave CodeRabbit review. Raw and normalized attempt files are retained, and the decision uses the cumulative open blocking ledger rather than only the latest nondeterministic response.
 
-Frontend smoke tests are also owned by the wave gate. They use `agent-browser` against configured routes to catch blank pages, visible errors, and broken primary happy paths before the next wave compounds the issue.
+Frontend smoke tests are also owned by the wave gate. They use `agent-browser` against URL and content expectations; a login redirect is not a successful anonymous smoke result.
 
 ## PROJ Quality Gate
 
@@ -228,7 +249,10 @@ It includes:
 
 - Full code review of the feature diff.
 - One PROJ-level build using `build_cmd`.
-- Optional Sonar scan when both `sonar` and `sonar-scanner` are available and the project is configured.
+- Optional additional PROJ-end Sonar scan when both `sonar` and
+  `sonar-scanner` are available and the project is configured. This is distinct
+  from the mandatory per-wave `sonar_cmd`; its skip policy cannot satisfy or
+  bypass a wave gate.
 - Test and lint verification.
 
 Exit criteria:

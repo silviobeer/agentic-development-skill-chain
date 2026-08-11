@@ -42,6 +42,10 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
   Peer findings are ingested into the ledger; a failed peer never stops
   the run — but a failed or timed-out WRITER cancels the peer
   immediately, and SIGINT/SIGTERM kill both lane process groups.
+- **Persistent PROJ worktree:** P0 creates or resumes the registered sibling
+  worktree and `run-phase.sh` re-executes there before later phases. Dependencies
+  are local to that checkout; `.env.local`, development data, and hosted-auth
+  limits are shared. Cleanup is conservative and belongs to successful P8.
 - **P6 is sequential:** the read-only QA finder runs FIRST and its
   findings are ingested before the P6 controller starts; the runner
   refuses `P6:done` while the ledger has open Critical/High findings.
@@ -80,6 +84,8 @@ Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `PEER_GRACE`
 (seconds a peer may outlive the writer, default 300),
 `PONYTAIL_ENFORCE` (0 = loud escape hatch for the P0 ponytail gate),
 `CONTEXT_BUNDLE_BUDGET` (token budget override for the compiler).
+`SKILLCHAIN_WORKTREE_ROOT` overrides the default sibling-worktree base;
+`SKILLCHAIN_DEV_PORT` records the PROJ dev port when setup needs a non-default.
 
 The runner never edits `state.json` or `findings.json` directly — all
 writes go through `scripts/state.sh` and `scripts/ledger.mjs` (both

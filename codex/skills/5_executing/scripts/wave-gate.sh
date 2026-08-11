@@ -1,147 +1,142 @@
 #!/usr/bin/env bash
-#
-# wave-gate.sh — Wave Completion Gate
-#
-# Validates that the current wave is cleanly finished before the next wave
-# starts. Exit 0 = pass. Non-zero exit = BLOCK next wave.
-#
-# Usage:
-#   bash scripts/wave-gate.sh <wave-number> <proj-x> <theme>
-# Example:
-#   bash scripts/wave-gate.sh 2 1 auth
-#
-# Requires:
-#   - jq (for parsing wave-gate-config.json)
-#   - The config file at specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json
-#   - coderabbit CLI
-#   - agent-browser CLI (for frontend smoke tests when frontend_routes is non-empty)
-#
-# Copy this file into every project that uses the skill chain, at:
-#   scripts/wave-gate.sh
-#
+# wave-gate.sh — evidence-based Wave Completion Gate (Codex variant)
 set -euo pipefail
 
 STATUS_ONLY=false
-if [[ "${1:-}" == "--status" ]]; then
-  STATUS_ONLY=true
-  shift
-fi
-
-WAVE="${1:-}"
-PROJ="${2:-}"
-THEMA="${3:-}"
-
-if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEMA" ]]; then
+if [[ "${1:-}" == "--status" ]]; then STATUS_ONLY=true; shift; fi
+WAVE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
+if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEME" ]]; then
   echo "Usage: $0 [--status] <wave-number> <proj-x> <theme>" >&2
   exit 64
 fi
 
-BASE="specs/PROJ-${PROJ}-${THEMA}"
+BASE="specs/PROJ-${PROJ}-${THEME}"
 PROGRESS="${BASE}/5_progress/PROJ-${PROJ}-progress.md"
 CFG="${BASE}/3-4_plan/wave-gate-config.json"
 RALPH_STATE="${BASE}/5_progress/ralph-wave-${WAVE}.json"
 RALPH_PID="${BASE}/5_progress/ralph-wave-${WAVE}.pid"
 RALPH_HEARTBEAT="${BASE}/5_progress/ralph-wave-${WAVE}.heartbeat"
+WAVE_KEY=".waves[\"${WAVE}\"]"
+DEV_PID=""
+DEV_PROCESS_GROUP=false
+OWNS_RALPH=false
 
-fail() { echo "❌ Wave ${WAVE} Gate FAILED: $1" >&2 ; exit 1 ; }
-step() { echo "→ [$(date +%H:%M:%S)] $1" ; }
-
-# Run a command with a timeout; fail with a descriptive message on timeout.
-# Usage: run_with_timeout <seconds> <label> <cmd...>
-run_with_timeout() {
-  local secs="$1" ; shift
-  local label="$1" ; shift
-  local start=$(date +%s)
-  set +e
-  timeout --foreground "${secs}" "$@"
-  local rc=$?
-  set -e
-  if [[ $rc -ne 0 ]]; then
-    local elapsed=$(( $(date +%s) - start ))
-    if [[ $rc -eq 124 ]]; then
-      fail "${label} timed out after ${secs}s (elapsed ${elapsed}s)"
-    fi
-    fail "${label} failed with exit ${rc} (elapsed ${elapsed}s)"
+fail() { echo "❌ Wave ${WAVE} Gate FAILED: $1" >&2; exit 1; }
+infra_fail() {
+  local message="$1" code="${2:-70}" tmp
+  if [[ -f "$RALPH_STATE" ]]; then
+    tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+    jq --arg message "$message" --argjson code "$code" --arg updated "$(date -Iseconds)" '
+      .ralph_status="infrastructure_failed"
+      | .infrastructure_failure={message:$message,exit_code:$code,at:$updated}
+      | .updated_at=$updated
+    ' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE" || rm -f "$tmp"
   fi
-  local elapsed=$(( $(date +%s) - start ))
+  echo "🏗️ Wave ${WAVE} Gate INFRASTRUCTURE FAILED: $message" >&2
+  exit "$code"
+}
+step() { echo "→ [$(date +%H:%M:%S)] $1"; }
+heartbeat() { date +%s > "$RALPH_HEARTBEAT"; }
+
+cleanup() {
+  [[ "$OWNS_RALPH" == false ]] || rm -f "$RALPH_PID"
+  if [[ -n "$DEV_PID" ]] && kill -0 "$DEV_PID" 2>/dev/null; then
+    if [[ "$DEV_PROCESS_GROUP" == true ]]; then kill -- "-$DEV_PID" 2>/dev/null || true; else kill "$DEV_PID" 2>/dev/null || true; fi
+    wait "$DEV_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
+run_with_timeout() {
+  local secs="$1" label="$2"; shift 2
+  local started rc elapsed
+  started=$(date +%s)
+  set +e
+  timeout --foreground "$secs" "$@"
+  rc=$?
+  set -e
+  elapsed=$(( $(date +%s) - started ))
+  [[ "$rc" -eq 124 ]] && fail "${label} timed out after ${secs}s (elapsed ${elapsed}s)"
+  [[ "$rc" -eq 0 ]] || fail "${label} failed with exit ${rc} (elapsed ${elapsed}s)"
   echo "   ✓ ${label} done in ${elapsed}s"
 }
 
-[[ -f "$CFG" ]]       || fail "config missing: $CFG"
-[[ -f "$PROGRESS" ]]  || fail "progress missing: $PROGRESS"
+[[ -f "$CFG" ]] || fail "config missing: $CFG"
+[[ -f "$PROGRESS" ]] || fail "progress missing: $PROGRESS"
 command -v jq >/dev/null || fail "jq not installed"
-
-WAVE_KEY=".waves[\"${WAVE}\"]"
+command -v git >/dev/null || fail "git not installed"
 jq -e "$WAVE_KEY" "$CFG" >/dev/null || fail "wave ${WAVE} not configured in $CFG"
 
-# Timeouts are config-owned so every agent and rerun uses the same budget.
-AC_TIMEOUT=$(jq -er '.timeouts.ac_seconds' "$CFG") || fail "timeouts.ac_seconds missing in $CFG"
-BUILD_TIMEOUT=$(jq -er '.timeouts.build_seconds' "$CFG") || fail "timeouts.build_seconds missing in $CFG"
-CODERABBIT_TIMEOUT=$(jq -er '.timeouts.coderabbit_seconds' "$CFG") || fail "timeouts.coderabbit_seconds missing in $CFG"
-BROWSER_TIMEOUT=$(jq -er '.timeouts.browser_seconds' "$CFG") || fail "timeouts.browser_seconds missing in $CFG"
-for pair in "ac_seconds:$AC_TIMEOUT" "build_seconds:$BUILD_TIMEOUT" "coderabbit_seconds:$CODERABBIT_TIMEOUT" "browser_seconds:$BROWSER_TIMEOUT"; do
-  key="${pair%%:*}"
-  value="${pair#*:}"
-  [[ "$value" =~ ^[0-9]+$ && "$value" -gt 0 ]] || fail "invalid timeout ${key}='${value}' in $CFG"
-done
-
-# Long Ralph runs are resumable. This is deliberately not state.json: it is
-# ephemeral verification evidence, kept beside progress.md and written after
-# every command so an interrupted run never loses already-green ACs.
+AC_TIMEOUT=$(jq -er '.timeouts.ac_seconds' "$CFG") || fail "timeouts.ac_seconds missing"
+BUILD_TIMEOUT=$(jq -er '.timeouts.build_seconds' "$CFG") || fail "timeouts.build_seconds missing"
+CODERABBIT_TIMEOUT=$(jq -er '.timeouts.coderabbit_seconds' "$CFG") || fail "timeouts.coderabbit_seconds missing"
+BROWSER_TIMEOUT=$(jq -er '.timeouts.browser_seconds' "$CFG") || fail "timeouts.browser_seconds missing"
+SONAR_TIMEOUT=$(jq -r '.timeouts.sonar_seconds // 120' "$CFG")
+SONAR_CMD=$(jq -er '.sonar_cmd | select(type=="string" and test("\\S"))' "$CFG") \
+  || fail "sonar_cmd must be a non-empty top-level command"
 RALPH_STALL_SECONDS=$(jq -r '.timeouts.ralph_stall_seconds // .timeouts.ac_seconds' "$CFG")
 RATE_LIMIT_BACKOFF_SECONDS=$(jq -r "${WAVE_KEY}.rate_limit_backoff_seconds // .rate_limit_backoff_seconds // 330" "$CFG")
 AUTH_PACING_SECONDS=$(jq -r "${WAVE_KEY}.auth_pacing_seconds // 0" "$CFG")
-for pair in "ralph_stall_seconds:$RALPH_STALL_SECONDS" "rate_limit_backoff_seconds:$RATE_LIMIT_BACKOFF_SECONDS" "auth_pacing_seconds:$AUTH_PACING_SECONDS"; do
-  key="${pair%%:*}"
+for pair in "ac:$AC_TIMEOUT" "build:$BUILD_TIMEOUT" "coderabbit:$CODERABBIT_TIMEOUT" "browser:$BROWSER_TIMEOUT" "sonar:$SONAR_TIMEOUT" "stall:$RALPH_STALL_SECONDS" "backoff:$RATE_LIMIT_BACKOFF_SECONDS" "pacing:$AUTH_PACING_SECONDS"; do
   value="${pair#*:}"
-  [[ "$value" =~ ^[0-9]+$ ]] || fail "invalid ${key}='${value}' in $CFG"
+  [[ "$value" =~ ^[0-9]+$ ]] || fail "invalid timeout/pacing ${pair}"
+done
+for value in "$AC_TIMEOUT" "$BUILD_TIMEOUT" "$CODERABBIT_TIMEOUT" "$BROWSER_TIMEOUT" "$SONAR_TIMEOUT"; do
+  [[ "$value" -gt 0 ]] || fail "required timeouts must be greater than zero"
 done
 
-heartbeat() { date +%s > "$RALPH_HEARTBEAT"; }
+AUTH_PREFLIGHT_CMD=$(jq -r '.auth_budget.preflight_cmd // empty' "$CFG")
+AUTH_EXHAUSTED_RC=$(jq -r '.auth_budget.exhausted_exit_code // 75' "$CFG")
+[[ "$AUTH_EXHAUSTED_RC" =~ ^[0-9]+$ && "$AUTH_EXHAUSTED_RC" -gt 0 && "$AUTH_EXHAUSTED_RC" -lt 256 ]] \
+  || fail "auth_budget.exhausted_exit_code must be 1..255"
 
 sleep_with_heartbeat() {
   local remaining="$1" chunk
   while [[ "$remaining" -gt 0 ]]; do
-    chunk=$(( remaining > 30 ? 30 : remaining ))
-    sleep "$chunk"
-    remaining=$(( remaining - chunk ))
-    heartbeat
+    chunk=$((remaining > 30 ? 30 : remaining)); sleep "$chunk"; remaining=$((remaining - chunk)); heartbeat
   done
 }
 
 init_ralph_state() {
   [[ -f "$RALPH_STATE" ]] && return
-  local tmp
-  tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
-  jq -n --arg wave "$WAVE" --arg started "$(date -Iseconds)" \
-    '{version: 1, wave: $wave, started_at: $started, updated_at: $started, ralph_status: "running", commands: []}' \
-    > "$tmp"
+  local tmp started
+  started=$(date -Iseconds); tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+  jq -n --arg wave "$WAVE" --arg started "$started" \
+    '{version:2,wave:$wave,started_at:$started,updated_at:$started,ralph_status:"running",commands:[],regressions:[]}' >"$tmp"
   mv "$tmp" "$RALPH_STATE"
 }
 
 record_ac() {
-  local index="$1" command="$2" attempts="$3" rc="$4" selected="$5" status="$6" log="$7" tmp
+  local index="$1" id="$2" task="$3" command="$4" tests="$5" attempts="$6" rc="$7" selected="$8" status="$9" log="${10}" verified_head="${11}" tmp
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
-  jq --argjson index "$index" --arg command "$command" --argjson attempts "$attempts" \
-    --argjson rc "$rc" --argjson selected "$selected" --arg status "$status" \
-    --arg log "$log" --arg updated "$(date -Iseconds)" '
-      .updated_at = $updated |
-      .commands = ((.commands // []) | map(select(.index != $index)) +
-        [{index: $index, command: $command, attempts: $attempts, rc: $rc,
-          selected: $selected, status: $status, log: $log, updated_at: $updated}])
-    ' "$RALPH_STATE" > "$tmp" && mv "$tmp" "$RALPH_STATE"
+  jq --argjson index "$index" --arg id "$id" --arg task "$task" --arg command "$command" --argjson tests "$tests" \
+    --argjson attempts "$attempts" --argjson rc "$rc" --argjson selected "$selected" --arg status "$status" \
+    --arg log "$log" --arg head "$verified_head" --arg updated "$(date -Iseconds)" '
+      .updated_at=$updated |
+      .commands=((.commands // []) | map(select(.index != $index)) + [{index:$index,id:$id,task:($task | if .=="" then null else . end),command:$command,test_files:$tests,attempts:$attempts,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
+    ' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
+}
+
+record_regression() {
+  local label="$1" command="$2" tests="$3" rc="$4" selected="$5" status="$6" log="$7" head="$8" tmp
+  tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
+  jq --arg label "$label" --arg command "$command" --argjson tests "$tests" --argjson rc "$rc" --argjson selected "$selected" \
+    --arg status "$status" --arg log "$log" --arg head "$head" --arg updated "$(date -Iseconds)" '
+      .updated_at=$updated |
+      .regressions=((.regressions // []) | map(select(.label != $label)) + [{label:$label,command:$command,test_files:$tests,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
+    ' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 }
 
 selected_count() {
   local log="$1" match
   match=$(grep -Eo 'Running[[:space:]]+[0-9]+[[:space:]]+tests?' "$log" 2>/dev/null | head -1 || true)
-  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<<"$match" | head -1; return; }
   match=$(grep -Eo 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' "$log" 2>/dev/null | head -1 || true)
-  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<<"$match" | head -1; return; }
   match=$(grep -Eo '^#[[:space:]]+tests[[:space:]]+[0-9]+' "$log" 2>/dev/null | head -1 || true)
-  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | tail -1; return; }
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<<"$match" | tail -1; return; }
   match=$(grep -Eo '(^|[^0-9])[0-9]+[[:space:]]+passed([[:space:]]|$)' "$log" 2>/dev/null | head -1 || true)
-  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<< "$match" | head -1; return; }
+  [[ -n "$match" ]] && { grep -Eo '[0-9]+' <<<"$match" | head -1; return; }
   echo 0
 }
 
@@ -149,326 +144,272 @@ provider_rate_limited() {
   grep -Eiq 'over_request_rate_limit|Request[[:space:]]+rate[[:space:]]+limit[[:space:]]+reached|HTTP(/[0-9.]+)?[[:space:]]+429([^0-9]|$)|"status"[[:space:]]*:[[:space:]]*429([^0-9]|$)|status[[:space:]]*=[[:space:]]*429([^0-9]|$)' "$1"
 }
 
-ralph_status() {
-  [[ -f "$RALPH_STATE" ]] || fail "no Ralph state recorded: $RALPH_STATE"
-  local pid="" heartbeat_at="" age="" heartbeat_age_json=0 state_status
-  [[ -f "$RALPH_PID" ]] && pid=$(tr -cd '0-9' < "$RALPH_PID")
-  [[ -f "$RALPH_HEARTBEAT" ]] && heartbeat_at=$(tr -cd '0-9' < "$RALPH_HEARTBEAT")
-  if [[ -n "$heartbeat_at" ]]; then age=$(( $(date +%s) - heartbeat_at )); heartbeat_age_json="$age"; else age="unknown"; fi
-  jq --arg pid "$pid" --argjson heartbeat_age "$heartbeat_age_json" '. + {pid: ($pid | if . == "" then null else tonumber end), heartbeat_age_seconds: $heartbeat_age}' "$RALPH_STATE"
-  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-    [[ "$age" == "unknown" || "$age" -le "$RALPH_STALL_SECONDS" ]] || fail "Ralph PID ${pid} is alive but made no progress for ${age}s (limit ${RALPH_STALL_SECONDS}s)"
-    return
-  fi
-  state_status=$(jq -r '.ralph_status // "running"' "$RALPH_STATE")
-  [[ -z "$pid" && "$state_status" == complete ]] && return
-  [[ -z "$pid" ]] && fail "Ralph state is ${state_status} but has no PID; rerun the gate to resume from $RALPH_STATE"
-  fail "Ralph PID ${pid} is not alive; rerun the gate to resume from $RALPH_STATE"
+is_evidence_path() {
+  case "$1" in
+    "$PROGRESS"|"$BASE/findings.json"|"$BASE/.findings.lock"|"$BASE/5_progress/ralph-wave-${WAVE}"*|"$BASE/5_progress/coderabbit-wave-${WAVE}-attempt-"*|"$BASE/5_progress/dev-server-wave-${WAVE}.log") return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
-if [[ "$STATUS_ONLY" == true ]]; then
-  ralph_status
-  exit 0
-fi
+assert_clean_worktree() {
+  local line path dirty=()
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    path="${line:3}"; path="${path#* -> }"
+    is_evidence_path "$path" || dirty+=("$line")
+  done < <(git status --porcelain=v1 --untracked-files=all)
+  [[ "${#dirty[@]}" -eq 0 ]] || fail "working tree contains non-gate changes; commit them before certification: ${dirty[*]}"
+}
 
-# CodeRabbit findings whose severity is listed here are logged as advisory.
-# Everything else blocks.
-jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null \
-  || fail "waves.${WAVE}.advisory_severities missing or not an array in $CFG"
-mapfile -t ADVISORY_SEVERITIES < <(jq -r "${WAVE_KEY}.advisory_severities[] | ascii_downcase" "$CFG")
-if [[ "${#ADVISORY_SEVERITIES[@]}" -eq 0 ]]; then
-  ADVISORY_JSON='[]'
-else
-  ADVISORY_JSON=$(printf '%s\n' "${ADVISORY_SEVERITIES[@]}" | jq -R . | jq -cs .)
-fi
-ADVISORY_LABEL=$(IFS=, ; echo "${ADVISORY_SEVERITIES[*]:-none}")
+assert_verified_head() {
+  local current
+  current=$(git rev-parse --verify HEAD)
+  [[ "$current" == "$VERIFIED_HEAD" ]] || fail "HEAD changed during gate verification (${VERIFIED_HEAD} -> ${current}); rerun all evidence on the new committed HEAD"
+}
 
-echo "=== Wave ${WAVE} Completion Gate — advisory severities: ${ADVISORY_LABEL} (PROJ-${PROJ}-${THEMA}) ==="
+ralph_status() {
+  [[ -f "$RALPH_STATE" ]] || fail "no Ralph state recorded: $RALPH_STATE"
+  local pid="" heartbeat_at="" age="unknown" status
+  [[ -f "$RALPH_PID" ]] && pid=$(tr -cd '0-9' <"$RALPH_PID")
+  [[ -f "$RALPH_HEARTBEAT" ]] && heartbeat_at=$(tr -cd '0-9' <"$RALPH_HEARTBEAT")
+  [[ -n "$heartbeat_at" ]] && age=$(( $(date +%s) - heartbeat_at ))
+  jq --arg pid "$pid" --arg age "$age" '. + {pid:($pid|if .=="" then null else tonumber end),heartbeat_age_seconds:($age|if .=="unknown" then null else tonumber end)}' "$RALPH_STATE"
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    [[ "$age" == unknown || "$age" -le "$RALPH_STALL_SECONDS" ]] || fail "Ralph PID ${pid} is stalled (${age}s)"
+    return
+  fi
+  status=$(jq -r '.ralph_status // "running"' "$RALPH_STATE")
+  [[ -z "$pid" && "$status" == complete ]] && return
+  fail "Ralph state is ${status} without a live PID; rerun the gate to resume"
+}
 
-# ─── 1. Ralph: AC checks ────────────────────────────────────────────────────
-step "1/6 Ralph: AC verification"
+if [[ "$STATUS_ONLY" == true ]]; then ralph_status; exit 0; fi
+
+# Runs an auth-budget preflight and the test under the shared-project lock.
+# Return codes 73/74 and the configured exhausted code are infrastructure, not test failures.
+run_test_command() {
+  local auth="$1" command="$2" timeout_secs="$3" log="$4" hook_log="$5" rc
+  if [[ "$auth" != true ]]; then
+    timeout --foreground "$timeout_secs" bash -c "$command" >"$log" 2>&1; rc=$?
+    return "$rc"
+  fi
+  [[ -n "$AUTH_PREFLIGHT_CMD" ]] || infra_fail "auth-consuming command has no auth_budget.preflight_cmd"
+  [[ -x scripts/worktree.sh ]] || infra_fail "auth-consuming command requires executable scripts/worktree.sh"
+  env WAVE="$WAVE" WAVE_GATE_CONFIG="$CFG" RALPH_STATE="$RALPH_STATE" \
+    scripts/worktree.sh with-shared-lock -- bash -c '
+      set +e
+      bash -c "$1" >"$2" 2>&1
+      hook_rc=$?
+      set -e
+      if grep -q "AUTH_BUDGET_EXHAUSTED" "$2" || [[ "$hook_rc" -eq "$3" ]]; then exit "$3"; fi
+      [[ "$hook_rc" -eq 0 ]] || exit 74
+      timeout --foreground "$4" bash -c "$5" >"$6" 2>&1
+    ' _ "$AUTH_PREFLIGHT_CMD" "$hook_log" "$AUTH_EXHAUSTED_RC" "$timeout_secs" "$command" "$log"
+  rc=$?
+  return "$rc"
+}
+
+jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null || fail "advisory_severities missing"
+ADVISORY_JSON=$(jq -c "${WAVE_KEY}.advisory_severities | map(ascii_downcase)" "$CFG")
+ADVISORY_LABEL=$(jq -r "${WAVE_KEY}.advisory_severities | if length==0 then \"none\" else join(\",\") end" "$CFG")
+VERIFIED_HEAD=$(git rev-parse --verify HEAD)
+assert_clean_worktree
+echo "=== Wave ${WAVE} Completion Gate — current ACs + declared regressions (PROJ-${PROJ}-${THEME}) ==="
+
+step "1/7 Ralph: current AC verification"
 AC_COUNT=$(jq -r "${WAVE_KEY}.ac_commands | length" "$CFG")
-if [[ "$AC_COUNT" -eq 0 ]]; then
-  fail "no ac_commands defined for wave ${WAVE}"
-fi
-
+[[ "$AC_COUNT" -gt 0 ]] || fail "no ac_commands defined"
 init_ralph_state
 if [[ -f "$RALPH_PID" ]]; then
-  previous_pid=$(tr -cd '0-9' < "$RALPH_PID")
-  if [[ -n "$previous_pid" ]] && kill -0 "$previous_pid" 2>/dev/null; then
-    ralph_status
-    fail "Ralph is already running as PID ${previous_pid}; use --status, never pgrep"
-  fi
-  echo "   ⚠ stale Ralph PID ${previous_pid:-unknown}; resuming recorded AC results"
+  previous_pid=$(tr -cd '0-9' <"$RALPH_PID")
+  if [[ -n "$previous_pid" ]] && kill -0 "$previous_pid" 2>/dev/null; then ralph_status; fail "Ralph already running"; fi
   rm -f "$RALPH_PID"
 fi
-printf '%s\n' "$$" > "$RALPH_PID"
-heartbeat
-trap 'rm -f "$RALPH_PID"' EXIT
-
+printf '%s\n' "$$" >"$RALPH_PID"; OWNS_RALPH=true; heartbeat
 LAST_AUTH="${BASE}/5_progress/ralph-wave-${WAVE}.auth-last"
-for ((index = 0; index < AC_COUNT; index++)); do
-  entry=$(jq -c "${WAVE_KEY}.ac_commands[$index]" "$CFG")
-  entry_type=$(jq -r 'type' <<< "$entry")
-  case "$entry_type" in
-    string) command=$(jq -r . <<< "$entry"); auth_consuming=false ;;
-    object)
-      command=$(jq -r '.command // empty' <<< "$entry")
-      auth_consuming=$(jq -r '.auth_consuming // false' <<< "$entry")
-      [[ "$auth_consuming" == true || "$auth_consuming" == false ]] || fail "AC $((index + 1)) auth_consuming must be boolean"
-      ;;
-    *) fail "AC $((index + 1)) must be a command string or {command, auth_consuming}" ;;
-  esac
-  [[ -n "$command" ]] || fail "AC $((index + 1)) command is empty"
 
-  if jq -e --argjson index "$index" '.commands[]? | select(.index == $index and .status == "passed" and .rc == 0 and .selected > 0)' "$RALPH_STATE" >/dev/null; then
-    echo "   ✓ AC $((index + 1)) already green; skipped (recorded state)"
+for ((index=0; index<AC_COUNT; index++)); do
+  entry=$(jq -c "${WAVE_KEY}.ac_commands[$index]" "$CFG")
+  if [[ $(jq -r type <<<"$entry") == string ]]; then
+    command=$(jq -r . <<<"$entry"); id="legacy-$((index+1))"; task=""; tests='[]'; auth=false
+  else
+    command=$(jq -r '.command // empty' <<<"$entry"); id=$(jq -r ".id // \"legacy-$((index+1))\"" <<<"$entry")
+    task=$(jq -r '.task // empty' <<<"$entry"); tests=$(jq -c '.test_files // []' <<<"$entry"); auth=$(jq -r '.auth_consuming // false' <<<"$entry")
+  fi
+  [[ -n "$command" && -n "$id" ]] || fail "AC $((index+1)) has empty id/command"
+  [[ "$auth" == true || "$auth" == false ]] || fail "AC ${id} auth_consuming must be boolean"
+  if jq -e --arg id "$id" --arg command "$command" --arg head "$VERIFIED_HEAD" \
+    '.commands[]? | select(.id==$id and .command==$command and .verified_head==$head and .status=="passed" and .rc==0 and ((.selected|type)=="number") and .selected>0)' "$RALPH_STATE" >/dev/null; then
+    assert_verified_head
+    echo "   ✓ AC ${id} already green at ${VERIFIED_HEAD}; skipped"
     continue
   fi
-
-  if [[ "$auth_consuming" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
-    last_auth=$(tr -cd '0-9' < "$LAST_AUTH")
-    wait_for=$(( AUTH_PACING_SECONDS - ($(date +%s) - last_auth) ))
-    if [[ "$wait_for" -gt 0 ]]; then
-      echo "   ⏳ AC $((index + 1)) consumes auth budget; pacing ${wait_for}s"
-      sleep_with_heartbeat "$wait_for"
-    fi
+  if [[ "$auth" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
+    last=$(tr -cd '0-9' <"$LAST_AUTH"); wait_for=$((AUTH_PACING_SECONDS - ($(date +%s) - last)))
+    [[ "$wait_for" -le 0 ]] || sleep_with_heartbeat "$wait_for"
   fi
-
-  attempts=$(jq -r --argjson index "$index" '[.commands[]? | select(.index == $index)][0].attempts // 0' "$RALPH_STATE")
+  attempts=$(jq -r --arg id "$id" '[.commands[]? | select(.id==$id)][0].attempts // 0' "$RALPH_STATE")
   for retry in 1 2; do
-    attempts=$((attempts + 1))
-    log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index + 1))-attempt-${attempts}.log"
-    effective_timeout=$(( AC_TIMEOUT < RALPH_STALL_SECONDS ? AC_TIMEOUT : RALPH_STALL_SECONDS ))
-    echo "   $ $command"
-    heartbeat
-    [[ "$auth_consuming" == true ]] && date +%s > "$LAST_AUTH"
-    set +e
-    timeout --foreground "$effective_timeout" bash -c "$command" > "$log" 2>&1
-    rc=$?
-    set -e
-    selected=$(selected_count "$log")
-    heartbeat
-    if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then
-      record_ac "$index" "$command" "$attempts" "$rc" "$selected" passed "$log"
-      echo "   ✓ AC $((index + 1)): ${selected} selected test(s), attempt ${attempts}"
-      break
-    fi
-    if [[ "$rc" -eq 0 ]]; then
-      record_ac "$index" "$command" "$attempts" "$rc" "$selected" failed_empty_selection "$log"
-      fail "AC $((index + 1)) selected 0 tests despite rc=0 (log: $log)"
-    fi
-    if [[ "$rc" -eq 124 ]]; then
-      record_ac "$index" "$command" "$attempts" "$rc" "$selected" stalled "$log"
-      fail "AC $((index + 1)) made no completed progress for ${effective_timeout}s (log: $log)"
-    fi
-    if provider_rate_limited "$log" && [[ "$retry" -eq 1 ]]; then
-      record_ac "$index" "$command" "$attempts" "$rc" "$selected" rate_limited "$log"
-      echo "   ⚠ provider rate limit in AC $((index + 1)); pausing ${RATE_LIMIT_BACKOFF_SECONDS}s, then retrying once (log: $log)"
-      sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"
-      continue
-    fi
-    record_ac "$index" "$command" "$attempts" "$rc" "$selected" failed "$log"
-    fail "AC $((index + 1)) failed rc=${rc}, selected=${selected} (log: $log)"
+    attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"
+    [[ "$auth" == true ]] && date +%s >"$LAST_AUTH"
+    heartbeat; set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log"); heartbeat
+    [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for AC ${id}" 73
+    [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for AC ${id} (log: $hook_log)" 74
+    if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during AC ${id}" "$AUTH_EXHAUSTED_RC"; fi
+    if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
+    if [[ "$rc" -eq 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "AC ${id} selected 0 tests"; fi
+    if [[ "$rc" -eq 124 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"; fail "AC ${id} timed out"; fi
+    if provider_rate_limited "$log" && [[ "$retry" -eq 1 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "AC ${id} failed rc=${rc}, selected=${selected} (log: $log)"
   done
+  assert_verified_head
+  assert_clean_worktree
 done
-rm -f "$RALPH_PID"
-trap - EXIT
-tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
-jq --arg updated "$(date -Iseconds)" '.ralph_status = "complete" | .updated_at = $updated' "$RALPH_STATE" > "$tmp" && mv "$tmp" "$RALPH_STATE"
 
-# ─── 2. Build ───────────────────────────────────────────────────────────────
-step "2/6 Build"
-BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG")
-[[ -n "$BUILD_CMD" ]] || fail "build_cmd missing in config"
-echo "   $ $BUILD_CMD"
-run_with_timeout "$BUILD_TIMEOUT" "build" bash -c "$BUILD_CMD"
+step "2/7 Declared broad regression suite"
+REG_COUNT=$(jq -r "${WAVE_KEY}.regression_commands // [] | length" "$CFG")
+[[ "$REG_COUNT" -gt 0 ]] || fail "wave ${WAVE} has no declared broad regression_commands"
+for ((index=0; index<REG_COUNT; index++)); do
+  entry=$(jq -c "${WAVE_KEY}.regression_commands[$index]" "$CFG")
+  label=$(jq -r ".label // \"regression-$((index+1))\"" <<<"$entry"); command=$(jq -r '.command // empty' <<<"$entry")
+  tests=$(jq -c '.test_files // []' <<<"$entry"); auth=$(jq -r '.auth_consuming // false' <<<"$entry"); require_selection=$(jq -r '.require_non_empty_selection // false' <<<"$entry")
+  [[ -n "$command" ]] || fail "regression ${label} command is empty"
+  log="${BASE}/5_progress/ralph-wave-${WAVE}-regression-$((index+1)).log"; hook_log="${log%.log}-auth-preflight.log"
+  set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log")
+  [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for regression ${label}" 73
+  [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for regression ${label}" 74
+  if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during regression ${label}" "$AUTH_EXHAUSTED_RC"; fi
+  [[ "$rc" -eq 0 ]] || { record_regression "$label" "$command" "$tests" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "regression ${label} failed rc=${rc}"; }
+  if [[ "$require_selection" == true && "$selected" -le 0 ]]; then record_regression "$label" "$command" "$tests" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "regression ${label} selected 0 tests"; fi
+  record_regression "$label" "$command" "$tests" 0 "$selected" passed "$log" "$VERIFIED_HEAD"
+  echo "   ✓ ${label}${require_selection:+ (${selected} selected)}"
+  assert_verified_head
+  assert_clean_worktree
+done
+rm -f "$RALPH_PID"; OWNS_RALPH=false
+tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg updated "$(date -Iseconds)" '.ralph_status="complete"|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 
-# ─── 3. CodeRabbit (non-advisory severities must be zero) ───────────────────
-step "3/6 CodeRabbit wave review"
+step "3/7 Build"
+BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
+run_with_timeout "$BUILD_TIMEOUT" build bash -c "$BUILD_CMD"; assert_verified_head; assert_clean_worktree
+
+step "4/7 CodeRabbit wave review"
 command -v coderabbit >/dev/null || fail "coderabbit not installed"
-
-# Wave base SHA resolution is intentionally hard: env override or explicit tag.
-# No commit-message, HEAD~20, or root fallback, because wide reviews bury signal.
 WAVE_BASE="${WAVE_BASE_SHA:-}"
-if [[ -n "$WAVE_BASE" ]]; then
-  git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 \
-    || fail "WAVE_BASE_SHA env set to '${WAVE_BASE}' but this commit does not exist"
-  echo "   base source: \$WAVE_BASE_SHA env override"
-else
-  WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true)
-  [[ -n "$WAVE_BASE" ]] || fail "missing wave base. Set WAVE_BASE_SHA or create tag wave-${WAVE}-start-PROJ-${PROJ}; no fallback is allowed."
-  echo "   base source: git tag wave-${WAVE}-start-PROJ-${PROJ}"
+if [[ -n "$WAVE_BASE" ]]; then git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 || fail "invalid WAVE_BASE_SHA"; else WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true); fi
+[[ -n "$WAVE_BASE" ]] || fail "missing wave base SHA/tag"
+FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
+attempt=1
+while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
+CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
+CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
+  set +e; timeout --foreground "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW"; CR_RC=$?; set -e
+: >"$CR_NORMALIZED"
+if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
+  fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
 fi
-echo "   base: $WAVE_BASE"
+RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
+NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
+[[ "$RAW_FINDINGS" -eq "$NORMALIZED_FINDINGS" ]] || fail "CodeRabbit finding count mismatch raw=${RAW_FINDINGS}, normalized=${NORMALIZED_FINDINGS}"
+jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.severity|IN("critical","high","medium","low")) and (.summary|type=="string" and test("\\S")) and ((.category==null) or (.category|type=="string")) and ((.file==null) or (.file|type=="string")) and ((.line==null) or ((.line|type)=="number" and (.line|floor)==.line)) and ((.anchor==null) or (.anchor|type=="string")))' "$CR_NORMALIZED" >/dev/null \
+  || fail "CodeRabbit emitted invalid finding records (normalized: $CR_NORMALIZED)"
+[[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
+[[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
+if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
 
-COMMITS_SINCE=$(git rev-list --count "${WAVE_BASE}..HEAD" 2>/dev/null || echo "?")
-FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" 2>/dev/null | wc -l | tr -d ' ')
-echo "   diff scope: ${COMMITS_SINCE} commits, ${FILES_CHANGED} files"
- # CodeRabbit's review ceiling is a hard boundary, not an excuse to omit
- # review. A green gate must mean the entire wave was reviewable.
- if [[ "$FILES_CHANGED" -gt 150 ]]; then
-   fail "CodeRabbit review scope is ${FILES_CHANGED} files (limit 150). Split the wave or establish a narrower reviewed base; do not continue without a complete review."
- fi
-
-CR_OUT=$(mktemp)
-CR_START=$(date +%s)
-set +e
-timeout --foreground "$CODERABBIT_TIMEOUT" \
-  coderabbit review --agent --base-commit "$WAVE_BASE" > "$CR_OUT"
-rc=$?
-set -e
-if [[ $rc -ne 0 ]]; then
-  elapsed=$(( $(date +%s) - CR_START ))
-  if [[ $rc -eq 124 ]]; then
-    fail "coderabbit review timed out after ${CODERABBIT_TIMEOUT}s (elapsed ${elapsed}s, raw: $CR_OUT). Increase timeouts.coderabbit_seconds in $CFG."
-  fi
-  fail "coderabbit review errored rc=${rc} (elapsed ${elapsed}s, see $CR_OUT)"
+LEDGER_AVAILABLE=false
+if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then LEDGER_AVAILABLE=true; fi
+if [[ "$RAW_FINDINGS" -gt 0 && "$LEDGER_AVAILABLE" == true ]]; then
+  node scripts/ledger.mjs add "$PROJ" "$THEME" --wave "$WAVE" <"$CR_NORMALIZED" >/dev/null || fail "ledger ingestion failed"
 fi
-echo "   ✓ coderabbit done in $(( $(date +%s) - CR_START ))s"
-
-BLOCKING=$( { grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null || true; } | jq -rs --argjson advisory "$ADVISORY_JSON" '
-  [ .[]
-    | (.severity? // .priority? // .level? // "" | tostring | ascii_downcase) as $sev
-    | select($sev != "" and (($advisory | index($sev)) | not))
-  ] | length
-' 2>/dev/null)
-ADVISORY=$( { grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null || true; } | jq -rs --argjson advisory "$ADVISORY_JSON" '
-  [ .[]
-    | (.severity? // .priority? // .level? // "" | tostring | ascii_downcase) as $sev
-    | select($sev != "" and (($advisory | index($sev)) != null))
-  ] | length
-' 2>/dev/null)
-BLOCKING=${BLOCKING:-0}
-ADVISORY=${ADVISORY:-0}
-[[ "$ADVISORY" -gt 0 ]] && echo "   ⚠ ${ADVISORY} advisory finding(s): ${ADVISORY_LABEL}"
-
-# Findings ledger ingest (framework runs): all CodeRabbit findings flow
-# into findings.json via ledger.mjs — deduplicated, never re-entered by hand.
-# No ledger.mjs in the project → plain pre-framework behavior, no-op.
-if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then
-  grep -E '^\{.*\}$' "$CR_OUT" 2>/dev/null | jq -c '
-    { source: "coderabbit",
-      severity: ((.severity? // .priority? // .level? // "low") | tostring | ascii_downcase),
-      category: ((.category? // "review") | tostring),
-      summary: ((.message? // .description? // .title? // "coderabbit finding") | tostring),
-      file: ((.file? // .path? // empty) | tostring),
-      line: (.line? // .startLine? // empty) }
-    | with_entries(select(.value != null and .value != ""))
-  ' 2>/dev/null | node scripts/ledger.mjs add "$PROJ" "$THEMA" --wave "$WAVE" \
-    && echo "   ✓ findings ingested into ledger" \
-    || echo "   ⚠ ledger ingest skipped (no parseable findings)"
+CUMULATIVE_BLOCKING=0
+if [[ "$LEDGER_AVAILABLE" == true && -f "$BASE/findings.json" ]]; then
+  CUMULATIVE_BLOCKING=$(jq --argjson advisory "$ADVISORY_JSON" '[.findings[] | select(.status=="open") | .severity as $s | select(($advisory | index($s) | not))] | length' "$BASE/findings.json")
+elif [[ "$LEDGER_AVAILABLE" == false ]]; then
+  CUMULATIVE_BLOCKING=$(jq -s --argjson advisory "$ADVISORY_JSON" '[.[] | .severity as $s | select(($advisory | index($s) | not))] | length' "$CR_NORMALIZED")
 fi
+[[ "$CUMULATIVE_BLOCKING" -eq 0 ]] || fail "${CUMULATIVE_BLOCKING} cumulative/current open blocking finding(s) remain after review ingestion"
+assert_verified_head; assert_clean_worktree
 
-if [[ "$BLOCKING" -ne 0 ]]; then
-  echo "   blocking findings:"
-  grep -E '^\{.*\}$' "$CR_OUT" | jq -c --argjson advisory "$ADVISORY_JSON" '
-    (.severity? // .priority? // .level? // "" | tostring | ascii_downcase) as $sev
-    | select($sev != "" and (($advisory | index($sev)) | not))
-  '
-  fail "${BLOCKING} non-advisory CodeRabbit finding(s) remain (raw output: $CR_OUT)"
+step "5/7 Sonar local scan"
+run_with_timeout "$SONAR_TIMEOUT" sonar_cmd bash -c "$SONAR_CMD"
+SONAR_STATUS=green
+assert_verified_head; assert_clean_worktree
+
+step "6/7 Browser smoke test"
+ROUTES_JSON=$(jq -c --arg wave "$WAVE" '[.frontend.routes[]? | select((.wave|tostring)==$wave)]' "$CFG")
+if [[ $(jq 'length' <<<"$ROUTES_JSON") -eq 0 ]]; then
+  ROUTES_JSON=$(jq -c "[${WAVE_KEY}.frontend_routes[]? | if type==\"string\" then {path:.,expected_url:.,expected_text:null,protected:false,auth_state:null} else . end]" "$CFG")
 fi
-rm -f "$CR_OUT"
-
-# ─── 4. Sonar local scan + secrets check ────────────────────────────────────
-# Skippable per CONCEPT.md §7: missing CLI or missing config → logged skip,
-# never a silent one. The command is config-owned (.sonar_cmd) — this script
-# does not guess CLI flags.
-step "4/6 Sonar local scan + secrets check"
-SONAR_CMD=$(jq -r '.sonar_cmd // empty' "$CFG")
-SONAR_STATUS="skipped"
-if ! command -v sonar >/dev/null; then
-  echo "   (sonar CLI not installed — SKIPPED, logged)"
-elif [[ -z "$SONAR_CMD" ]]; then
-  echo "   (no sonar_cmd in $CFG — SKIPPED, logged)"
-else
-  SONAR_TIMEOUT=$(jq -r '.timeouts.sonar_seconds // 120' "$CFG")
-  echo "   $ $SONAR_CMD"
-  run_with_timeout "$SONAR_TIMEOUT" "sonar local scan" bash -c "$SONAR_CMD"
-  SONAR_STATUS="green"
-fi
-
-# ─── 5. Smoke test ──────────────────────────────────────────────────────────
-step "5/6 Browser smoke test"
-mapfile -t ROUTES < <(jq -r "${WAVE_KEY}.frontend_routes[]? // empty" "$CFG")
-if [[ "${#ROUTES[@]}" -eq 0 ]]; then
-  echo "   (backend-only wave — skipped)"
-else
-  if command -v agent-browser >/dev/null; then
-    BASE_URL=$(jq -r '.dev_url // "http://localhost:3000"' "$CFG")
-    for route in "${ROUTES[@]}"; do
-      [[ -z "$route" ]] && continue
-      echo "   $ agent-browser open ${BASE_URL}${route}"
-      run_with_timeout "$BROWSER_TIMEOUT" "smoke ${route}" \
-        bash -c 'agent-browser open "$1" && agent-browser read && agent-browser errors' _ "${BASE_URL}${route}"
+ROUTE_COUNT=$(jq 'length' <<<"$ROUTES_JSON"); ROUTES_STR=backend-only
+if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; else
+  ROUTES_STR=$(jq -r '[.[].path]|join(" ")' <<<"$ROUTES_JSON")
+  for ((index=0; index<ROUTE_COUNT; index++)); do
+    route=$(jq -c ".[$index]" <<<"$ROUTES_JSON"); path=$(jq -r '.path' <<<"$route"); protected=$(jq -r '.protected // false' <<<"$route"); auth_state=$(jq -r '.auth_state // empty' <<<"$route")
+    if [[ "$protected" == true && -z "$auth_state" ]]; then
+      coverage=$(jq -c '.authenticated_e2e_test_files // []' <<<"$route")
+      [[ $(jq 'length' <<<"$coverage") -gt 0 ]] || fail "protected route ${path} lacks auth_state or authenticated E2E coverage"
+      jq -e --argjson coverage "$coverage" "${WAVE_KEY}.regression_commands as \$reg | ([\$reg[].test_files[]?] | unique) as \$files | (\$coverage - \$files | length)==0" "$CFG" >/dev/null || fail "protected route ${path} lacks auth_state or successful authenticated E2E coverage"
+      echo "   ✓ protected ${path}: covered by authenticated regression"
+    fi
+  done
+  SMOKE_ROUTES_JSON=$(jq -c '[.[] | select((.protected // false)==false or ((.auth_state // "")|length)>0)]' <<<"$ROUTES_JSON")
+  SMOKE_COUNT=$(jq 'length' <<<"$SMOKE_ROUTES_JSON")
+  if [[ "$SMOKE_COUNT" -eq 0 ]]; then
+    echo "   (all protected routes covered by authenticated regression — browser smoke skipped)"
+  else
+    command -v agent-browser >/dev/null || fail "agent-browser not installed but smoke routes are configured"
+    command -v curl >/dev/null || fail "curl not installed but smoke routes are configured"
+    DEV_URL=$(jq -r '.frontend.dev_url // .dev_url // "http://localhost:3000"' "$CFG"); DEV_CMD=$(jq -r '.frontend.dev_cmd // .dev_cmd // empty' "$CFG")
+    READY_PATH=$(jq -r '.frontend.readiness.path // "/"' "$CFG"); READY_TIMEOUT=$(jq -r '.frontend.readiness.timeout_seconds // .timeouts.browser_seconds' "$CFG"); READY_INTERVAL=$(jq -r '.frontend.readiness.interval_seconds // 1' "$CFG")
+    READY_URL="${DEV_URL%/}/${READY_PATH#/}"
+    if ! curl -fsS --max-time 2 "$READY_URL" >/dev/null 2>&1; then
+      [[ -n "$DEV_CMD" ]] || fail "dev server not ready at ${READY_URL} and frontend.dev_cmd is missing"
+      DEV_LOG="${BASE}/5_progress/dev-server-wave-${WAVE}.log"
+      if command -v setsid >/dev/null; then setsid bash -c "$DEV_CMD" >"$DEV_LOG" 2>&1 & DEV_PID=$!; DEV_PROCESS_GROUP=true
+      else bash -c "$DEV_CMD" >"$DEV_LOG" 2>&1 & DEV_PID=$!
+      fi
+      deadline=$(( $(date +%s) + READY_TIMEOUT ))
+      until curl -fsS --max-time 2 "$READY_URL" >/dev/null 2>&1; do kill -0 "$DEV_PID" 2>/dev/null || fail "dev server exited before readiness (log: $DEV_LOG)"; [[ $(date +%s) -lt "$deadline" ]] || fail "dev server readiness timed out (log: $DEV_LOG)"; sleep "$READY_INTERVAL"; done
+    fi
+    for ((index=0; index<SMOKE_COUNT; index++)); do
+      route=$(jq -c ".[$index]" <<<"$SMOKE_ROUTES_JSON"); path=$(jq -r '.path' <<<"$route"); auth_state=$(jq -r '.auth_state // empty' <<<"$route")
+      [[ -z "$auth_state" || -f "$auth_state" ]] || fail "auth_state missing for ${path}: ${auth_state}"
+      target="${DEV_URL%/}/${path#/}"; expected=$(jq -r '.expected_url // .path' <<<"$route"); [[ "$expected" =~ ^https?:// ]] || expected="${DEV_URL%/}/${expected#/}"
+      expected_text=$(jq -r '.expected_text // empty' <<<"$route"); session="skillchain-wave-${WAVE}-route-${index}"
+      browser=(agent-browser --session "$session"); [[ -z "$auth_state" ]] || browser+=(--state "$auth_state")
+      run_with_timeout "$BROWSER_TIMEOUT" "smoke ${path}" "${browser[@]}" open "$target"
+      actual=$("${browser[@]}" get url); [[ "$actual" == "$expected" ]] || fail "smoke ${path} redirected/resolved to '${actual}', expected '${expected}'"
+      text_out=$("${browser[@]}" read); [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
+      "${browser[@]}" errors >/dev/null || fail "browser errors on ${path}"
+      "${browser[@]}" close >/dev/null 2>&1 || true
     done
-  else
-    fail "agent-browser not installed but frontend routes defined"
   fi
 fi
+assert_verified_head; assert_clean_worktree
 
-step "6/6 Component registry"
-# The registry is generated from the component doc blocks. A stale file or an
-# undocumented component blocks the wave — this replaces the per-edit hook.
-if [[ -f scripts/gen-component-registry.mjs ]]; then
-  if [[ -d src/components || -d src/features ]]; then
-    set +e
-    node scripts/gen-component-registry.mjs --check
-    REG_RC=$?
-    set -e
-    case "$REG_RC" in
-      0) ;;
-      # exit 3 = registry still hand-written; the migration is a human call and
-      # must not block waves. Reported every gate so it stays visible.
-      3) echo "   (registry not migrated yet — reported, not blocking)" ;;
-      *) fail "component registry out of date or component missing its doc block" ;;
-    esac
-  else
-    echo "   (no component directories — skipped)"
-  fi
-else
-  echo "   (scripts/gen-component-registry.mjs not installed — skipped)"
-fi
+step "7/7 Component registry"
+if [[ -f scripts/gen-component-registry.mjs && ( -d src/components || -d src/features ) ]]; then
+  set +e; node scripts/gen-component-registry.mjs --check; REG_RC=$?; set -e
+  [[ "$REG_RC" -eq 0 || "$REG_RC" -eq 3 ]] || fail "component registry out of date"
+else echo "   (component registry unavailable/not applicable — skipped)"; fi
 
-# ─── Record in progress.md ──────────────────────────────────────────────────
+assert_verified_head; assert_clean_worktree
 TS=$(date -Iseconds)
-ROUTES_STR="${ROUTES[*]:-backend-only}"
-
-cat >> "$PROGRESS" <<EOF
+cat >>"$PROGRESS" <<EOF
 
 ### Wave ${WAVE} Gate — PASSED ($TS)
-- [x] Ralph: ${AC_COUNT} AC commands green
+- [x] Current ACs: ${AC_COUNT} commands green at ${VERIFIED_HEAD}
+- [x] Declared broad regressions: ${REG_COUNT} commands green
 - [x] Build: \`${BUILD_CMD}\`
-- [x] CodeRabbit: 0 non-advisory findings (advisory severities: ${ADVISORY_LABEL})
+- [x] CodeRabbit: attempt ${attempt} ingested; cumulative open blocking findings after ledger status: 0
 - [x] Sonar: ${SONAR_STATUS}
-- [x] Component registry: generated + current
-- [x] Smoke: ${ROUTES_STR}
+- [x] Component registry: checked
+- [x] Smoke/authenticated E2E: ${ROUTES_STR}
 EOF
+echo "✅ Wave ${WAVE} Gate PASSED — current ACs plus declared regressions verified (not every historical AC command)"
 
-echo "✅ Wave ${WAVE} Gate PASSED"
-
-# ─── Auto-tag the NEXT wave's base SHA ──────────────────────────────────────
-# HEAD at this point = end of Wave N = start of Wave N+1. Tagging it here
-# means Skill 5 Step 2a becomes a belt-and-braces for Wave 1 only; the main
-# agent cannot forget to tag for Wave 2+.
-NEXT=$((WAVE + 1))
-NEXT_TAG="wave-${NEXT}-start-PROJ-${PROJ}"
-if git rev-parse --verify "${NEXT_TAG}^{commit}" >/dev/null 2>&1; then
-  echo "   tag ${NEXT_TAG} already exists — leaving untouched"
-else
-  git tag "$NEXT_TAG" HEAD 2>/dev/null && \
-    echo "   tagged: ${NEXT_TAG} → HEAD (base for Wave ${NEXT} CodeRabbit review)" || \
-    echo "   (could not create tag ${NEXT_TAG} — continuing)"
-fi
-
-# ─── NEXT ACTION hint (biases the lead agent to auto-continue) ──────────────
+NEXT=$((WAVE+1)); NEXT_TAG="wave-${NEXT}-start-PROJ-${PROJ}"
+git rev-parse --verify "${NEXT_TAG}^{commit}" >/dev/null 2>&1 || git tag "$NEXT_TAG" HEAD 2>/dev/null || true
 NEXT_PLAN="${BASE}/3-4_plan/PROJ-${PROJ}-wave-${NEXT}-plan.md"
-echo ""
-if [[ -f "$NEXT_PLAN" ]]; then
-  echo "→ NEXT ACTION: Start Wave ${NEXT} NOW. Read ${NEXT_PLAN} and spawn teammates immediately."
-  echo "  Do NOT pause. Do NOT ask the user. Do NOT summarize. The gate is the signal."
-else
-  echo "→ NEXT ACTION: All waves complete for PROJ-${PROJ}-${THEMA}."
-  echo "  Start Skill 5 Step 9 Quality Gate: run code-reviewer-gate + optional sonar-cli stream."
-  echo "  After Quality Gate passes → /compact → invoke /6_qa (see Skill 5 Step 11 handoff)."
-fi
+if [[ -f "$NEXT_PLAN" ]]; then echo "→ NEXT ACTION: Start Wave ${NEXT}."; else echo "→ NEXT ACTION: Start the PROJ-end Quality Gate, then QA."; fi

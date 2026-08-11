@@ -97,6 +97,16 @@ check_identical "$ROOT/claude/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/claude/skills/0b_intake/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/0b_intake/scripts/curation-caps.sh"
+check_identical "$ROOT/claude/skills/4_writing-plans/scripts/validate-wave-plan.mjs" \
+  "$ROOT/codex/skills/4_writing-plans/scripts/validate-wave-plan.mjs" \
+  "$ROOT/claude/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
+  "$ROOT/codex/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
+  "$ROOT/claude/skills/4b_setup/scripts/validate-wave-plan.mjs" \
+  "$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs"
+check_identical "$ROOT/claude/skills/4b_setup/scripts/worktree.sh" \
+  "$ROOT/codex/skills/4b_setup/scripts/worktree.sh" \
+  "$ROOT/claude/skills/8_delivery/scripts/worktree.sh" \
+  "$ROOT/codex/skills/8_delivery/scripts/worktree.sh"
 while IFS= read -r bugfix_file; do
   bugfix_rel="${bugfix_file#"$ROOT/codex/skills/bugfixing/"}"
   check_identical "$bugfix_file" "$ROOT/claude/skills/bugfixing/$bugfix_rel"
@@ -131,7 +141,16 @@ done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" "$ROOT/s
 if command -v node >/dev/null; then
   while IFS= read -r mjs; do
     node --check "$mjs" 2>/dev/null || fail "node syntax error: $mjs"
-  done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" -name '*.mjs' -type f)
+  done < <(find "$ROOT/claude/skills" "$ROOT/codex/skills" "$ROOT/runner" "$ROOT/scripts" -name '*.mjs' -type f)
 fi
+
+# Syntax-only checks cannot prove gate behavior. These deterministic harnesses
+# use temporary repositories/fixtures and never contact external services.
+bash "$ROOT/scripts/test-wave-plan-validator.sh"
+bash "$ROOT/scripts/test-ledger.sh"
+bash "$ROOT/scripts/test-preflight-biome.sh"
+bash "$ROOT/scripts/test-worktree.sh"
+bash "$ROOT/scripts/test-wave-gate.sh"
+node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest
 
 echo "validate: ok"

@@ -26,24 +26,79 @@ judgment). There are no user questions in P0.
 ### 0. Gate on approval
 
 <HARD-GATE>
-Read the state: `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'`
-(if `scripts/state.sh` is missing, copy it from
-`~/.claude/skills/4b_setup/scripts/state.sh` first).
+Read the state with the repo helper, or directly with the installed helper when
+the repo copy is not present yet:
+`bash ${STATE_SH:-~/.claude/skills/4b_setup/scripts/state.sh} get <X> <theme> '.phase + ":" + .status'`.
+Do not copy a missing helper into the control checkout before `prepare`; that
+would correctly trip its clean-checkout gate.
 
 - `CP1:approved` → proceed.
 - state.json missing or any other phase/status → STOP. Route to
   **checkpoint** (4a) — P0 never runs on an unapproved plan.
+
+Before changing state or creating a worktree, run the plan consistency gate:
+
+```bash
+PLAN_DIR=specs/PROJ-<X>-<theme>/3-4_plan
+[ -d "$PLAN_DIR" ] || PLAN_DIR=specs/PROJ-<X>-<theme>/6_plan
+node ~/.claude/skills/4b_setup/scripts/validate-wave-plan.mjs "$PLAN_DIR"
+```
+
+Any non-zero exit is a hard stop: route back to **writing-plans**. For a
+legacy PROJ, select the existing `6_plan/` directory as above; never create a
+parallel current-layout directory. `worktree.sh prepare` repeats this exact
+validation before it creates anything.
 </HARD-GATE>
 
-Then mark the phase: `bash scripts/state.sh transition <X> <theme> P0 running`
+### 1. Persistent PROJ worktree + BASE_SHA
 
-### 1. Branch + BASE_SHA
+From the control checkout root, run:
 
-1. `git checkout -b proj/PROJ-<X>` (from the current main HEAD)
-2. `BASE_SHA=$(git rev-parse HEAD)`; tag it: `git tag proj-PROJ-<X>-base`
-3. Record both:
-   `bash scripts/state.sh set <X> <theme> .base_sha "$BASE_SHA"`
-   `bash scripts/state.sh set <X> <theme> .branch proj/PROJ-<X>`
+```bash
+WORKTREE=$(~/.claude/skills/4b_setup/scripts/worktree.sh prepare <X> <theme>)
+cd "$WORKTREE"
+P0_STATE=$(bash ~/.claude/skills/4b_setup/scripts/state.sh get <X> <theme> '.phase + ":" + .status')
+case "$P0_STATE" in
+  CP1:approved|P0:blocked) bash ~/.claude/skills/4b_setup/scripts/state.sh transition <X> <theme> P0 running ;;
+  P0:running) : ;; # interrupted P0 resumes without a duplicate transition
+  P0:done) P0_ALREADY_DONE=1 ;; # refresh-only; never transition or reseal
+  *) echo "unexpected P0 resume state: $P0_STATE" >&2; exit 1 ;;
+esac
+```
+
+Use the installed absolute `state.sh` path until step 4 has copied the helper
+set into this fresh worktree; `scripts/state.sh` is not assumed to exist at
+CP1. After the copy, the versioned repo helper is canonical for the run.
+
+When `P0_ALREADY_DONE=1`, only refresh byte-identical framework copies and run
+their validation; skip all phase transitions and the P0 seal commit.
+
+`prepare` requires a clean control checkout at its committed CP1 `HEAD`,
+creates `proj/PROJ-<X>` at that exact commit, and tags
+`proj-PROJ-<X>-base`. The default persistent path is the sibling
+`<parent>/<repo>-proj<X>`; `SKILLCHAIN_WORKTREE_ROOT` overrides the parent.
+An existing correctly registered branch/path is resumed idempotently. A dirty
+control checkout, mismatched existing branch, conflicting registration, or
+occupied target path is a hard stop.
+
+`.env.local` is linked from the control checkout only when the source exists
+and Git ignores it. If only `.env.local.example` exists, stop and require the
+local secret file. Secret values are never printed or stored. Dependencies are
+installed reproducibly from the one supported lockfile inside the worktree;
+`node_modules` is never linked. The helper records `.worktree` metadata,
+`.base_sha`, and `.branch` through `state.sh`, including shared database mode,
+dev port (`SKILLCHAIN_DEV_PORT` or `frontend.dev_url`), and cleanup status.
+
+Database migrations and auth-consuming commands must run through the shared
+resource lock:
+
+```bash
+scripts/worktree.sh with-shared-lock -- <command...>
+```
+
+The default lock lives in the Git common directory and therefore serializes
+parallel worktrees of this repository. Set
+`SKILLCHAIN_SHARED_RESOURCE_LOCK` to an explicit shared path to override it.
 
 ### 2. Permission preflight (Claude host)
 
@@ -75,7 +130,8 @@ why; an untested verifier is not a P0 success.
 
 Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
 the WHOLE 4b_setup helper set first — `preflight.sh`, `ponytail-check.sh`,
-`compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh` from
+`compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh`,
+`worktree.sh`, `validate-wave-plan.mjs` from
 `~/.claude/skills/4b_setup/scripts/` — preflight calls its siblings; a
 lone copy also works, it falls back to the installed skill tree). It checks
 the CONCEPT.md §7 CLI list including auth states and a bounded live
@@ -118,7 +174,7 @@ files; overwrite older copies and note it in the commit):
 
 | From (installed skill) | To |
 |---|---|
-| `4b_setup/scripts/state.sh`, `preflight.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs` | `scripts/` |
+| `4b_setup/scripts/state.sh`, `preflight.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs` | `scripts/` |
 | `4b_setup/manifests/roles/*.md` | `templates/roles/` |
 | `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
 | `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
@@ -203,10 +259,16 @@ reports, never silent.
 (`runner/run-phase.sh P5 <X> <theme>`, autonomous dual-lane) or the
 **executing** skill (5) directly in this session.
 
+When P0 is runner-managed, the runner detects the registered PROJ worktree,
+re-executes itself there once, and starts every later phase from that path. The
+`SKILLCHAIN_WORKTREE_REEXEC` guard prevents a re-exec loop.
+
 ## Completion Checklist
 
 - [ ] state.json was `CP1:approved` before starting; now `P0:done`
-- [ ] `proj/PROJ-<X>` branch exists; `base_sha` + `branch` in state.json
+- [ ] wave plan consistency validator passed before worktree creation
+- [ ] persistent `proj/PROJ-<X>` worktree exists; `base_sha`, `branch`, and `.worktree` metadata are in state.json
+- [ ] `.env.local` is an ignored control-checkout symlink (or explicitly absent); dependencies are isolated
 - [ ] `preflight` block in state.json; `degraded` set truthfully
 - [ ] `.context.ponytail` in state.json (parity gate result, enforced truthfully)
 - [ ] `specs/.../context/` has canonical + claude/codex bundles; `.context.bundles` hashes in state.json

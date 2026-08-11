@@ -89,6 +89,20 @@ api-contracts — and record the touched files in the entry's
 check from writing-plans, 4): story/dependency/contract consistency
 across all waves. A checkpoint that edits a wave plan but not the gate
 config produces an overnight run that gates against a stale plan.
+
+Run the machine consistency validator after every cascade and once more even
+when the round adopted every point unchanged:
+
+```bash
+node ~/.codex/skills/4a_checkpoint/scripts/validate-wave-plan.mjs \
+  specs/PROJ-<X>-<theme>/3-4_plan
+```
+
+This is a hard pre-approval gate. It checks unique AC IDs, their task/command
+mapping, bidirectional task/test-file agreement, broad regressions, auth-budget
+hooks, and protected-route coverage through auth state or mapped authenticated
+E2E files. Do not seal CP1 while it is red. For a legacy layout, pass the
+existing `6_plan/` directory instead.
 </HARD-GATE>
 
 ### 5. Seal the approval
@@ -153,6 +167,7 @@ turn them into a baseline the developer actually stands behind.
 - [ ] Decision log appended with one `D-<X>-<NN>` entry per point
 - [ ] Every change cascaded through ALL affected artifacts; Cascade field filled
 - [ ] Plan self-review re-run after cascades — consistent
+- [ ] Plan consistency validator passes after the final cascade
 - [ ] state.json sealed `CP1:approved` with `.decision_log` set (CP1 only)
 - [ ] Committed
 

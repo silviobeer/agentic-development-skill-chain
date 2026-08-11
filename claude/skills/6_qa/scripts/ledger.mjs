@@ -18,8 +18,10 @@
 //   required: source, severity, summary
 //   optional: category, file, line, anchor, provider, wave, status, debt_marker
 //
-// Dedupe key: file | anchor-or-line | category (case-insensitive). A re-reported
-// finding merges (sources appended, severity escalated) instead of duplicating.
+// Dedupe key: file | anchor-or-line | category (case-insensitive). Findings
+// without an anchor/line add a stable summary fingerprint so two distinct
+// findings in the same file cannot collapse. A re-reported finding merges
+// (sources appended, severity escalated) instead of duplicating.
 // A re-report with status open REOPENS a previously `fixed` finding — a repair
 // that did not survive re-verification must not stay green. `deferred` and
 // `false-positive` are deliberate triage decisions and are NOT reopened by
@@ -33,12 +35,13 @@
 // Exit codes: 0 ok · 1 invalid input / unknown severity / lock timeout (nothing written) · 2 findings.json missing · 64 usage
 import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { createHash } from "node:crypto";
 
 const SEVERITY_MAP = {
   blocker: "critical", critical: "critical",
   major: "high", high: "high",
   medium: "medium", moderate: "medium",
-  minor: "low", low: "low", info: "low", note: "low", advisory: "low",
+  minor: "low", trivial: "low", low: "low", info: "low", note: "low", advisory: "low",
 };
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const STATUSES = ["open", "fixed", "deferred", "false-positive"];
@@ -116,9 +119,16 @@ function save(ledger) {
   renameSync(tmp, file);
 }
 
-const dedupeKey = (f) =>
-  [f.file ?? "", f.anchor ?? (f.line != null ? String(f.line) : ""), f.category ?? "general"]
-    .join("|").toLowerCase();
+const summaryFingerprint = (summary) => createHash("sha256")
+  .update(String(summary ?? "").trim().replace(/\s+/g, " ").toLowerCase())
+  .digest("hex")
+  .slice(0, 16);
+
+const dedupeKey = (f) => {
+  const location = f.anchor ?? (f.line != null ? String(f.line) : null);
+  const discriminator = location ?? `summary:${summaryFingerprint(f.summary)}`;
+  return [f.file ?? "", discriminator, f.category ?? "general"].join("|").toLowerCase();
+};
 
 const nextId = (findings) => {
   const max = findings.reduce((m, f) => {
@@ -137,20 +147,33 @@ function findOrFail(ledger, id) {
 if (cmd === "add") {
   const waveIdx = rest.indexOf("--wave");
   const wave = waveIdx >= 0 ? Number(rest[waveIdx + 1]) : undefined;
+  if (waveIdx >= 0 && !Number.isInteger(wave)) fail("--wave must be an integer — nothing written");
   const raw = readFileSync(0, "utf8");
   const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) fail("add requires at least one JSON finding on stdin — nothing written");
 
   // Parse and validate BEFORE taking the lock, so bad input cannot stall writers.
   const incomingRecords = lines.map((line) => {
     let rec;
     try { rec = JSON.parse(line); } catch { fail(`not valid JSON: ${line}`); }
-    for (const req of ["source", "severity", "summary"])
-      if (!rec[req]) fail(`missing required field '${req}': ${line}`);
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) fail(`finding must be a JSON object: ${line}`);
+    for (const req of ["source", "severity", "summary"]) {
+      if (typeof rec[req] !== "string" || rec[req].trim() === "") {
+        fail(`missing or invalid required field '${req}': ${line}`);
+      }
+    }
+    for (const field of ["category", "file", "anchor", "provider", "debt_marker"]) {
+      if (rec[field] != null && typeof rec[field] !== "string") {
+        fail(`optional field '${field}' must be a string or null: ${line}`);
+      }
+    }
+    if (rec.line != null && !Number.isInteger(rec.line)) fail(`optional field 'line' must be an integer or null: ${line}`);
     if (!SOURCES.includes(rec.source)) fail(`unknown source '${rec.source}' (known: ${SOURCES.join(", ")})`);
     const severity = SEVERITY_MAP[String(rec.severity).toLowerCase()];
     if (!severity) fail(`unknown severity '${rec.severity}' (mapping table in ledger.mjs)`);
     const status = rec.status ?? "open";
     if (!STATUSES.includes(status)) fail(`unknown status '${rec.status}'`);
+    if (rec.provider != null && !["claude", "codex"].includes(rec.provider)) fail(`unknown provider '${rec.provider}'`);
     return {
       source: rec.source, severity, status,
       category: rec.category ?? "general", summary: rec.summary,

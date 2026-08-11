@@ -619,7 +619,13 @@ The same loop is used in three places:
 
 Once per PROJ, fully automatic:
 
-1. Create the `proj/PROJ-X` branch, tag BASE_SHA
+1. From the clean committed CP1 checkout, create or resume the persistent
+   sibling worktree on `proj/PROJ-X` and tag BASE_SHA. The default path is
+   `<parent>/<repo>-proj<X>`; `SKILLCHAIN_WORKTREE_ROOT` overrides its base.
+   Dependencies install reproducibly inside the worktree. `.env.local` is an
+   ignored symlink to the control checkout; development data and hosted-auth
+   budget remain shared and are recorded as such. Migrations and auth-consuming
+   commands serialize through a lock in the common Git directory.
 2. **Check/update the context pack** (context-curator agent): the
    baseline from `docs/` is the foundation; PROJ-specific additions are
    architecture-delta, api-contracts, ground-file
@@ -661,9 +667,12 @@ for each wave N:
      branch in dependency order; auto-fix trivial conflicts; semantic
      conflicts = planning error → finding into the ledger + escalate
   5. WAVE GATE (script, extended):
-     – AC commands + build (as today)
-     – CodeRabbit `--agent --base-commit <wave-start>` (as today)
-     – NEW: `sonar` local scan + secrets check (seconds, local)
+     – current structured AC commands + declared broad regressions + build
+     – cached AC proof binds ID, command, positive selection, and committed HEAD
+     – CodeRabbit `--agent --base-commit <wave-start>` with attempt-unique raw
+       and normalized evidence; the cumulative open blocking ledger decides
+     – required top-level `sonar_cmd` with a timeout, executed from the
+       persistent PROJ worktree (scanner/npm/wrapper chosen by the project)
      – smoke test (agent-browser) for frontend waves
      → all findings into the ledger; Critical/High block
   6. green → next wave without stopping
@@ -1038,7 +1047,8 @@ port allocation. Mode 3 stays disabled until this passes.
 | `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component) |
 | `codex` | Codex phase lane + provider-opposite review via `codex exec` | 🟡 preferred, degradable — missing/unauthenticated → single-provider run with model-opposite review, flagged in report + PR body, never silent |
 | `agent-browser` | smoke tests in the wave gate, browser E2E in P6 | ✅ hard for frontend waves; backend-only: unused |
-| `sonar` | local scan + secrets check in the wave gate | 🟡 skippable with log entry |
+| `sonar_cmd` dependencies | project-defined local scan + secrets check in every wave gate | ✅ hard through the configured command |
+| `sonar` | optional additional PROJ-end Sonar CLI/API stream | 🟡 skippable with explicit PROJ-end disposition; never skips `sonar_cmd` |
 | `sonar-scanner` | full quality gate at PROJ end (P6) | 🟡 skippable with log entry |
 | `supabase` | migrations, types, local instances (if the product uses Supabase) | 🟡 only if Supabase in the stack |
 | Jira access (Atlassian MCP or CLI/REST) | PRD intake Mode B (P2d) + status sync-back | 🟡 TODO — only for Mode B (Stage 3); Mode A (local PRDs in specs/) needs nothing |
@@ -1060,17 +1070,20 @@ progress.md/state.json. Auth is checked too (`gh auth status`,
   visible. The waiting rule in §8 is only a fallback for outages.
 - The `.coderabbit.yaml` preflight (exists in Skill 5) remains.
 
-### Sonar — Two Stages (two CLIs, two jobs)
-- **`sonar`** (developer CLI): local change analysis + secrets scan in
-  the WAVE GATE — fast, local, no CI round trip. Secrets are found
-  BEFORE they enter the branch history, not at PROJ end.
+### Sonar — Two Stages (project command plus full-project job)
+- **`sonar_cmd`**: required project-defined local change analysis + secrets
+  scan in every WAVE GATE — fast, local, no CI round trip. It runs from the
+  persistent PROJ worktree and may call `sonar-scanner`, an npm script, or a
+  wrapper. Missing or non-zero execution blocks; there is no hard-coded
+  `command -v sonar` skip. Secrets are found BEFORE they enter the branch
+  history, not at PROJ end.
 - **`sonar-scanner`**: full project analysis + quality gate ONCE at
   PROJ end (P6). Setup/auth/coverage per the `sonar-cli` skill.
 - **Environment: SonarQube Cloud, already set up** (org, token, project
   config present) — the P0 preflight only verifies auth
   (`sonar auth status`, `SONAR_TOKEN`) instead of doing setup.
-- If the CLIs are missing on the machine: skip with a log entry, never
-  block.
+- The PROJ-end scanner may still be dispositioned separately. The per-wave
+  `sonar_cmd` is mandatory and fails closed.
 
 ### Claude + Codex CLI Adapters
 - `claude -p` and `codex exec` are first-class phase lanes. The runner
@@ -1144,6 +1157,13 @@ the framework. `state.sh` and `ledger.mjs` validate on every write —
 an agent writing a malformed record fails loudly at write time, not
 silently at render time.
 
+**Evidence retention boundary:** CodeRabbit raw and normalized JSONL is retained
+per gate attempt because it directly drives the local decision. CI and Sonar
+evidence remains authoritative in those systems. Cross-review stores validated
+normalized findings, not complete model responses that may carry sensitive
+prompt context. The framework does not indiscriminately archive every external
+response.
+
 #### Script specifications
 
 | Script (skill) | Input | Output | Behavior / exit |
@@ -1151,9 +1171,11 @@ silently at render time.
 | `preflight.sh` (4b_setup) | CLI list §7 (embedded), env | report to stdout; state.json `preflight` block | checks `command -v` + auth per tool; exit ≠ 0 on any missing HARD tool (stop condition); skippable tools → logged skip |
 | `compile-context-bundles.mjs` (4b_setup) | root `AGENTS.md`, `docs/*`, `specs/PROJ-<X>-<theme>/*`, injection matrix §5 | one canonical bundle per role plus Claude/Codex projections | counts tokens and hashes both provider projections; exit ≠ 0 on budget breach or semantic drift |
 | `state.sh` (4b_setup) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
-| `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | extended: `sonar` local scan + secrets check, component-registry `--check`; any Critical/High → exit ≠ 0 |
+| `worktree.sh` (4b_setup/8_delivery) | PROJ id, control checkout, state | persistent PROJ worktree lifecycle | creates/resumes safely; links ignored `.env.local`; installs from lockfile; reports conservative cleanup eligibility |
+| `validate-wave-plan.mjs` (4_writing-plans/4a_checkpoint/4b_setup) | wave plans + `wave-gate-config.json` | deterministic consistency verdict | validates unique AC mappings, bidirectional test files, broad regressions, auth budget, and protected-route coverage |
+| `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | runs current ACs + declared regressions, archives CodeRabbit evidence, checks cumulative blocking ledger, manages frontend readiness; red evidence → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
-| `ledger.mjs` (quality) | raw findings (JSON lines from all sources) | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/line/category; severity mapping table embedded; idempotent (re-run safe) |
+| `ledger.mjs` (quality) | non-empty normalized findings JSONL from all sources | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/anchor/category, adding a stable summary fingerprint when no location exists; idempotent with reopen support; empty stdin fails |
 | `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; for Claude-authored work only, unavailable Codex may fall back model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
 | `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes OAuth-preserving isolated `claude -p` read-only with validated JSON Schema; rejects structured API/auth errors; detects the 10 MB stdin ceiling; timeout/cancel as one process group |
 | `review-with-codex.sh` (cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
@@ -1212,7 +1234,7 @@ sequentially).
 | Wave gate red | fix and re-run; 3× red on the SAME check → stop condition |
 | Critical bug survives 3 fix attempts | stop condition |
 | Semantic merge conflict (parallel) | 1 resolution attempt with the contract as reference; unresolved → stop condition |
-| Tool missing / auth broken / env broken | stop condition (never skip silently — except explicitly marked skippable, e.g. Sonar) |
+| Tool missing / auth broken / env broken | stop condition (never skip silently; the per-wave `sonar_cmd` is mandatory) |
 | Rate limit exhausted (CodeRabbit) | wait until the window frees up, max 1h; then stop condition |
 | Security-critical (secrets in code, auth bypass) not auto-fixable | stop condition, do NOT commit the wave |
 
@@ -1231,7 +1253,12 @@ controlled way:
      branches/worktrees are open
    - **Cleanup list:** what the human/the next run must clean up
    - Recommended next action
-4. If more PROJs are queued and the failure is PROJ-local: start the
+4. Retain the persistent PROJ worktree and report its exact path plus the safe
+   P8 resume command. Retention dirties state deliberately, so P8 must reseal,
+   push, and obtain exact-head green CI before guarded cleanup can retry. Only
+   successful P8 may auto-remove the worktree, after final CI is green,
+   upstream equals local HEAD, and the worktree is clean.
+5. If more PROJs are queued and the failure is PROJ-local: start the
    next PROJ. On environment failures (env/tools): end the whole run.
 
 ### Morning Report
@@ -1257,7 +1284,7 @@ notification failure never loses or invalidates the report.
 | P3 reads/writes the curated ARCHITECTURE.md, produces a delta | Skill 3 (per-PROJ architecture without a baseline) |
 | P0 setup with context pack + injector hook | FIRST-ACTION block + if/else context logic in Skill 5 |
 | Paired Claude + Codex lanes by default; worktrees for concurrent writers | one host process plus same-host subagents in a shared checkout |
-| `sonar` local scan + secrets in the wave gate | Sonar only at PROJ end |
+| required project `sonar_cmd` in every wave gate | Sonar only at PROJ end |
 | Findings ledger as the central fix queue | 4 separate finding streams |
 | Minimalism ladder in implementer prompts | only the Ken review at PROJ end (Ken stays as the net) |
 | Folder agent.md with protocol + curation | agent.md per feature only, without curation |

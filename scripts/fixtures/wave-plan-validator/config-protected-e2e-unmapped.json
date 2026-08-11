@@ -1,0 +1,43 @@
+{
+  "sonar_cmd": "npm run sonar",
+  "frontend": {
+    "dev_cmd": "npm run dev",
+    "dev_url": "http://localhost:3000",
+    "readiness": {
+      "path": "/health",
+      "timeout_seconds": 30,
+      "interval_seconds": 1
+    },
+    "routes": [
+      {
+        "wave": "1",
+        "path": "/account",
+        "expected_url": "http://localhost:3000/account",
+        "expected_text": "Account",
+        "protected": true,
+        "authenticated_e2e_test_files": ["tests/e2e/account.spec.ts"]
+      }
+    ]
+  },
+  "waves": {
+    "1": {
+      "ac_commands": [
+        {
+          "id": "PROJ-1-PRD-1-US-1-AC-1",
+          "task": "Task PROJ-1-PRD-1-US-1-T1",
+          "command": "npm test -- tests/validator.test.ts",
+          "test_files": ["tests/validator.test.ts"],
+          "auth_consuming": false
+        }
+      ],
+      "regression_commands": [
+        {
+          "label": "unrelated browser flow",
+          "command": "npm run test:e2e -- tests/e2e/other.spec.ts",
+          "test_files": ["tests/e2e/other.spec.ts"],
+          "auth_consuming": false
+        }
+      ]
+    }
+  }
+}

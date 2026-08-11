@@ -156,6 +156,12 @@ that is not listed there; never add one without an architecture decision.
 ## Commands
 - `<pm> dev` · `<pm> build` · `<pm> test` · `<pm> lint`
 
+## Execution isolation
+- P0–P8 run in the registered persistent PROJ worktree, not the control checkout.
+- Dependencies are worktree-local. `.env.local`, the development database, and
+  hosted-auth limits are shared resources; never print secrets and serialize
+  migrations or auth-consuming gates through the configured lock.
+
 ## Curated context
 - `docs/PRODUCT.md` — what the product is, and is not
 - `docs/ARCHITECTURE.md` — stack + load-bearing architecture

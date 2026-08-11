@@ -56,5 +56,10 @@ the ladder, recorded in state.json and flagged in the reports.
 ## Notes
 
 - Existing skill folders with the same names are overwritten.
+- The installed folders are copies, not Git repositories. To update another
+  machine, pull this skill-chain repository there and run both installers
+  again; do not try to push from `~/.claude/skills/` or `~/.codex/skills/`.
+- Re-running the installers also refreshes the shared P0/P8 worktree helper,
+  the plan-consistency validator, and the provider-specific Wave Gate.
 - The 0-to-8 core chain and its `cross-review` mechanism are installed, along with the documented optional skills: `bugfixing`, `refactor-dreamer`, and `sonar-cli`.
 - `CLAUDE.md` is not installed as a skill. It is a repo-level pointer file only.

@@ -38,7 +38,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 3 | `architecture` | PROJ-level tech design across all PRDs |
 | 4 | `writing-plans` | Wave-based implementation plans |
 | 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
-| 4b | `setup` | P0 once per PROJ: branch, preflight, framework scripts into the repo, context bundles |
+| 4b | `setup` | P0 once per PROJ: persistent isolated worktree, branch, preflight, framework scripts, dependencies, context bundles |
 | 5 | `executing` | Implement wave by wave with TDD, wave gates, debt markers |
 | 6 | `qa` | End-to-end QA plus required six-persona opposite-provider evidence review; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
@@ -77,6 +77,21 @@ What makes an overnight run trustworthy:
   phases happens only via `specs/PROJ-*/state.json` (written solely by
   `state.sh`) and the findings ledger `findings.json` (written solely by
   `ledger.mjs`).
+- **Persistent PROJ worktree.** P0–P8 run on `proj/PROJ-X` in a registered
+  sibling worktree. Dependencies are installed inside it; `.env.local`, the
+  development database, and hosted-auth limits remain deliberately shared and
+  are surfaced in state and reports. Migrations and auth-consuming gates use a
+  common repository lock.
+- **Evidence-based wave gates.** A green wave proves the current AC commands
+  and the wave's declared broad regression suite. AC cache entries bind to ID,
+  command, selected tests, and committed HEAD; CodeRabbit attempts retain raw
+  and normalized evidence and are judged against cumulative open ledger debt.
+  The required project `sonar_cmd` also runs from that same PROJ worktree on
+  every wave; it is never skipped based on a hard-coded CLI name.
+- **Bounded evidence retention.** CodeRabbit raw output is kept because the
+  local gate parses it. CI and Sonar evidence remains in their source systems,
+  while cross-review persists validated normalized findings instead of full
+  model responses that may contain sensitive context.
 - **Cross-model review.** Review routes to the provider OPPOSITE the
   artifact's author; a review gate is never satisfied by the model that
   authored the artifact. Claude-authored work goes to Codex, while
@@ -107,7 +122,7 @@ What makes an overnight run trustworthy:
 Details: [runner/README.md](runner/README.md),
 [docs/skill-chain.md](docs/skill-chain.md), and `CONCEPT.md` for the full
 model. Stage 3+ of the concept (P3 runner rework, deeper pre-mortem
-orchestration, Jira import, worktree parallelism) is not built yet; the
+orchestration, Jira import, and optional per-story worktree parallelism) is not built yet; the
 producing-skill cross-review handoffs themselves are already wired.
 
 ## Outside the Chain
@@ -193,8 +208,9 @@ runner/spike-stage2.sh         # Stage 2 release gate: bundles, injector, caps, 
 
 The validation script checks that the expected skill folders exist in both
 trees, every skill has `SKILL.md` frontmatter, the byte-identical helper
-set stays in sync, the schemas parse, and every script passes a syntax
-check. The spikes are the release gates for the framework: they exercise
+set stays in sync, the schemas parse, every script passes a syntax check,
+and the Wave Gate, ledger, worktree, plan-consistency, preflight/Biome, and
+registry behavior harnesses pass. The spikes are the release gates for the framework: they exercise
 live provider lanes, the ledger's concurrency and reopen guarantees, and
 every runner gate against stubbed failure fixtures.
 

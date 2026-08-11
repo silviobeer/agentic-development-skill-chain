@@ -1,0 +1,24 @@
+{
+  "sonar_cmd": "npm run sonar",
+  "waves": {
+    "1": {
+      "ac_commands": [
+        {
+          "id": "PROJ-1-PRD-1-US-1-AC-1",
+          "task": "Task PROJ-1-PRD-1-US-1-T1",
+          "command": "npm test -- tests/validator.test.ts",
+          "test_files": ["tests/validator.test.ts"],
+          "auth_consuming": true
+        }
+      ],
+      "regression_commands": [
+        {
+          "label": "validator regression",
+          "command": "npm test -- tests",
+          "test_files": ["tests/validator.test.ts"],
+          "auth_consuming": false
+        }
+      ]
+    }
+  }
+}

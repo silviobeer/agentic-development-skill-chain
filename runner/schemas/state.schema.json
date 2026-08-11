@@ -34,6 +34,22 @@
       "type": "string",
       "description": "PROJ branch name, e.g. proj/PROJ-3"
     },
+    "worktree": {
+      "type": "object",
+      "description": "Persistent PROJ-worktree topology. Dependencies are isolated; database and auth infrastructure are deliberately shared.",
+      "required": ["control_path", "path", "branch", "env_link_status", "database_mode", "dev_port", "dependency_install", "cleanup_status", "cleanup_reason"],
+      "properties": {
+        "control_path": { "type": "string", "description": "Absolute path of the clean control checkout used at P0." },
+        "path": { "type": "string", "description": "Absolute path of the persistent PROJ worktree." },
+        "branch": { "type": "string", "pattern": "^proj/PROJ-[0-9]+$" },
+        "env_link_status": { "enum": ["linked", "not_present"], "description": ".env.local is either an ignored symlink to the control checkout or absent." },
+        "database_mode": { "const": "shared", "description": "Development database and auth limits are shared across worktrees and serialized where declared." },
+        "dev_port": { "type": ["integer", "null"], "minimum": 1, "maximum": 65535 },
+        "dependency_install": { "enum": ["installed", "not_applicable"], "description": "Lockfile-based install in this worktree; node_modules is never linked." },
+        "cleanup_status": { "enum": ["pending", "retained", "removed"], "description": "removed is sealed intent during final CI and becomes factual when the registered path is gone; a failed predicate rewrites it to retained and blocks P8." },
+        "cleanup_reason": { "type": ["string", "null"] }
+      }
+    },
     "decision_log": {
       "type": "string",
       "description": "Path to decisions.md written by 4a_checkpoint"

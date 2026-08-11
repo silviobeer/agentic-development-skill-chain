@@ -45,6 +45,10 @@ Before doing ANYTHING else — before reading plans, before spawning any agent:
      4b's `preflight.sh`; do NOT re-run them here.
    - Then mark the phase if needed: if state shows `P0:done`, run
      `bash scripts/state.sh transition <X> <theme> P5 running`.
+   - Verify the current directory is `.worktree.path` from state. P0 owns the
+     persistent PROJ worktree and the runner re-executes there; do not implement
+     from the control checkout. Dependencies are isolated, while `.env.local`,
+     development data, and hosted-auth limits are deliberately shared.
 2. **Standalone fallback (no state.json — manual run without the framework):**
    run the legacy preflights inline before wave 1: (a) permission preflight —
    `claude --dangerously-skip-permissions` or `bash scripts/merge-project-settings.sh`
@@ -85,14 +89,19 @@ Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. 
 For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
 
 The script validates:
-1. **Ralph ACs** — every `ac_commands` entry exits 0 **and reports a non-empty selected-test count**. The gate persists each result in `5_progress/ralph-wave-N.json` immediately; reruns skip only recorded-green ACs, and `bash scripts/wave-gate.sh --status <N> <PROJ-X> <theme>` checks its PID/heartbeat without `pgrep`.
-2. **Build** — `build_cmd` from config exits 0
-3. **CodeRabbit** — 0 Critical/High findings against wave start SHA
-4. **Smoke Test** — `agent-browser` passes on every `frontend_routes` entry (skipped if empty)
+1. **Current Ralph ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass is reusable only for the same AC ID, command, positive selection, and committed `verified_head`; changed or uncommitted code cannot be certified.
+2. **Declared broad regressions** — every `regression_commands` entry runs after the current ACs and before build; selection-aware entries must prove that they selected tests.
+3. **Build** — `build_cmd` from config exits 0.
+4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
+5. **Sonar** — the required top-level `sonar_cmd` runs with a timeout from the current persistent PROJ worktree. The gate does not assume an executable named `sonar`; missing, timed-out, or non-zero project commands are red.
+6. **Smoke Test** — the configured dev server is reused or started by the gate. Anonymous routes must match URL and characteristic content; redirects are failures. Protected routes require auth state or authenticated E2E coverage.
+
+A green wave gate proves the current wave's ACs plus its declared broad
+regression suite. It does not claim that every earlier AC command was rerun.
 
 On success the script appends a `### Wave N Gate — PASSED` block with timestamp to `progress.md`. This is the canonical proof that the wave is done — no manual checkbox editing.
 
-**Framework runs (state.json exists):** after every green gate, update the machine state too — `bash scripts/state.sh set <X> <theme> .waves '{"current": <N>, "total": <M>, "stories": {…per-US status…}}'` (merge with the existing block). The gate also pipes its CodeRabbit/Sonar findings into the ledger when `scripts/ledger.mjs` is present — never re-enter them by hand.
+**Framework runs (state.json exists):** after every green gate, update the machine state too — `bash scripts/state.sh set <X> <theme> .waves '{"current": <N>, "total": <M>, "stories": {…per-US status…}}'` (merge with the existing block). The gate pipes its normalized CodeRabbit findings into the ledger when `scripts/ledger.mjs` is present; Sonar evidence remains in the configured system — never re-enter either by hand.
 
 **If the wave-gate.sh script is missing from the project:** copy the template from `~/.claude/skills/5_executing/scripts/wave-gate.sh` to `scripts/wave-gate.sh`, `chmod +x` it, commit it before running the first wave.
 
@@ -160,7 +169,7 @@ Status: pending | passed
 | P2 Medium | 0 | 0 | 0 |
 | P3 Low | 0 | 0 | 0 |
 
-### SonarCloud
+### PROJ-end SonarCloud (separate from mandatory per-wave `sonar_cmd`)
 Status: pending | ran | skipped (sonar CLI unavailable) | skipped (project not configured)
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
@@ -335,6 +344,13 @@ wave, the lead also owns every other declared shared resource and the control
 plane: `progress.md`, staging, and commits. Include the execution mode, runtime
 constraints, and these ownership rules in every spawn prompt.
 
+The development database and hosted-auth budget are shared across the PROJ
+worktrees. Every database migration command—including one delegated to a story
+agent—and every other explicitly `auth_consuming` command must therefore be
+wrapped as `scripts/worktree.sh with-shared-lock -- <command>`. Put that exact
+constraint in the agent prompt; never let parallel agents run migrations
+outside the project lock.
+
 **Choose the right implementer type per US.** Where the current session can
 spawn P0's `skillchain-<role>` agent types, use them. Otherwise use the normal
 agent type and attach the path printed by
@@ -463,8 +479,9 @@ coderabbit review --agent --base-commit $WAVE_BASE_SHA
 Where `$WAVE_BASE_SHA` is the commit before this wave started (record it at the start of each wave, similar to `BASE_SHA` for the full feature).
 
 **How to handle findings:**
-- **Critical / High:** Fix immediately — spawn a fix teammate before the next wave. These would only get worse with more code on top.
-- **Medium / Low:** Log to `progress.md` under the wave section. These are picked up by the full Quality Gate later.
+- Each gate attempt retains `coderabbit-wave-<N>-attempt-<M>.jsonl` and its normalized sibling; never overwrite earlier review evidence.
+- Any cumulative open ledger severity not listed in the wave's `advisory_severities` blocks. Fix immediately — spawn a fix teammate before the next wave.
+- Listed advisory severities are logged and revisited at the PROJ-end Quality Gate if still relevant.
 
 **Log in progress.md:**
 ```markdown
@@ -481,7 +498,7 @@ Update `$WAVE_BASE_SHA` to the current commit after the wave review passes.
 
 **Skip this step if the wave only contained backend-implementer teammates.**
 
-After the CodeRabbit review, run a quick browser smoke test using `agent-browser` to verify that what was just built actually renders and works. This is NOT the full QA — it's a 60-second gut check.
+Browser smoke testing is owned by `wave-gate.sh`. It reuses a matching reachable server or starts `frontend.dev_cmd`, waits for readiness, logs its output, and stops only the process it started. It then runs `agent-browser` to verify URL and characteristic content. Redirects are failures; protected routes require `auth_state` or authenticated E2E coverage.
 
 ```bash
 # The lead owns this server for the wave; do not start or stop another one.
@@ -492,7 +509,7 @@ agent-browser errors
 
 For multiple pages affected by the wave, run one `agent-browser` call per route.
 
-**Pass criteria:** Page renders, no visible errors, primary happy path works.
+**Pass criteria:** Anonymous routes keep the expected URL and characteristic text. Protected routes supply `auth_state`, or the declared regression suite provides authenticated E2E coverage.
 **Fail:** Stop and fix before the next wave — broken UI compounds fast.
 
 Log the result in `progress.md` under the wave section:
@@ -542,6 +559,9 @@ After all waves for this PROJ-X are complete and all ACs verified, run the Quali
 See `references/quality-gate.md` for full instructions.
 
 **Run code review, PROJ-end build, optional Sonar, and Ken in parallel where safe:**
+
+This optional PROJ-end analysis is additional to the mandatory `sonar_cmd`
+that every wave gate has already run. Its skip policy never applies to a wave.
 
 Before launching the Sonar stream, check tool availability:
 

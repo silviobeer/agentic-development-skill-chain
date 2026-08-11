@@ -35,10 +35,12 @@ Plans are written one PROJ at a time. If the architecture or concept references 
 - Read architecture file
 - Read every PRD in `2_PRDs/`
 - If UI work exists, read `1d_mockups/implementation-handoff.md` and extract the implementation-facing UI constraints.
-- Extract **all** user stories and acceptance criteria verbatim, prefixing with `PROJ-<X>-PRD-<Y>-US-<Z>` for uniqueness
+- Extract **all** user stories and acceptance criteria verbatim. Give every story
+  the canonical ID `PROJ-<X>-PRD-<Y>-US-<Z>` and every criterion the globally
+  unique ID `PROJ-<X>-PRD-<Y>-US-<Z>-AC-<N>`; the text remains verbatim.
 - Check existing codebase for relevant files, patterns, and conventions
 - **Check for `agent.md`** in the feature's source folder (e.g., `src/features/[feature]/agent.md`). If it exists, read it — incorporate known gotchas into the relevant tasks as warnings.
-- **Component Registry — mandatory for UI waves:** The canonical registry is `docs/components.md`, and it is **generated from the code**, not written by hand. If the PROJ has any UI work (any wave with `frontend_routes` or frontend-implementer tasks), refresh it before drafting task descriptions:
+- **Component Registry — mandatory for UI waves:** The canonical registry is `docs/components.md`, and it is **generated from the code**, not written by hand. If the PROJ has any UI work (any route in `frontend.routes` or frontend-implementer tasks), refresh it before drafting task descriptions:
 
   ```bash
   node scripts/gen-component-registry.mjs
@@ -122,8 +124,8 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 **Scope:** backend → backend-implementer
 
 **Acceptance Criteria:**
-- [ ] AC-1: [verbatim from PRD]
-- [ ] AC-2: [verbatim from PRD]
+- [ ] PROJ-<X>-PRD-1-US-1-AC-1: [verbatim from PRD]
+- [ ] PROJ-<X>-PRD-1-US-1-AC-2: [verbatim from PRD]
 
 **Smoke Test:** (only for frontend or full-stack scope — omit for backend-only)
 - Route: `/path/to/page`
@@ -139,13 +141,16 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 - Interaction contract: [required panels/modals/drawers/tabs/states/responsive behavior]
 - Implementation tolerance: existing React components and design tokens take precedence over exact HTML mockup CSS; preserve selected layout direction.
 
-### Task 1.1: [Component Name]
-**Fulfills:** AC-1
+### Task PROJ-<X>-PRD-1-US-1-T1: [Component Name]
+**Fulfills:** PROJ-<X>-PRD-1-US-1-AC-1
 
 **Files:**
 - Create: `exact/path/to/file.ts`
 - Modify: `exact/path/to/existing.ts`
 - Test: `tests/exact/path/to/test.ts`
+
+**Gate commands:**
+- `PROJ-<X>-PRD-1-US-1-AC-1`: `npm test -- tests/exact/path/to/test.ts`
 
 **What to build:** [1-2 sentences describing observable behaviour]
 
@@ -168,7 +173,7 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 > ⚠️ **Gotcha:** [only if agent.md revealed one — otherwise omit]
 
-### Task 1.2: …
+### Task PROJ-<X>-PRD-1-US-1-T2: …
 
 ### Post-Wave Notes (reserved for documentation harvest)
 - Deviations from plan: —
@@ -194,33 +199,83 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 ```json
 {
   "build_cmd": "npm run build",
-  "dev_url": "http://localhost:3000",
+  "sonar_cmd": "npm run sonar:wave",
   "timeouts": {
     "ac_seconds": 300,
     "ralph_stall_seconds": 300,
     "build_seconds": 600,
     "coderabbit_seconds": 600,
-    "browser_seconds": 120
+    "browser_seconds": 120,
+    "sonar_seconds": 300
+  },
+  "auth_provider_rate_limited": true,
+  "auth_budget": {
+    "preflight_cmd": "npm run auth:budget-check",
+    "exhausted_exit_code": 75
+  },
+  "frontend": {
+    "dev_cmd": "npm run dev",
+    "dev_url": "http://localhost:3000",
+    "readiness": {
+      "path": "/health",
+      "timeout_seconds": 60,
+      "interval_seconds": 2
+    },
+    "routes": [
+      {
+        "wave": "2",
+        "path": "/account",
+        "expected_url": "http://localhost:3000/account",
+        "expected_text": "Your account",
+        "protected": true,
+        "auth_state": "tests/e2e/.auth/user.json"
+      }
+    ]
   },
   "waves": {
     "1": {
       "codex_effort": "high",
       "advisory_severities": ["medium", "low"],
       "ac_commands": [
-        { "command": "npm test -- src/auth/password.test.ts", "auth_consuming": true },
-        "npm test -- src/auth/session.test.ts"
+        {
+          "id": "PROJ-1-PRD-1-US-1-AC-1",
+          "task": "Task PROJ-1-PRD-1-US-1-T1",
+          "command": "npm test -- src/auth/password.test.ts",
+          "test_files": ["src/auth/password.test.ts"],
+          "auth_consuming": true
+        }
       ],
-      "auth_pacing_seconds": 20,
-      "frontend_routes": []
+      "regression_commands": [
+        {
+          "label": "auth regression suite",
+          "command": "npm test -- src/auth",
+          "test_files": ["src/auth/password.test.ts", "src/auth/session.test.ts"],
+          "auth_consuming": true,
+          "require_non_empty_selection": true
+        }
+      ]
     },
     "2": {
       "codex_effort": "medium",
       "advisory_severities": ["high", "medium", "low"],
       "ac_commands": [
-        "npm test -- src/auth/login.test.ts",
-        "npm test -- src/auth/signup.test.ts"
+        {
+          "id": "PROJ-1-PRD-1-US-2-AC-1",
+          "task": "Task PROJ-1-PRD-1-US-2-T1",
+          "command": "npm test -- src/auth/login.test.ts",
+          "test_files": ["src/auth/login.test.ts"],
+          "auth_consuming": false
+        }
       ],
-      "frontend_routes": ["/login", "/signup"]
+      "regression_commands": [
+        {
+          "label": "browser auth flows",
+          "command": "npm run test:e2e -- tests/e2e/auth.spec.ts",
+          "test_files": ["tests/e2e/auth.spec.ts"],
+          "auth_consuming": false,
+          "require_non_empty_selection": true
+        }
+      ]
     }
   }
 }
@@ -228,16 +283,53 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 
 **Rules:**
 - `build_cmd`: whatever builds the project fully (`npm run build`, `tsc --noEmit`, `cargo build`, etc.)
-- `dev_url`: dev server URL for agent-browser smoke tests (default `http://localhost:3000`)
+- `sonar_cmd`: required non-empty project command for the per-wave Sonar scan.
+  The gate always runs this exact command from the persistent PROJ worktree;
+  use the repository's real entry point (`sonar-scanner`, an `npm` script, or a
+  wrapper) rather than assuming a binary named `sonar` exists. Missing,
+  timed-out, or non-zero execution blocks the wave.
+- `frontend.dev_url`: dev server URL for agent-browser smoke tests (default `http://localhost:3000`)
 - `timeouts`: required budgets for long-running gate steps. Use seconds. The gate fails if any key is missing:
   - `ac_seconds`: per AC command
   - `ralph_stall_seconds`: maximum no-progress time for one AC command (optional; defaults to `ac_seconds`)
   - `build_seconds`: full project build
   - `coderabbit_seconds`: per-wave CodeRabbit review
   - `browser_seconds`: per route smoke test
-- `ac_commands[]`: one shell command per AC. Keep existing string entries, or use `{ "command": "…", "auth_consuming": true }` for a command that spends shared provider/auth budget. **Each AC in the wave must map to exactly one command.** The gate persists `rc`, selected-test count, attempts, command, and log after every AC; it resumes only entries recorded green with a non-empty selection. A command must print a recognizable selected-test count (`Running N tests`, `Tests N passed`, TAP `# tests N`, or `N passed`); zero or unparseable selection blocks even when rc is 0.
-- `auth_pacing_seconds`: optional per-wave minimum gap between `auth_consuming` commands; omit or set `0` when no shared provider budget exists. Do not mark unrelated commands merely to slow the gate.
-- `frontend_routes[]`: URLs touched by the wave. Empty array = backend-only wave → smoke test skipped. Each listed route is gut-checked via `agent-browser`.
+  - `sonar_seconds`: per-wave `sonar_cmd` (optional; defaults to 120)
+- `ac_commands[]`: one structured object per AC. `id` is the unique canonical
+  AC ID, `task` exactly matches its stable `### Task ...` heading, `command` is
+  exactly the command in that task's `Gate commands` block, and `test_files` is
+  the exact set of `Test:` files in that task's `Files` block.
+  `auth_consuming` is always an explicit boolean. The
+  runtime gate still accepts legacy string entries, but newly written plans do
+  not use them because they cannot prove plan/config consistency. Each AC maps
+  to exactly one command. A command must print a recognizable selected-test
+  count (`Running N tests`, `Tests N passed`, TAP `# tests N`, or `N passed`);
+  zero or unparseable selection blocks even when rc is 0.
+- `regression_commands[]`: required, non-empty broad regression coverage for
+  every wave, run after its current AC commands. Each entry has `label`,
+  `command`, `test_files`, explicit `auth_consuming`, and optional
+  `require_non_empty_selection` (set it to `true` for test runners whose
+  selection can silently be empty). Select the smallest broad suite that covers
+  shared behavior affected by the wave; do not mechanically repeat every prior
+  AC command or the entire E2E inventory. Deterministic minimum: a regression
+  entry is invalid when its whitespace-normalized `command` and its normalized
+  `test_files` set both exactly equal an AC entry. Reusing the same test file is
+  allowed when a different command genuinely selects a broader suite.
+- `auth_budget`: mandatory whenever any AC or regression command has
+  `auth_consuming: true`. `preflight_cmd` is a provider-neutral project hook;
+  set `exhausted_exit_code` to `75` by default. A rate-limited hosted-auth project may
+  not declare an auth-consuming command without this hook. Set
+  `auth_provider_rate_limited: true` for such a project so the validator also
+  requires the hook before auth-consuming commands have been added.
+- `frontend`: omit for a backend-only PROJ. Otherwise provide `dev_cmd`,
+  `dev_url`, bounded `readiness`, and route objects. Every route names its
+  `wave`, `path`, exact `expected_url`, characteristic `expected_text`, and
+  whether it is `protected`. Protected routes require either `auth_state` for
+  the smoke or
+  `authenticated_e2e_test_files`; every listed E2E file must also occur in the
+  same wave's regression `test_files`. An anonymous redirect to login is not
+  successful smoke evidence.
 - `advisory_severities`: required list of CodeRabbit severities that do **not** block the wave. Any finding whose normalized severity is not listed blocks.
   - Use `["medium", "low"]` for normal or risky waves. Critical/High/Error/Blocker findings block.
   - Use `["high", "medium", "low"]` only for low-risk polish/doc/test-only waves where High findings can be deferred to the PROJ-end Quality Gate.
@@ -245,6 +337,13 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 - `codex_effort`: `"minimal" | "low" | "medium" | "high" | "xhigh"` — reasoning effort for Codex-backed PROJ-end reviewers or rescue work if invoked. Default: `"high"` for normal/risky waves, `"medium"` for low-risk polish waves. Optional — omit to accept the default.
 
 The test commands here are the **same commands** Ralph will run during execution — keep them in sync with the Smoke Test and AC sections of the wave plans. The plan's `Execution` block, not `Can start when`, decides whether independent stories are dispatched concurrently.
+
+**Legacy migration:** string `ac_commands` remain runtime-readable for a
+standalone legacy gate run, but strict CP1/P0 evidence requires replacing them
+with structured entries, adding the required regressions/auth metadata, running
+the validator, and obtaining approval again. Never infer an AC identity from
+its array index. There is intentionally no automatic migrator: selecting broad
+regressions and identifying auth consumption require planning judgment.
 
 ### 6. Plan Self-Review
 
@@ -263,7 +362,21 @@ After writing all wave files, review them with fresh eyes:
 
 Fix issues inline. Move on.
 
-**Config consistency check:** every wave plan has an `Execution` block; `wave-gate-config.json` has one entry per wave, every wave has at least one `ac_commands`, all four required `timeouts` keys are present (`ralph_stall_seconds` is optional), `advisory_severities` never includes `critical`/`blocker`/`error` without explicit user approval, and `frontend_routes` only set for waves that touch UI. For hosted/rate-limited providers, mark only the budget-consuming AC commands and set deliberate `auth_pacing_seconds`; no config may widen a provider limit to make verification green. Mismatch here will block execution.
+**Config consistency check:** every wave plan has an `Execution` block;
+`wave-gate-config.json` has one entry per wave; every AC ID occurs exactly once;
+every AC names the correct task and command; and its `test_files` equal the
+task's `Files: Test:` entries in both directions. Every wave declares at least
+one broad regression command. The top-level `sonar_cmd` is non-empty. All
+timeout keys, auth-budget hooks, and frontend metadata are complete; protected
+routes have authenticated coverage.
+
+Run the deterministic validator after generating or changing any plan/config
+artifact. A failure blocks user review and handoff:
+
+```bash
+node ~/.claude/skills/4_writing-plans/scripts/validate-wave-plan.mjs \
+  specs/PROJ-<X>-<theme>/3-4_plan
+```
 
 **Platform-authority check:** for each planned deployment/platform value (region,
 runtime, API feature, environment setting), name the platform query, CLI, or
