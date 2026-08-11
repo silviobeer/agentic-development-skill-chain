@@ -25,8 +25,12 @@ user.
 
 Supply source artifacts that establish truth through `--ground-truth`; the
 script embeds both artifacts and ground truth with `cat -n` line numbers. A
-`--diff-base` embeds that git diff. The reviewer has no need or permission to
-run commands, making read-only behaviour independent of sandbox support.
+`--diff-base` embeds that git diff. Add `--diff-paths` with normal Git
+pathspecs for large PROJs; the prompt names every changed path omitted by that
+scope. Embedded material defaults to a 900,000-byte ceiling and fails before
+the provider call rather than truncating. The reviewer has no need or
+permission to run commands, making read-only behaviour independent of sandbox
+support.
 
 ## Run it
 
@@ -79,7 +83,10 @@ for handoffs where a fallback must instead stop the gate.
 bash scripts/cross-review.sh docs <X> <theme> \
   --artifacts docs/ARCHITECTURE.md docs/PRODUCT.md docs/GUIDELINES.md \
   --author-key docs-delta \
-  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" --round 1
+  --diff-base "$(bash scripts/state.sh get <X> <theme> .base_sha)" \
+  --diff-paths . ':(exclude)specs/**' ':(exclude)**/*.test.*' \
+    ':(exclude)**/*.spec.*' ':(exclude)tests/**' ':(exclude)e2e/**' \
+  --round 1
 ```
 
 Exit codes: `0` clean or non-blocking only; `3` Critical/High findings;
@@ -107,10 +114,11 @@ round goes to the human. Medium/Low findings are reported or deferred as debt.
 - Findings are deduplicated by `category + file + line + summary` before they
   reach stdout or the ledger. `review-clean` is a liveness marker, never a
   finding.
-- Review prompts stream to both provider CLIs and have no artificial default
-  byte cap; the selected model's context window is authoritative. Set
-  `CROSS_REVIEW_MAX_CONTEXT_BYTES` to a positive integer only when a caller
-  deliberately wants a stricter local safety limit (`0` also means unlimited).
+- Review prompts stream to both provider CLIs with a default 900,000-byte
+  embedded-material ceiling. Set `CROSS_REVIEW_MAX_CONTEXT_BYTES` when the
+  selected provider has a different verified limit (`0` means consciously
+  unlimited). `--diff-paths` scopes large diffs and always tells both operator
+  and reviewer which changed paths were omitted.
   Claude Code itself imposes a 10 MB stdin transport ceiling; the Claude
   adapter detects it before launch and fails with the exact cause rather than
   truncating or silently narrowing review scope.

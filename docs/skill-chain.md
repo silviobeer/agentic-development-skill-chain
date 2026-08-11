@@ -146,7 +146,8 @@ Stage 2 adds the bootstrap and the full context system:
   model-opposite, always flagged). Active call sites:
   required PRD review in Step 2, optional concept/architecture/plan reviews,
   required P6 QA evidence review, and the P7 docs truth gate. Review prompts
-  have no artificial default byte cap; callers may set an explicit safety cap.
+  have a 900,000-byte default embedded-material cap; large diffs use explicit
+  pathspecs and name every omitted changed path.
   The Claude adapter reports Claude Code's hard 10 MB stdin ceiling rather
   than truncating review material. The QA gate launches one isolated worker per
   persona: Codex-authored QA fails closed without Claude, while Claude-authored

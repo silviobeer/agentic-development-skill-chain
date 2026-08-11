@@ -96,9 +96,10 @@ What makes an overnight run trustworthy:
   artifact's author; a review gate is never satisfied by the model that
   authored the artifact. Claude-authored work goes to Codex, while
   Codex-authored work goes to an authenticated, isolated Claude process
-  with validated structured output. Review inputs are not silently
-  truncated: there is no artificial default cap, and Claude's hard 10 MB
-  stdin ceiling is reported explicitly. Any permitted model-opposite
+  with validated structured output. Review inputs are not silently truncated:
+  large diffs use explicit Git pathspecs, omitted paths are named, and a
+  conservative default byte ceiling fails before provider invocation. Claude's
+  hard 10 MB stdin ceiling is also reported explicitly. Any permitted model-opposite
   fallback is recorded and flagged, never silent.
 - **Context bundles.** P0 compiles one canonical, token-budgeted context
   bundle per agent role from the curated `docs/` baseline (budget breach

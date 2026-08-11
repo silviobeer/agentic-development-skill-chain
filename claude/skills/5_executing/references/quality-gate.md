@@ -8,6 +8,17 @@ Must pass before handing off to QA.
 - All waves complete, all ACs verified by outer Ralph loop
 - Record `BASE_SHA` (commit before first implementation change) at the start of execution
 
+## Gate 0: Declared Quality-Phase Tests
+
+Read `phase_commands` from `wave-gate-config.json` and run each entry whose
+`phase` is `quality` exactly once against the assembled PROJ. Preserve its
+output and require a non-zero selected-test count. Do not replay `ci` or
+`nightly` entries locally; verify their workflow wiring. Delivery owns the
+actual PR CI result.
+
+Wave commands already proved the newly built behavior. This gate is for broader
+assembled-PROJ coverage, not another run of every wave AC.
+
 ---
 
 ## Gate 1: Code Review Expert
@@ -103,6 +114,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
 
 The quality gate passes when ALL of these are true:
 
+- [ ] Every declared `quality` phase command passed once; CI/nightly commands are wired to their named workflows
 - [ ] Zero P0/P1 code review findings remain
 - [ ] If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
 - [ ] If Sonar was skipped: explicit skip reason is logged

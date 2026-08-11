@@ -426,6 +426,8 @@ bash scripts/cross-review.sh docs <X> <theme> \
   --artifacts $ARTIFACTS \
   --author-key docs-delta \
   --diff-base "$BASE_SHA" \
+  --diff-paths . ':(exclude)specs/**' ':(exclude)**/*.test.*' \
+    ':(exclude)**/*.spec.*' ':(exclude)tests/**' ':(exclude)e2e/**' \
   --round 1
 ```
 

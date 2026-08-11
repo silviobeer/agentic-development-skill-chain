@@ -100,7 +100,10 @@ bash scripts/cross-review.sh qa <X> <theme> \
   --artifacts "$BASE/5_progress/PROJ-<X>-progress.md" \
   --ground-truth "$BASE/3-4_plan/PROJ-<X>-architecture.md" "$BASE"/2_PRDs/*.md \
   --author-provider claude --persist --personas \
-  --diff-base "$BASE_SHA" --round 1
+  --diff-base "$BASE_SHA" \
+  --diff-paths . ':(exclude)specs/**' ':(exclude)**/*.test.*' \
+    ':(exclude)**/*.spec.*' ':(exclude)tests/**' ':(exclude)e2e/**' \
+  --round 1
 ```
 
 The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Codex is preferred. If it is missing or unauthenticated, the script prints a visible degraded-mode notice, records `degraded_fallback: true`, and runs the same six personas with Claude; tell the user that independent-provider review was unavailable. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller.
@@ -122,6 +125,10 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 - Focus on: browser E2E validation, edge cases, adversarial scenarios, security, regression
 - Also inspect implementation shape for unnecessary complexity. QA must surface complexity that makes the feature harder to fix, test, or extend.
 - QA covers the entire PROJ — all PRDs together
+- Read `phase_commands` in `wave-gate-config.json`. Do not replay `ci` or
+  `nightly` hosted-auth/browser suites locally. Verify their workflow wiring;
+  P8 delivery owns the actual PR CI result. Missing wiring is a release gap,
+  not permission to drain the shared provider from QA.
 
 ### 1b. Sonar Quality-Gate Input
 
@@ -134,7 +141,7 @@ Read the `### SonarCloud` block in `5_progress/PROJ-<X>-progress.md`.
 
 ### 2. Browser E2E Testing (Playwright Or Agent Browser)
 
-For every user story implemented, test it **in a real browser** using Playwright or the active agent browser/browser automation tools. This is the primary testing method — not code review, not reading tests.
+For every user-facing story implemented, test the changed flow **once in a real browser** using Playwright or the active agent browser/browser automation tools. This is the primary behavioral method — not code review, not reading tests. Reuse authenticated state when auth is only setup; create identities here only when auth itself changed or no cheaper proof exists.
 
 **For each user story:**
 
@@ -150,7 +157,7 @@ For every user story implemented, test it **in a real browser** using Playwright
 6. **Check console for errors**: `browser_console_messages` (level: "error")
 7. **Check network requests** for failed API calls: `browser_network_requests`
 
-**Test each AC by doing it in the browser, not by reading code.**
+**Do not replay one browser journey per AC.** One observed flow may prove several ACs; record that mapping. Wave-level unit/integration evidence remains valid for behavior that does not require a browser.
 
 ### 3. Adversarial & Edge Case Testing
 

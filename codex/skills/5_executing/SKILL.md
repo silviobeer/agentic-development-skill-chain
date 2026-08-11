@@ -81,11 +81,13 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
 
-For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
+For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. For auth-consuming browser commands, `auth_budget.rate_limit_evidence_cmd` may establish the same fact from server/provider evidence outside the Playwright stream; its output is retained. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
+
+Before P0 seals an auth-budget project, `bash scripts/wave-gate.sh --auth-budget-negative-control 1 <PROJ-X> <theme>` must return the configured exhausted exit code and persist `infrastructure_failed`. It exercises the configured hooks with `SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1` and never drains a real hosted bucket.
 
 The script validates:
 1. **Current Ralph ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass is reusable only for the same AC ID, command, positive selection, and committed `verified_head`; changed or uncommitted code cannot be certified.
-2. **Declared broad regressions** — every `regression_commands` entry runs after the current ACs and before build; selection-aware entries must prove that they selected tests.
+2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before build; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
 3. **Build** — `build_cmd` from config exits 0.
 4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
 5. **Sonar** — the required top-level `sonar_cmd` runs with a timeout from the current persistent PROJ worktree. The gate does not assume an executable named `sonar`; missing, timed-out, or non-zero project commands are red.
@@ -556,7 +558,10 @@ Spawn teammates:
   "Run the Sonar quality-gate stream for files changed since BASE_SHA=$BASE_SHA. Use sonar-scanner for project analysis and sonar CLI/API for quality gate, issue, coverage, and duplication data. If project Sonar config is absent, log SonarCloud as skipped rather than blocking."
 ```
 
-The lead also runs `build_cmd` from `wave-gate-config.json` once for the assembled PROJ. The lead consolidates reviewer, build, and optional Sonar results.
+The lead also runs `build_cmd` and every `phase_commands` entry marked
+`quality` from `wave-gate-config.json` once for the assembled PROJ. CI/nightly
+entries are verified as wired to their named workflows, not replayed locally. The lead
+consolidates reviewer, build, test-phase, and optional Sonar results.
 
 **After both teammates report — Handling Findings with Technical Rigor:**
 
@@ -574,6 +579,7 @@ Do NOT blindly implement every finding. Apply this discipline:
 **Exit criteria:**
 - Zero P0/P1 code review findings
 - `build_cmd` from `wave-gate-config.json` passes once for the assembled PROJ
+- Every `quality` phase command passes once; CI/nightly workflow wiring is verified
 - If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
 - If Sonar was skipped because CLIs or project config were unavailable: the skip reason is logged in `progress.md`
 - All tests passing, no new lint errors
@@ -601,7 +607,7 @@ Spawn teammates:
 
 **In parallel, the lead runs browser E2E testing directly:**
 1. Start dev server (`npm run dev`)
-2. Use Playwright MCP tools to test every AC in the browser
+2. Use Playwright MCP tools once per changed user flow; map that observation to all ACs it proves
 3. Take snapshots and screenshots as evidence
 4. Document findings
 

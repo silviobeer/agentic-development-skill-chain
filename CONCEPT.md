@@ -55,8 +55,8 @@ and a drift gate)*
 *(v0.21: focused `bugfixing` workflow outside the feature chain;
 opposite-provider review expanded to required Requirements and six-persona
 QA gates plus optional concept/architecture/plan reviews; Codex → Claude
-hardened with auth preflight, isolated validated structured output, no
-artificial default input cap, and explicit handling of Claude's 10 MB stdin
+hardened with auth preflight, isolated validated structured output, a
+conservative default input cap with explicit diff omissions, and handling of Claude's 10 MB stdin
 ceiling)*
 
 **Date:** 2026-08-10
@@ -1373,7 +1373,7 @@ agent-browser smoke tests.
 | Morning report | file in `specs/` (canonical) + best-effort notification at run end |
 | Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
-| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and optional-by-default for concept/architecture/plans; no artificial default input cap, explicit Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |
+| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and optional-by-default for concept/architecture/plans; conservative default input cap, explicit diff omissions and Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |
 | Focused bug repair | `bugfixing` stays outside the feature chain: reproduce first (real browser for UI), trace code cause + test escape, prove a regression test red before the fix, dispatch a micro-fixer, and stop after at most three Ralph repair attempts; CodeRabbit/Sonar are proportional existing gates, not new dependencies |
 | P6 QA/fix ownership | Skill 6 is a strictly read-only finder. The P6 phase controller deduplicates and verifies findings, dispatches tier-0 fix lanes, and requires fresh provider-opposite QA re-verification; three failed Critical/High repair attempts trigger the stop policy |
 

@@ -114,18 +114,6 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 `~/.claude/skills/5_executing/references/coderabbit-template.yaml` to
 `.coderabbit.yaml` and include it in the setup commit.
 
-### 3a. Verify the verifier
-
-Before trusting an unattended run, prove one applicable gate can reject a
-controlled bad change. Pick the cheapest safe control for this PROJ: temporarily
-break an AC assertion, a rate-limit assertion, an authorization/RLS policy, or
-the build. Run its real gate, observe the expected non-zero result, restore the
-exact file, and re-run it green. Record the command, expected red reason, and
-restored green result under `## Negative controls` in `5_progress/PROJ-<X>-progress.md`.
-Never use a production mutation, a destructive migration, or an assertion whose
-failure proves only a syntax error. If no safe control exists, STOP and record
-why; an untested verifier is not a P0 success.
-
 ### 4. Tool + auth preflight
 
 Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
@@ -200,6 +188,37 @@ and `node scripts/gen-component-registry.mjs --check` when component folders
 exist. Exit 3 means a hand-written or safety-refused registry: report it and
 do not overwrite it; any other non-zero registry result must be fixed before
 P0 is sealed.
+
+### 5a. Verify the verifier
+
+Before trusting an unattended run, prove one applicable gate can reject a
+controlled bad change. When `auth_budget` is configured, its project hooks must
+honor `SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1` without consuming a hosted
+identity. After step 5 copied the gate, run:
+
+```bash
+CONTROL_WAVE=$(jq -r '.waves | keys | map(tonumber) | min' "$PLAN_DIR/wave-gate-config.json")
+EXPECTED_AUTH_RC=$(jq -r '.auth_budget.exhausted_exit_code // 75' "$PLAN_DIR/wave-gate-config.json")
+set +e
+bash scripts/wave-gate.sh --auth-budget-negative-control "$CONTROL_WAVE" <X> <theme>
+CONTROL_RC=$?
+set -e
+[ "$CONTROL_RC" -eq "$EXPECTED_AUTH_RC" ]
+jq -e --argjson code "$EXPECTED_AUTH_RC" \
+  '.ralph_status == "infrastructure_failed" and .infrastructure_failure.exit_code == $code' \
+  "specs/PROJ-<X>-<theme>/5_progress/ralph-wave-${CONTROL_WAVE}.json"
+```
+
+This exercises `preflight_cmd` and, when configured, `rate_limit_evidence_cmd`
+through the real shared-lock/runtime path and must produce retained non-empty
+evidence. It is the required negative control for an auth-budget project. For a
+project without `auth_budget`, pick the cheapest safe control: temporarily break
+an AC assertion, authorization/RLS policy, or the build; run its real gate red,
+restore the exact file, and re-run it green. Record the command, expected red
+reason, retained evidence, and restored green result under `## Negative controls`
+in `5_progress/PROJ-<X>-progress.md`. Never use a production mutation, destructive
+migration, or syntax-only failure. If no safe control exists, STOP; an untested
+verifier is not a P0 success.
 
 ### 6. Context system (compile bundles, ground file, injectors)
 

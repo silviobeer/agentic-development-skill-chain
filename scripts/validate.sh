@@ -154,6 +154,7 @@ bash "$ROOT/scripts/test-ledger.sh"
 bash "$ROOT/scripts/test-preflight-biome.sh"
 bash "$ROOT/scripts/test-worktree.sh"
 bash "$ROOT/scripts/test-wave-gate.sh"
+bash "$ROOT/scripts/test-cross-review.sh"
 node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest
 
 echo "validate: ok"

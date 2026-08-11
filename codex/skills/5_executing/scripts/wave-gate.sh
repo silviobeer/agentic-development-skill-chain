@@ -3,10 +3,14 @@
 set -euo pipefail
 
 STATUS_ONLY=false
-if [[ "${1:-}" == "--status" ]]; then STATUS_ONLY=true; shift; fi
+AUTH_BUDGET_NEGATIVE_CONTROL=false
+case "${1:-}" in
+  --status) STATUS_ONLY=true; shift ;;
+  --auth-budget-negative-control) AUTH_BUDGET_NEGATIVE_CONTROL=true; shift ;;
+esac
 WAVE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEME" ]]; then
-  echo "Usage: $0 [--status] <wave-number> <proj-x> <theme>" >&2
+  echo "Usage: $0 [--status|--auth-budget-negative-control] <wave-number> <proj-x> <theme>" >&2
   exit 64
 fi
 
@@ -86,6 +90,7 @@ for value in "$AC_TIMEOUT" "$BUILD_TIMEOUT" "$CODERABBIT_TIMEOUT" "$BROWSER_TIME
 done
 
 AUTH_PREFLIGHT_CMD=$(jq -r '.auth_budget.preflight_cmd // empty' "$CFG")
+AUTH_RATE_LIMIT_EVIDENCE_CMD=$(jq -r '.auth_budget.rate_limit_evidence_cmd // empty' "$CFG")
 AUTH_EXHAUSTED_RC=$(jq -r '.auth_budget.exhausted_exit_code // 75' "$CFG")
 [[ "$AUTH_EXHAUSTED_RC" =~ ^[0-9]+$ && "$AUTH_EXHAUSTED_RC" -gt 0 && "$AUTH_EXHAUSTED_RC" -lt 256 ]] \
   || fail "auth_budget.exhausted_exit_code must be 1..255"
@@ -209,6 +214,40 @@ run_test_command() {
   return "$rc"
 }
 
+run_auth_budget_negative_control() {
+  local preflight_log="${BASE}/5_progress/ralph-wave-${WAVE}-auth-preflight-negative-control.log"
+  local evidence_log="${BASE}/5_progress/ralph-wave-${WAVE}-rate-limit-evidence-negative-control.log"
+  local rc observed="configured preflight exhaustion"
+  [[ -n "$AUTH_PREFLIGHT_CMD" ]] || infra_fail "auth budget negative control requires auth_budget.preflight_cmd" 73
+  [[ -x scripts/worktree.sh ]] || infra_fail "auth budget negative control requires executable scripts/worktree.sh" 73
+  init_ralph_state
+
+  set +e
+  env SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1 WAVE="$WAVE" WAVE_GATE_CONFIG="$CFG" RALPH_STATE="$RALPH_STATE" \
+    scripts/worktree.sh with-shared-lock -- bash -c "$AUTH_PREFLIGHT_CMD" >"$preflight_log" 2>&1
+  rc=$?
+  set -e
+  if ! grep -q 'AUTH_BUDGET_EXHAUSTED' "$preflight_log" && [[ "$rc" -ne "$AUTH_EXHAUSTED_RC" ]]; then
+    infra_fail "auth budget negative control did not make preflight_cmd report exhaustion (rc=${rc})" 73
+  fi
+
+  if [[ -n "$AUTH_RATE_LIMIT_EVIDENCE_CMD" ]]; then
+    set +e
+    env SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1 WAVE="$WAVE" WAVE_GATE_CONFIG="$CFG" RALPH_STATE="$RALPH_STATE" \
+      AC_ID="negative-control" AC_LOG="$preflight_log" \
+      scripts/worktree.sh with-shared-lock -- bash -c "$AUTH_RATE_LIMIT_EVIDENCE_CMD" >"$evidence_log" 2>&1
+    rc=$?
+    set -e
+    [[ "$rc" -eq 0 ]] || infra_fail "auth budget negative control rate_limit_evidence_cmd failed with exit ${rc}" 74
+    grep -q '[^[:space:]]' "$evidence_log" || infra_fail "auth budget negative control rate_limit_evidence_cmd produced no evidence" 74
+    observed+=" and rate-limit evidence"
+  fi
+
+  infra_fail "auth budget negative control observed ${observed}" "$AUTH_EXHAUSTED_RC"
+}
+
+if [[ "$AUTH_BUDGET_NEGATIVE_CONTROL" == true ]]; then run_auth_budget_negative_control; fi
+
 jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null || fail "advisory_severities missing"
 ADVISORY_JSON=$(jq -c "${WAVE_KEY}.advisory_severities | map(ascii_downcase)" "$CFG")
 ADVISORY_LABEL=$(jq -r "${WAVE_KEY}.advisory_severities | if length==0 then \"none\" else join(\",\") end" "$CFG")
@@ -231,7 +270,7 @@ LAST_AUTH="${BASE}/5_progress/ralph-wave-${WAVE}.auth-last"
 for ((index=0; index<AC_COUNT; index++)); do
   entry=$(jq -c "${WAVE_KEY}.ac_commands[$index]" "$CFG")
   if [[ $(jq -r type <<<"$entry") == string ]]; then
-    command=$(jq -r . <<<"$entry"); id="legacy-$((index+1))"; task=""; tests='[]'; auth=false
+    fail "legacy string entries are unsupported; replace each with {id, task, command, test_files, auth_consuming}"
   else
     command=$(jq -r '.command // empty' <<<"$entry"); id=$(jq -r ".id // \"legacy-$((index+1))\"" <<<"$entry")
     task=$(jq -r '.task // empty' <<<"$entry"); tests=$(jq -c '.test_files // []' <<<"$entry"); auth=$(jq -r '.auth_consuming // false' <<<"$entry")
@@ -250,7 +289,7 @@ for ((index=0; index<AC_COUNT; index++)); do
   fi
   attempts=$(jq -r --arg id "$id" '[.commands[]? | select(.id==$id)][0].attempts // 0' "$RALPH_STATE")
   for retry in 1 2; do
-    attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"
+    attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"; rate_limit_log="${log%.log}-rate-limit-evidence.log"
     [[ "$auth" == true ]] && date +%s >"$LAST_AUTH"
     heartbeat; set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log"); heartbeat
     [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for AC ${id}" 73
@@ -259,7 +298,22 @@ for ((index=0; index<AC_COUNT; index++)); do
     if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
     if [[ "$rc" -eq 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "AC ${id} selected 0 tests"; fi
     if [[ "$rc" -eq 124 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"; fail "AC ${id} timed out"; fi
-    if provider_rate_limited "$log" && [[ "$retry" -eq 1 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
+    rate_limited=false
+    provider_rate_limited "$log" && rate_limited=true
+    if [[ "$rate_limited" == false && "$auth" == true && -n "$AUTH_RATE_LIMIT_EVIDENCE_CMD" ]]; then
+      set +e
+      env WAVE="$WAVE" WAVE_GATE_CONFIG="$CFG" RALPH_STATE="$RALPH_STATE" AC_ID="$id" AC_LOG="$log" \
+        timeout --foreground "$AC_TIMEOUT" bash -c "$AUTH_RATE_LIMIT_EVIDENCE_CMD" >"$rate_limit_log" 2>&1
+      evidence_rc=$?
+      if [[ "$evidence_rc" -eq 0 ]] && ! grep -q '[^[:space:]]' "$rate_limit_log"; then
+        evidence_rc=74
+        printf 'rate-limit evidence command exited 0 without evidence output\n' >>"$rate_limit_log"
+      fi
+      printf 'exit_code=%s\n' "$evidence_rc" >>"$rate_limit_log"
+      set -e
+      case "$evidence_rc" in 0) rate_limited=true ;; 1) ;; *) infra_fail "rate-limit evidence hook failed for AC ${id} rc=${evidence_rc} (log: $rate_limit_log)" "$evidence_rc" ;; esac
+    fi
+    if [[ "$rate_limited" == true && "$retry" -eq 1 ]]; then echo "   ↻ provider rate limit evidenced; pausing"; record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
     record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "AC ${id} failed rc=${rc}, selected=${selected} (log: $log)"
   done
   assert_verified_head

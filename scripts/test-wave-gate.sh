@@ -42,6 +42,7 @@ write_config() { printf '%s\n' "$1" >"$CASE/specs/PROJ-1-test/3-4_plan/wave-gate
 commit_case() { git -C "$CASE" add .; git -C "$CASE" commit -qm fixture; git -C "$CASE" tag -f wave-1-start-PROJ-1 >/dev/null; }
 run_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" 1 1 test); }
 status_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --status 1 1 test); }
+auth_control_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --auth-budget-negative-control 1 1 test); }
 
 run_suite() {
   GATE="$1"; PLATFORM="$2"
@@ -149,6 +150,21 @@ run_suite() {
   jq -e '.commands[0].attempts==2 and .commands[0].status=="passed"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: exact provider rate limit did not retry once"
   unset RETRY_FILE
 
+  # Browser output can hide the provider 429 in a separate server log. The
+  # configured evidence command must make that failure pause and retry too.
+  case_dir browser-provider-rate-limit
+  RETRY_FILE="$TMP/$PLATFORM-browser-retry"; RATE_LIMIT_EVIDENCE_FILE="$TMP/$PLATFORM-server.log"; export RETRY_FILE RATE_LIMIT_EVIDENCE_FILE
+  printf "status: 429, message: 'Request rate limit reached', type: 'signup'\n" >"$RATE_LIMIT_EVIDENCE_FILE"
+  config=$(default_config | jq '.rate_limit_backoff_seconds=1 | .auth_budget={"preflight_cmd":"true","exhausted_exit_code":75,"rate_limit_evidence_cmd":"grep '\''Request rate limit reached'\'' \"$RATE_LIMIT_EVIDENCE_FILE\""} | .waves["1"].ac_commands[0].auth_consuming=true | .waves["1"].ac_commands[0].command="if [[ ! -f \"$RETRY_FILE\" ]]; then touch \"$RETRY_FILE\"; printf '\''unexpected value http://127.0.0.1:3000/anmelden\\n'\''; exit 1; fi; printf '\''Running 1 test\\n1 passed\\n'\''"')
+  gate_output="$TMP/$PLATFORM-browser-gate-output"
+  write_config "$config"; commit_case; started=$(date +%s); run_gate >"$gate_output"; elapsed=$(( $(date +%s) - started ))
+  jq -e '.commands[0].attempts==2 and .commands[0].status=="passed"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: browser failure with provider evidence did not retry once"
+  grep -q 'provider rate limit evidenced; pausing' "$gate_output" || fail "$LABEL: browser rate-limit pause was not observable"
+  [[ "$elapsed" -ge 1 ]] || fail "$LABEL: browser rate-limit retry did not actually pause"
+  [[ -s "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1-ac-1-attempt-1-rate-limit-evidence.log" ]] || fail "$LABEL: browser rate-limit evidence was not retained"
+  grep -q 'Request rate limit reached' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1-ac-1-attempt-1-rate-limit-evidence.log" || fail "$LABEL: retained rate-limit log lacks provider evidence"
+  unset RETRY_FILE RATE_LIMIT_EVIDENCE_FILE
+
   case_dir stall
   config=$(default_config | jq '.timeouts.ac_seconds=1 | .waves["1"].ac_commands[0].command="sleep 2"')
   write_config "$config"; commit_case; expect_fail run_gate
@@ -176,6 +192,28 @@ run_suite() {
   write_config "$config"; commit_case; WORKTREE_LOCK_LOG="$TMP/$PLATFORM-auth-env-lock"; export WORKTREE_LOCK_LOG
   run_gate >/dev/null; [[ -s "$WORKTREE_LOCK_LOG" ]] || fail "$LABEL: successful auth hook did not use shared lock"
   unset WORKTREE_LOCK_LOG
+
+  case_dir auth-negative-control
+  config=$(default_config | jq '.auth_budget={"preflight_cmd":"if [[ \"${SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL:-0}\" == 1 ]]; then printf AUTH_BUDGET_EXHAUSTED; exit 75; fi","exhausted_exit_code":75,"rate_limit_evidence_cmd":"if [[ \"${SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL:-0}\" == 1 ]]; then printf '\''simulated provider rate-limit evidence\\n'\''; exit 0; fi; exit 1"} | .waves["1"].ac_commands[0].auth_consuming=true')
+  write_config "$config"; commit_case; WORKTREE_LOCK_LOG="$TMP/$PLATFORM-auth-control-lock"; export WORKTREE_LOCK_LOG
+  expect_rc 75 auth_control_gate
+  grep -q 'auth budget negative control observed' "$GATE_OUT" || fail "$LABEL: auth negative control did not report the expected infrastructure failure"
+  jq -e '.ralph_status=="infrastructure_failed" and .infrastructure_failure.exit_code==75' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: auth negative control did not persist infra_fail"
+  [[ $(wc -l <"$WORKTREE_LOCK_LOG") -eq 2 ]] || fail "$LABEL: both configured auth hooks were not exercised under the shared lock"
+  grep -q 'AUTH_BUDGET_EXHAUSTED' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1-auth-preflight-negative-control.log" || fail "$LABEL: configured preflight negative evidence was not retained"
+  grep -q 'simulated provider rate-limit evidence' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1-rate-limit-evidence-negative-control.log" || fail "$LABEL: configured rate-limit negative evidence was not retained"
+  unset WORKTREE_LOCK_LOG
+
+  case_dir auth-negative-control-inactive
+  config=$(default_config | jq '.auth_budget={"preflight_cmd":"true","exhausted_exit_code":75} | .waves["1"].ac_commands[0].auth_consuming=true')
+  write_config "$config"; commit_case
+  expect_rc 73 auth_control_gate
+  grep -q 'preflight_cmd report exhaustion' "$GATE_OUT" || fail "$LABEL: inactive auth negative-control branch was not rejected clearly"
+
+  case_dir legacy-ac
+  config=$(default_config | jq '.waves["1"].ac_commands=["printf '\''Running 1 test\\n1 passed\\n'\''"]')
+  write_config "$config"; commit_case; expect_fail run_gate
+  grep -Fq 'legacy string entries are unsupported; replace each with {id, task, command, test_files, auth_consuming}' "$GATE_OUT" || fail "$LABEL: legacy AC did not stop with migration guidance"
 
   case_dir auth-pacing
   AUTH_TIMES="$TMP/$PLATFORM-auth-times"; export AUTH_TIMES

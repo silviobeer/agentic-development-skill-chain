@@ -11,7 +11,7 @@
 #     --artifacts <file...> [--ground-truth <file...>]
 #     [--author-provider claude|codex] [--author-model M] [--author-key K]
 #     [--joint] [--personas] [--persist] [--require-provider claude|codex]
-#     [--round 1|2] [--diff-base SHA] [--timeout S]
+#     [--round 1|2] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]
 # Exit: 0 clean/no blocking findings; 3 Critical/High findings; 1 infra error;
 #       64 invalid invocation.
 set -euo pipefail
@@ -19,15 +19,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 usage() {
-  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round 1|2] [--diff-base SHA] [--timeout S]" >&2
+  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round 1|2] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
   exit 64
 }
 [ -n "$MODE" ] && [ -n "$PROJ" ] && [ -n "$THEME" ] || usage
 shift 3
 case "$MODE" in concept|requirements|architecture|plan|qa|docs) ;; *) echo "cross-review.sh: unknown mode '$MODE'" >&2; exit 64 ;; esac
 
-ARTIFACTS=(); GROUND_TRUTH=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
-ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-0}"
+ARTIFACTS=(); GROUND_TRUTH=(); DIFF_PATHS=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
+ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-900000}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --artifacts) shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do ARTIFACTS+=("$1"); shift; done ;;
@@ -41,11 +41,13 @@ while [ $# -gt 0 ]; do
     --require-provider) REQUIRED_PROVIDER="${2:?}"; shift 2 ;;
     --round) ROUND="${2:?}"; shift 2 ;;
     --diff-base) DIFF_BASE="${2:?}"; shift 2 ;;
+    --diff-paths) shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do DIFF_PATHS+=("$1"); shift; done ;;
     --timeout) TIMEOUT="${2:?}"; shift 2 ;;
     *) echo "cross-review.sh: unknown option $1" >&2; usage ;;
   esac
 done
 [ ${#ARTIFACTS[@]} -gt 0 ] || { echo "cross-review.sh: --artifacts required" >&2; usage; }
+[ ${#DIFF_PATHS[@]} -eq 0 ] || [ -n "$DIFF_BASE" ] || { echo "cross-review.sh: --diff-paths requires --diff-base" >&2; exit 64; }
 [[ "$ROUND" =~ ^[12]$ ]] || { echo "cross-review.sh: --round must be 1 or 2" >&2; exit 64; }
 [[ "$MAX_CONTEXT_BYTES" =~ ^[0-9]+$ ]] || { echo "cross-review.sh: CROSS_REVIEW_MAX_CONTEXT_BYTES must be a non-negative integer" >&2; exit 64; }
 [ "$QA_PERSONAS" -eq 0 ] || { [ "$MODE" = qa ] && [ "$JOINT" -eq 0 ]; } || { echo "cross-review.sh: --personas is only valid for qa without --joint" >&2; exit 64; }
@@ -125,13 +127,26 @@ for f in "${ARTIFACTS[@]}"; do append_numbered "Artifact under review" "$f"; don
 for f in "${GROUND_TRUTH[@]}"; do append_numbered "Ground truth" "$f"; done
 if [ -n "$DIFF_BASE" ]; then
   git rev-parse --verify "$DIFF_BASE^{commit}" >/dev/null 2>&1 || { echo "cross-review.sh: invalid --diff-base $DIFF_BASE" >&2; exit 1; }
+  OMITTED_PATHS=""
+  if [ ${#DIFF_PATHS[@]} -gt 0 ]; then
+    ALL_DIFF_PATHS="$(git diff --name-only "$DIFF_BASE..HEAD" | sort)"
+    SCOPED_DIFF_PATHS="$(git diff --name-only "$DIFF_BASE..HEAD" -- "${DIFF_PATHS[@]}" | sort)"
+    OMITTED_PATHS="$(comm -23 <(printf '%s\n' "$ALL_DIFF_PATHS") <(printf '%s\n' "$SCOPED_DIFF_PATHS"))"
+    MATERIAL+=$'\n## Diff scope\nGit pathspecs: `'
+    MATERIAL+="$(printf '%s ' "${DIFF_PATHS[@]}")"
+    MATERIAL+=$'`\n\nOmitted from diff ground truth (may be supplied separately above):\n```text\n'
+    MATERIAL+="${OMITTED_PATHS:-none}"
+    MATERIAL+=$'\n```\n'
+  fi
   MATERIAL+=$'\n## Ground truth: git diff '"$DIFF_BASE"$'..HEAD\n```diff\n'
-  MATERIAL+="$(git diff --no-ext-diff "$DIFF_BASE..HEAD")"
+  MATERIAL+="$(git diff --no-ext-diff "$DIFF_BASE..HEAD" ${DIFF_PATHS:+--} "${DIFF_PATHS[@]}")"
   MATERIAL+=$'\n```\n'
 fi
 CONTEXT_BYTES="$(printf '%s' "$MATERIAL" | wc -c | tr -d ' ')"
 if [ "$MAX_CONTEXT_BYTES" -gt 0 ] && [ "$CONTEXT_BYTES" -gt "$MAX_CONTEXT_BYTES" ]; then
-  echo "cross-review.sh: embedded context is ${CONTEXT_BYTES} bytes, above configured limit ${MAX_CONTEXT_BYTES}; narrow inputs or raise CROSS_REVIEW_MAX_CONTEXT_BYTES" >&2
+  omitted_label="${OMITTED_PATHS:-none}"
+  omitted_label="${omitted_label//$'\n'/, }"
+  echo "cross-review.sh: embedded context is ${CONTEXT_BYTES} bytes, above configured limit ${MAX_CONTEXT_BYTES}; omitted changed paths: ${omitted_label}; narrow --diff-paths/inputs or raise CROSS_REVIEW_MAX_CONTEXT_BYTES for a provider that supports it" >&2
   exit 1
 fi
 

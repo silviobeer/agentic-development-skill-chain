@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const planDir = path.resolve(process.argv[2] ?? "");
+const repoRoot = path.resolve(process.argv[3] ?? path.join(planDir, "../../.."));
 const errors = [];
 const fail = (message) => errors.push(message);
 const isText = (value) => typeof value === "string" && value.trim() !== "";
@@ -13,7 +14,7 @@ const sameSet = (left, right) =>
   left.size === right.size && [...left].every((value) => right.has(value));
 
 if (!process.argv[2]) {
-  console.error("usage: validate-wave-plan.mjs <3-4_plan-directory>");
+  console.error("usage: validate-wave-plan.mjs <3-4_plan-directory> [repository-root]");
   process.exit(2);
 }
 
@@ -170,16 +171,22 @@ for (const [wave, plan] of plans) {
     acCommands.forEach((entry, index) => {
       const label = `wave ${wave} ac_commands[${index}]`;
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-        fail(`${label}: legacy string entries lack id/task/test_files metadata`);
+        fail(`${label}: legacy string entries are unsupported; replace each with {id, task, command, test_files, auth_consuming}`);
         return;
       }
       for (const key of ["id", "task", "command"]) {
         if (!isText(entry[key])) fail(`${label}: ${key} must be a non-empty string`);
       }
+      if (isText(entry.command) && /&&|\|\||;/.test(entry.command)) {
+        fail(`${label}: must invoke exactly one test runner; split shell-chained commands`);
+      }
       if (typeof entry.auth_consuming !== "boolean") {
         fail(`${label}: auth_consuming must be boolean`);
       } else if (entry.auth_consuming) {
         hasAuthConsumingCommand = true;
+        if (!isText(entry.wave_required_reason)) {
+          fail(`${label}: wave_required_reason must explain why hosted auth is needed before CI`);
+        }
       }
       if (!Array.isArray(entry.test_files) || entry.test_files.length === 0 || !entry.test_files.every(isText)) {
         fail(`${label}: test_files must be a non-empty string array`);
@@ -231,6 +238,9 @@ for (const [wave, plan] of plans) {
       for (const key of ["label", "command"]) {
         if (!isText(entry[key])) fail(`${label}: ${key} must be a non-empty string`);
       }
+      if (isText(entry.command) && /&&|\|\||;/.test(entry.command)) {
+        fail(`${label}: must invoke exactly one test runner; split shell-chained commands`);
+      }
       if (!Array.isArray(entry.test_files) || entry.test_files.length === 0 || !entry.test_files.every(isText)) {
         fail(`${label}: test_files must be a non-empty string array`);
       } else {
@@ -249,12 +259,58 @@ for (const [wave, plan] of plans) {
         fail(`${label}: auth_consuming must be boolean`);
       } else if (entry.auth_consuming) {
         hasAuthConsumingCommand = true;
+        if (!isText(entry.wave_required_reason)) {
+          fail(`${label}: wave_required_reason must explain why hosted auth is needed before CI`);
+        }
       }
       if (
         Object.hasOwn(entry, "require_non_empty_selection") &&
         typeof entry.require_non_empty_selection !== "boolean"
       ) {
         fail(`${label}: require_non_empty_selection must be boolean when present`);
+      }
+    });
+  }
+}
+
+const phaseCommands = config.phase_commands;
+if (phaseCommands !== undefined) {
+  if (!Array.isArray(phaseCommands)) {
+    fail("phase_commands must be an array when present");
+  } else {
+    phaseCommands.forEach((entry, index) => {
+      const label = `phase_commands[${index}]`;
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        fail(`${label}: must be a structured object`);
+        return;
+      }
+      for (const key of ["label", "command"]) {
+        if (!isText(entry[key])) fail(`${label}: ${key} must be a non-empty string`);
+      }
+      if (!isText(entry.phase) || !["quality", "ci", "nightly"].includes(entry.phase)) {
+        fail(`${label}: phase must be quality, ci, or nightly`);
+      }
+      if (!Array.isArray(entry.test_files) || entry.test_files.length === 0 || !entry.test_files.every(isText)) {
+        fail(`${label}: test_files must be a non-empty string array`);
+      }
+      if (typeof entry.auth_consuming !== "boolean") {
+        fail(`${label}: auth_consuming must be boolean`);
+      }
+      if (["ci", "nightly"].includes(entry.phase) && !isText(entry.workflow_file)) {
+        fail(`${entry.phase} phase command requires workflow_file`);
+      } else if (["ci", "nightly"].includes(entry.phase)) {
+        const workflowPath = path.resolve(repoRoot, entry.workflow_file);
+        if (!fs.existsSync(workflowPath)) {
+          fail(`${label}: workflow_file does not exist: ${entry.workflow_file}`);
+        } else if (
+          isText(entry.command) &&
+          !fs
+            .readFileSync(workflowPath, "utf8")
+            .split(/\r?\n/)
+            .some((line) => !/^\s*#/.test(line) && line.includes(entry.command))
+        ) {
+          fail(`${label}: command is absent from workflow_file ${entry.workflow_file}`);
+        }
       }
     });
   }
@@ -276,6 +332,9 @@ if (hasAuthConsumingCommand || config.auth_provider_rate_limited === true || aut
     fail("auth-consuming commands or rate-limited hosted auth require config.auth_budget");
   } else {
     if (!isText(authBudget.preflight_cmd)) fail("auth_budget.preflight_cmd must be a non-empty string");
+    if (config.auth_provider_rate_limited === true && !isText(authBudget.rate_limit_evidence_cmd)) {
+      fail("rate-limited hosted auth requires auth_budget.rate_limit_evidence_cmd for failures outside the test log");
+    }
     if (!Number.isInteger(authBudget.exhausted_exit_code) || authBudget.exhausted_exit_code < 1 || authBudget.exhausted_exit_code > 255) {
       fail("auth_budget.exhausted_exit_code must be an integer from 1 to 255 (default 75)");
     }

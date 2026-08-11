@@ -211,6 +211,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   "auth_provider_rate_limited": true,
   "auth_budget": {
     "preflight_cmd": "npm run auth:budget-check",
+    "rate_limit_evidence_cmd": "npm run auth:rate-limit-check",
     "exhausted_exit_code": 75
   },
   "frontend": {
@@ -232,6 +233,16 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
       }
     ]
   },
+  "phase_commands": [
+    {
+      "label": "hosted browser auth regression",
+      "phase": "nightly",
+      "command": "npm run test:e2e -- tests/e2e/auth.spec.ts",
+      "test_files": ["tests/e2e/auth.spec.ts"],
+      "auth_consuming": true,
+      "workflow_file": ".github/workflows/e2e.yml"
+    }
+  ],
   "waves": {
     "1": {
       "codex_effort": "high",
@@ -242,7 +253,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
           "task": "Task PROJ-1-PRD-1-US-1-T1",
           "command": "npm test -- src/auth/password.test.ts",
           "test_files": ["src/auth/password.test.ts"],
-          "auth_consuming": true
+          "auth_consuming": false
         }
       ],
       "regression_commands": [
@@ -250,7 +261,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
           "label": "auth regression suite",
           "command": "npm test -- src/auth",
           "test_files": ["src/auth/password.test.ts", "src/auth/session.test.ts"],
-          "auth_consuming": true,
+          "auth_consuming": false,
           "require_non_empty_selection": true
         }
       ]
@@ -269,9 +280,9 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
       ],
       "regression_commands": [
         {
-          "label": "browser auth flows",
-          "command": "npm run test:e2e -- tests/e2e/auth.spec.ts",
-          "test_files": ["tests/e2e/auth.spec.ts"],
+          "label": "account component regression",
+          "command": "npm test -- src/auth",
+          "test_files": ["src/auth/login.test.ts", "src/auth/session.test.ts"],
           "auth_consuming": false,
           "require_non_empty_selection": true
         }
@@ -296,23 +307,27 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   - `coderabbit_seconds`: per-wave CodeRabbit review
   - `browser_seconds`: per route smoke test
   - `sonar_seconds`: per-wave `sonar_cmd` (optional; defaults to 120)
-- `ac_commands[]`: one structured object per AC. `id` is the unique canonical
+- `ac_commands[]`: one structured object per AC built in this wave. `id` is the unique canonical
   AC ID, `task` exactly matches its stable `### Task ...` heading, `command` is
   exactly the command in that task's `Gate commands` block, and `test_files` is
   the exact set of `Test:` files in that task's `Files` block.
-  `auth_consuming` is always an explicit boolean. The
-  runtime gate still accepts legacy string entries, but newly written plans do
-  not use them because they cannot prove plan/config consistency. Each AC maps
-  to exactly one command. A command must print a recognizable selected-test
+  `auth_consuming` is always an explicit boolean. Use the cheapest deterministic
+  proof of the new behavior here; do not replay broad auth or browser suites per
+  AC. An auth-consuming wave command is reserved for a story that changes auth
+  itself or has no cheaper equivalent proof, and must add a non-empty
+  `wave_required_reason`. Each AC maps to exactly one command and one test
+  runner; shell-chained commands (`&&`, `||`, or `;`) are rejected. A command must print a recognizable selected-test
   count (`Running N tests`, `Tests N passed`, TAP `# tests N`, or `N passed`);
   zero or unparseable selection blocks even when rc is 0.
-- `regression_commands[]`: required, non-empty broad regression coverage for
+- `regression_commands[]`: required, non-empty targeted regression coverage for
   every wave, run after its current AC commands. Each entry has `label`,
   `command`, `test_files`, explicit `auth_consuming`, and optional
   `require_non_empty_selection` (set it to `true` for test runners whose
-  selection can silently be empty). Select the smallest broad suite that covers
-  shared behavior affected by the wave; do not mechanically repeat every prior
-  AC command or the entire E2E inventory. Deterministic minimum: a regression
+  selection can silently be empty). Each entry invokes one runner; split
+  shell-chained suites into separate entries. Select the smallest suite that covers
+  shared behavior actually affected by the wave; do not mechanically repeat every prior
+  AC command, auth suite, or the entire E2E inventory. An auth-consuming
+  regression needs the same `wave_required_reason` as an AC. Deterministic minimum: a regression
   entry is invalid when its whitespace-normalized `command` and its normalized
   `test_files` set both exactly equal an AC entry. Reusing the same test file is
   allowed when a different command genuinely selects a broader suite.
@@ -321,7 +336,24 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   set `exhausted_exit_code` to `75` by default. A rate-limited hosted-auth project may
   not declare an auth-consuming command without this hook. Set
   `auth_provider_rate_limited: true` for such a project so the validator also
-  requires the hook before auth-consuming commands have been added.
+  requires the hook before auth-consuming commands have been added. Such a
+  project also supplies `rate_limit_evidence_cmd`: the wave gate runs it after
+  a failed auth-consuming command so browser failures can be checked against
+  current bucket state or current-attempt server/provider evidence outside the
+  test's own output. Exit `0` must print the decisive evidence, exit `1` means
+  not rate-limited, and any other exit is infrastructure failure. The hook
+  receives `WAVE`, `WAVE_GATE_CONFIG`, `RALPH_STATE`, `AC_ID`, and `AC_LOG`.
+  Both hooks must also implement the safe P0 control: when
+  `SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1`, `preflight_cmd` reports exhaustion
+  without consuming a hosted identity, while `rate_limit_evidence_cmd` exits 0
+  and prints simulated decisive evidence.
+- `phase_commands[]`: broad checks deliberately kept out of waves. `phase` is
+  `quality`, `ci`, or `nightly`; every entry declares `command`, `test_files`,
+  and explicit `auth_consuming`. Quality commands run once after all waves.
+  CI/nightly commands name the existing `workflow_file` that contains that exact
+  command; the validator reads the workflow rather than trusting the path. This is
+  where full hosted-auth and Playwright regressions belong. The current wave
+  still needs its cheaper AC proof; deferral may not remove coverage.
 - `frontend`: omit for a backend-only PROJ. Otherwise provide `dev_cmd`,
   `dev_url`, bounded `readiness`, and route objects. Every route names its
   `wave`, `path`, exact `expected_url`, characteristic `expected_text`, and
@@ -338,11 +370,10 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 
 The test commands here are the **same commands** Ralph will run during execution — keep them in sync with the Smoke Test and AC sections of the wave plans. The plan's `Execution` block, not `Can start when`, decides whether independent stories are dispatched concurrently.
 
-**Legacy migration:** string `ac_commands` remain runtime-readable for a
-standalone legacy gate run, but strict CP1/P0 evidence requires replacing them
-with structured entries, adding the required regressions/auth metadata, running
-the validator, and obtaining approval again. Never infer an AC identity from
-its array index. There is intentionally no automatic migrator: selecting broad
+**Legacy migration:** the validator and runtime gate reject string
+`ac_commands`. Replace them with structured entries, add the required
+regressions/auth metadata, run the validator, and obtain approval again. Never
+infer an AC identity from its array index. There is intentionally no automatic migrator: selecting targeted
 regressions and identifying auth consumption require planning judgment.
 
 ### 6. Plan Self-Review
