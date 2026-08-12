@@ -34,7 +34,7 @@ Never wire a wave gate's `sonar_cmd` (`wave-gate-config.json`) to `sonar analyze
    - `test:coverage` should generate the report referenced by Sonar.
    - `sonar` can call `sonar-scanner`.
 5. Run coverage before the scanner.
-6. Run `sonar-scanner` with an analysis token, normally through `SONAR_TOKEN`, never committed.
+6. Run `sonar-scanner` with an analysis token, normally through `SONAR_TOKEN`, never committed. In a skill-chain persistent worktree, set it in `.env.local` (the control checkout's, which `worktree.sh` symlinks into every worktree) rather than only exporting it in a shell — preflight.sh and wave-gate.sh both fall back to reading it from `.env.local` when the ambient env doesn't have it.
 7. Wait for the compute task, then pull issue and measure data through `sonar api` or `sonar list issues`.
 8. Keep project measured state separate from quality gate status. Clean measures do not mean an enforced gate exists.
 

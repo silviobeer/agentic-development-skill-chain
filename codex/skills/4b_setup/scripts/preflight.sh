@@ -52,6 +52,25 @@ CODEX_STATE="ok"
 
 say()  { echo "  $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# Preflight runs in the control checkout's shell, which may not be the same
+# session any secret (SONAR_TOKEN or otherwise) was exported into. .env.local
+# is the one managed secrets file worktree.sh symlinks into every worktree —
+# load whatever it has (never overriding an already-set var) instead of
+# hardcoding a per-tool fallback for each token a given stack happens to use.
+load_env_local() {
+  local file="$1" line key value
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key="${line%%=*}"; value="${line#*=}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+    [[ -n "${!key:-}" ]] && continue
+    export "$key=$value"
+  done <"$file"
+}
+load_env_local .env.local
 agent_browser_contract() {
   agent-browser open --help >/dev/null 2>&1 \
     && agent-browser read --help >/dev/null 2>&1 \
