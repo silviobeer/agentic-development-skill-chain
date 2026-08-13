@@ -215,6 +215,23 @@ flock -u 7
 if (cd "$wt" && SKILLCHAIN_SHARED_RESOURCE_LOCK=relative.lock "$HELPER" with-shared-lock -- true >/dev/null 2>&1); then fail "relative shared-lock override was accepted"; fi
 ok "custom worktree root and shared-resource lock contract work"
 
+# An open PR must retain the ready worktree for review follow-up and bug fixes.
+repo="$TMP_ROOT/open-pr/control"
+remote="$TMP_ROOT/open-pr/remote.git"
+mkdir -p "$(dirname "$repo")"
+init_repo "$repo" 30 beta absent "$remote"
+wt="$(cd "$repo" && "$HELPER" prepare 30 beta)"
+advance_to_p8_done "$wt" 30 beta
+head="$(git -C "$wt" rev-parse HEAD)"
+open_pr_bin="$TMP_ROOT/open-pr/bin"
+mkdir -p "$open_pr_bin"
+printf '#!/usr/bin/env bash\n[ "$1 $2" = "pr view" ] || exit 9\nprintf "OPEN\\n"\n' >"$open_pr_bin/gh"
+chmod +x "$open_pr_bin/gh"
+if (cd "$repo" && PATH="$open_pr_bin:$PATH" "$HELPER" cleanup 30 beta --ci-verified-head "$head" >/dev/null 2>&1); then fail "cleanup removed an unmerged PR worktree"; fi
+[ -d "$wt" ] || fail "open PR cleanup removed the worktree directory"
+[ "$(jq -r '.phase + ":" + .status' "$wt/specs/PROJ-30-beta/state.json")" = P8:done ] || fail "open PR cleanup changed the sealed lifecycle"
+ok "cleanup retains the worktree until the PR is merged"
+
 # Successful cleanup: P8 seal, identical upstream and CI head, clean tree.
 repo="$TMP_ROOT/cleanup/control"
 remote="$TMP_ROOT/cleanup/remote.git"
@@ -225,7 +242,11 @@ advance_to_p8_done "$wt" 8 zeta
 mkdir -p "$wt/packages/example/node_modules/pkg"
 printf generated >"$wt/packages/example/node_modules/pkg/index.js"
 head="$(git -C "$wt" rev-parse HEAD)"
-(cd "$repo" && "$HELPER" cleanup 8 zeta --ci-verified-head "$head")
+merged_pr_bin="$TMP_ROOT/merged-pr/bin"
+mkdir -p "$merged_pr_bin"
+printf '#!/usr/bin/env bash\n[ "$1 $2" = "pr view" ] || exit 9\nprintf "MERGED\\n"\n' >"$merged_pr_bin/gh"
+chmod +x "$merged_pr_bin/gh"
+(cd "$repo" && PATH="$merged_pr_bin:$PATH" "$HELPER" cleanup 8 zeta --ci-verified-head "$head")
 [ ! -e "$wt" ] || fail "successful cleanup kept worktree directory"
 git -C "$repo" show-ref --verify --quiet refs/heads/proj/PROJ-8 || fail "cleanup deleted the PROJ branch"
 [ "$(git -C "$repo" show proj/PROJ-8:specs/PROJ-8-zeta/state.json | jq -r .worktree.cleanup_status)" = removed ] || fail "durable removed status missing"
@@ -433,7 +454,7 @@ fail_bin="$TMP_ROOT/fail-bin"
 mkdir -p "$fail_bin"
 printf '#!/usr/bin/env bash\nif [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = remove ]; then exit 1; fi\nexec "$REAL_GIT" "$@"\n' >"$fail_bin/git"
 chmod +x "$fail_bin/git"
-if (cd "$repo" && PATH="$fail_bin:$PATH" REAL_GIT="$real_git" "$HELPER" cleanup 9 eta --ci-verified-head "$head" >/dev/null 2>&1); then fail "simulated git remove failure succeeded"; fi
+if (cd "$repo" && PATH="$fail_bin:$merged_pr_bin:$PATH" REAL_GIT="$real_git" "$HELPER" cleanup 9 eta --ci-verified-head "$head" >/dev/null 2>&1); then fail "simulated git remove failure succeeded"; fi
 [ "$(jq -r .worktree.cleanup_status "$wt/specs/PROJ-9-eta/state.json")" = retained ] || fail "remove failure did not retain state"
 jq -e '.worktree.cleanup_reason | startswith("git refused to remove")' "$wt/specs/PROJ-9-eta/state.json" >/dev/null || fail "remove failure reason missing"
 ok "git worktree remove failure falls back to retained state"
@@ -536,7 +557,7 @@ ok "reports render a target-cwd P8 resume through the actual runner path"
 CI_POLL="$ROOT/codex/skills/8_delivery/scripts/ci-poll.sh"
 ci_bin="$TMP_ROOT/ci-bin"
 mkdir -p "$ci_bin"
-printf '#!/usr/bin/env bash\nset -euo pipefail\nif [ "$1 $2" = "pr view" ]; then\n  count=0; [ ! -f "$GH_PR_COUNT" ] || count="$(cat "$GH_PR_COUNT")"\n  count=$((count + 1)); printf "%%s" "$count" >"$GH_PR_COUNT"\n  if [ "$count" -eq 1 ]; then printf "%%s\\n" "$GH_HEAD_FIRST"; else printf "%%s\\n" "$GH_HEAD_SECOND"; fi\nelif [ "$1 $2" = "run list" ]; then\n  cat "$GH_RUNS_FILE"\nelif [ "$1 $2" = "pr checks" ]; then\n  exit 0\nelse\n  exit 9\nfi\n' >"$ci_bin/gh"
+printf '#!/usr/bin/env bash\nset -euo pipefail\nif [ "$1 $2" = "pr view" ]; then\n  if [[ " $* " = *" --json state "* ]]; then printf "%%s\\n" "${GH_PR_STATE:-MERGED}"; exit 0; fi\n  count=0; [ ! -f "$GH_PR_COUNT" ] || count="$(cat "$GH_PR_COUNT")"\n  count=$((count + 1)); printf "%%s" "$count" >"$GH_PR_COUNT"\n  if [ "$count" -eq 1 ]; then printf "%%s\\n" "$GH_HEAD_FIRST"; else printf "%%s\\n" "$GH_HEAD_SECOND"; fi\nelif [ "$1 $2" = "run list" ]; then\n  cat "$GH_RUNS_FILE"\nelif [ "$1 $2" = "pr checks" ]; then\n  exit 0\nelse\n  exit 9\nfi\n' >"$ci_bin/gh"
 chmod +x "$ci_bin/gh"
 jq -cn '[{databaseId:1,status:"completed",conclusion:"success",name:"ci"}]' >"$TMP_ROOT/gh-runs.json"
 head_a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -563,13 +584,25 @@ set +e
 (cd "$wt" && \
   PATH="$ci_bin:$PATH" \
   GH_RUNS_FILE="$TMP_ROOT/gh-runs.json" \
-  GH_PR_COUNT="$TMP_ROOT/gh-count-resume" GH_HEAD_FIRST="$head" GH_HEAD_SECOND="$head" \
+  GH_PR_STATE=OPEN GH_PR_COUNT="$TMP_ROOT/gh-count-open" GH_HEAD_FIRST="$head" GH_HEAD_SECOND="$head" \
   "$ROOT/runner/run-phase.sh" auto 28 psi --timeout 30 >"$resume_out" 2>&1)
 resume_rc=$?
 set -e
-[ "$resume_rc" -eq 0 ] || { cat "$resume_out" >&2; fail "post-seal P8 resume failed with $resume_rc"; }
+[ "$resume_rc" -eq 0 ] || { cat "$resume_out" >&2; fail "open-PR P8 wait failed with $resume_rc"; }
+[ -d "$wt" ] || { cat "$resume_out" >&2; fail "runner removed the open-PR worktree"; }
+[ "$(jq -r '.phase + ":" + .status' "$wt/specs/PROJ-28-psi/state.json")" = P8:done ] || fail "open-PR runner wait changed the sealed lifecycle"
+grep -F "persistent worktree retained until merge" "$resume_out" >/dev/null || fail "runner did not report the successful open-PR wait"
+set +e
+(cd "$wt" && \
+  PATH="$ci_bin:$PATH" \
+  GH_RUNS_FILE="$TMP_ROOT/gh-runs.json" \
+  GH_PR_COUNT="$TMP_ROOT/gh-count-resume" GH_HEAD_FIRST="$head" GH_HEAD_SECOND="$head" \
+  "$ROOT/runner/run-phase.sh" auto 28 psi --timeout 30 >>"$resume_out" 2>&1)
+resume_rc=$?
+set -e
+[ "$resume_rc" -eq 0 ] || { cat "$resume_out" >&2; fail "post-merge P8 resume failed with $resume_rc"; }
 [ ! -e "$wt" ] || { cat "$resume_out" >&2; fail "auto skipped unfinished post-seal P8 cleanup"; }
 grep -F "P8 seal already exists but worktree cleanup is unfinished" "$resume_out" >/dev/null || fail "P8 finalization resume was not explicit"
-ok "auto resumes final CI/cleanup after a post-seal P8 crash"
+ok "auto waits with an open PR and removes the worktree on a later post-merge rerun"
 
 echo "PASS: $PASS worktree behavior groups"

@@ -332,7 +332,7 @@ retain() {
 
 cleanup() {
   [ $# -eq 4 ] && [ "$3" = "--ci-verified-head" ] || usage
-  local proj="$1" theme="$2" ci_head="$4" branch worktree state control head upstream upstream_ref remote merge_ref remote_branch
+  local proj="$1" theme="$2" ci_head="$4" branch worktree state control head upstream upstream_ref remote merge_ref remote_branch pr_number pr_state
   branch="proj/PROJ-${proj}"
   case "$ci_head" in ''|*[!0-9a-fA-F]*) die "--ci-verified-head must be a full commit SHA" ;; esac
   [ "${#ci_head}" -ge 40 ] || die "--ci-verified-head must be a full commit SHA"
@@ -412,6 +412,25 @@ cleanup() {
     retain "$proj" "$theme" "worktree contains unexpected ignored payloads: ${unexpected[*]}"
     return 1
   fi
+
+  pr_number="$(jq -r '.pr.number // empty' "$state")"
+  [ -n "$pr_number" ] \
+    || { retain "$proj" "$theme" "state.pr.number is missing"; return 1; }
+  if ! pr_state="$(gh pr view "$pr_number" --json state --jq .state 2>/dev/null)"; then
+    retain "$proj" "$theme" "could not read authoritative state for PR #$pr_number"
+    return 1
+  fi
+  case "$pr_state" in
+    MERGED) : ;;
+    OPEN)
+      echo "worktree retained: PR #$pr_number is OPEN; cleanup waits for merge" >&2
+      return 2
+      ;;
+    *)
+      retain "$proj" "$theme" "PR #$pr_number state is ${pr_state:-unavailable}, not MERGED"
+      return 1
+      ;;
+  esac
 
   # --force is necessary for reproducible, ignored dependencies and the
   # managed ignored .env.local link. Every safety predicate above resolves an

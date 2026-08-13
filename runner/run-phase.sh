@@ -96,6 +96,7 @@ for candidate in scripts/worktree.sh \
   if [ -x "$candidate" ]; then WORKTREE_HELPER="$(realpath -m "$candidate")"; break; fi
 done
 WORKTREE_WAS_REMOVED=0
+P8_WAITING_FOR_MERGE=0
 WORKTREE_REMOVAL_SUMMARY=""
 
 step() { echo "→ [$(date -Iseconds)] $*"; }
@@ -455,7 +456,7 @@ Substitute <X>=${PROJ} and <theme>=${THEME} in every command above."
 }
 
 finalize_p8_cleanup() { # evidence file used if the post-seal finalization stops
-  local evidence_file="${1:-}" pr_number final_head current_pr_head control_path cleanup_reason final_poll_out final_poll_rc
+  local evidence_file="${1:-}" pr_number final_head current_pr_head control_path cleanup_reason final_poll_out final_poll_rc cleanup_rc
   [ -n "$WORKTREE_HELPER" ] || stop_run "P8 sealed but worktree.sh is missing — safe cleanup cannot be evaluated" "$evidence_file"
   pr_number="$(state_get '.pr.number // empty')"
   [ -n "$pr_number" ] || stop_run "P8 sealed but state.pr.number is missing — final CI cannot be verified" "$evidence_file"
@@ -488,16 +489,28 @@ finalize_p8_cleanup() { # evidence file used if the post-seal finalization stops
     stop_run "$cleanup_reason" "$final_poll_out"
   fi
   control_path="$(state_get .worktree.control_path)"
-  if "$WORKTREE_HELPER" cleanup "$PROJ" "$THEME" --ci-verified-head "$final_head"; then
-    WORKTREE_WAS_REMOVED=1
-    WORKTREE_REMOVAL_SUMMARY="P8 done; final CI green at ${final_head}; persistent worktree removed; branch proj/PROJ-${PROJ} retained"
-    cd "$control_path"
-    step "$WORKTREE_REMOVAL_SUMMARY"
-  else
-    cleanup_reason="$(jq -r '.worktree.cleanup_reason // "cleanup safety predicate failed"' "$BASE/state.json")"
-    WORKTREE_REMOVAL_SUMMARY="P8 blocked; PROJ worktree retained: ${cleanup_reason}. Safe next action: runner/run-phase.sh P8 $PROJ $THEME (reseal, push, exact-head CI, guarded cleanup)"
-    stop_run "$WORKTREE_REMOVAL_SUMMARY" "$final_poll_out"
-  fi
+  set +e
+  "$WORKTREE_HELPER" cleanup "$PROJ" "$THEME" --ci-verified-head "$final_head"
+  cleanup_rc=$?
+  set -e
+  case "$cleanup_rc" in
+    0)
+      WORKTREE_WAS_REMOVED=1
+      WORKTREE_REMOVAL_SUMMARY="P8 done; final CI green at ${final_head}; persistent worktree removed; branch proj/PROJ-${PROJ} retained"
+      cd "$control_path"
+      step "$WORKTREE_REMOVAL_SUMMARY"
+      ;;
+    2)
+      P8_WAITING_FOR_MERGE=1
+      WORKTREE_REMOVAL_SUMMARY="P8 done; final CI green at ${final_head}; PR #${pr_number} is open; persistent worktree retained until merge. After merge: runner/run-phase.sh P8 $PROJ $THEME"
+      step "$WORKTREE_REMOVAL_SUMMARY"
+      ;;
+    *)
+      cleanup_reason="$(jq -r '.worktree.cleanup_reason // "cleanup safety predicate failed"' "$BASE/state.json")"
+      WORKTREE_REMOVAL_SUMMARY="P8 blocked; PROJ worktree retained: ${cleanup_reason}. Safe next action: runner/run-phase.sh P8 $PROJ $THEME (reseal, push, exact-head CI, guarded cleanup)"
+      stop_run "$WORKTREE_REMOVAL_SUMMARY" "$final_poll_out"
+      ;;
+  esac
 }
 
 run_generic() {
@@ -659,9 +672,9 @@ if [ "$PHASE_ARG" = "auto" ]; then
     run_one_phase "$ph"
   done
   step "run complete — rendering morning report"
-  if [ "$WORKTREE_WAS_REMOVED" -eq 1 ]; then
+  if [ "$WORKTREE_WAS_REMOVED" -eq 1 ] || [ "$P8_WAITING_FOR_MERGE" -eq 1 ]; then
     # The final state is durable on the retained PROJ branch; the filesystem
-    # worktree is intentionally gone, so a path-scanning renderer cannot run.
+    # must stay clean for post-merge cleanup, so the renderer cannot write.
     ONELINER="$WORKTREE_REMOVAL_SUMMARY"
   else
     ONELINER="$(node "$RUNNER_DIR/render-report.mjs" morning specs | head -n 1)"

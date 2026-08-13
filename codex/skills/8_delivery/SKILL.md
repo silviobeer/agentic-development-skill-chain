@@ -113,17 +113,23 @@ delivery work; immediately run
 preserved worktree records why cleanup was refused. Do not claim the previous
 head's CI as evidence for this one.
 
-After exit 0, capture the exact verified commit and remove the persistent
-worktree only through the safety helper:
+After exit 0, keep the persistent worktree while the PR is open so review
+follow-up can use it. After the human merges, rerun P8 (or `auto`) to repeat
+the exact-head checks and remove the worktree only through the safety helper:
 
 ```bash
 scripts/worktree.sh cleanup <X> <theme> --ci-verified-head "$FINAL_CI_HEAD"
 ```
 
+The helper exits 2 without changing `P8:done` while the authoritative
+`gh pr view` state is `OPEN`; runner-managed P8 treats that as a successful
+waiting state and prints the post-merge rerun command. Cleanup proceeds only
+when the authoritative PR state is `MERGED`.
+
 The poll is bound to the pre-poll local/PR head and rechecks the PR head after
 all workflows finish; the two explicit comparisons above also reject a local
 or remote head change between poll and cleanup. The helper additionally
-requires `.pr.ci == "green"`, `P8:done`, the sealed
+requires `.pr.ci == "green"`, `P8:done`, authoritative `MERGED` PR state, the sealed
 `removed` intent, the expected branch/registration, an identical pushed
 upstream commit, and a clean tree. It removes only the registered worktree
 (including its reproducible ignored dependencies and managed env symlink) and
@@ -140,8 +146,8 @@ same guarded cleanup; this avoids deleting the runner's current filesystem
 before it has verified the P8 seal.
 
 The run is then waiting on the human. A runner-managed run emits the final PR,
-CI-head, cleanup status/reason, and safe retry command (when retained) from the
-sealed state/helper result; nothing further happens autonomously.
+CI head, open-PR waiting status, and post-merge rerun command from the sealed
+state/helper result; nothing further happens autonomously.
 
 → NEXT ACTION: human reviews and merges the PR (Checkpoint 2 — for
 overnight runs, in the morning via the morning report). After the merge,
@@ -181,7 +187,7 @@ for bookkeeping: `bash scripts/state.sh transition <X> <theme> done done`.
 - [ ] CI green, or bounded fix loop / stop condition recorded truthfully
 - [ ] state.json `P8:done`
 - [ ] final CI verified the exact pushed seal commit
-- [ ] PROJ worktree removed safely, or retained with exact state-backed reason and retry command
+- [ ] Open PR retains the PROJ worktree; merged PR removes it safely, or records an exact failure reason and retry command
 - [ ] CP2 comment rounds reconciled point by point with decision-log entries
 
 ## Git Commit Format

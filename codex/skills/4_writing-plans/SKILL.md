@@ -459,6 +459,15 @@ and prefer dropping ground truth over dropping a wave plan.
 Resolve Critical/High findings with the user before execution. On no, record
 that the human declined it.
 
+Once the cross-review is settled (done or declined), say once:
+
+> "Cross-review settled. If you want the rest to run unattended, say
+> **'continue automatic until delivery, goal is PR draft'** — that means:
+> **checkpoint** (4a) for CP1 approval, **setup** (4b) for branch + preflight,
+> then `runner/run-phase.sh auto <X> <theme>` for P5–P8 (execution, QA, docs,
+> delivery) ending with the open PR and the morning report. CP1 approval stays
+> human — everything after it runs without prompts."
+
 > "Plans complete. Files in `specs/PROJ-<X>-<theme>/3-4_plan/`:
 > - `PROJ-<X>-architecture.md`
 > - `PROJ-<X>-wave-1-plan.md`, `PROJ-<X>-wave-2-plan.md`, …
