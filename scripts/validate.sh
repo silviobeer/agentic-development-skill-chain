@@ -29,7 +29,7 @@ OPTIONAL_SKILLS=(
   bugfixing
   refactor-dreamer
   sonar-cli
-  vibe-spike
+  vibecoder
 )
 EXPECTED=("${CORE_SKILLS[@]}" "${OPTIONAL_SKILLS[@]}")
 
@@ -115,8 +115,8 @@ while IFS= read -r bugfix_file; do
   bugfix_rel="${bugfix_file#"$ROOT/codex/skills/bugfixing/"}"
   check_identical "$bugfix_file" "$ROOT/claude/skills/bugfixing/$bugfix_rel"
 done < <(find "$ROOT/codex/skills/bugfixing" -type f | sort)
-check_identical "$ROOT/claude/skills/vibe-spike/SKILL.md" \
-  "$ROOT/codex/skills/vibe-spike/SKILL.md"
+check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
+  "$ROOT/codex/skills/vibecoder/SKILL.md"
 for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
          4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
          4b_setup/scripts/context-injector.mjs \

@@ -1,6 +1,6 @@
 ---
-name: vibe-spike
-description: "Run a freeform exploratory coding session (a spike) on a scratch branch, keep a live journal of what gets tried and why direction changes as it happens, then distill that journal plus the resulting diff into a chain-ready concept seed once the session wraps up. Use when the user wants to vibe-code, prototype freely, or explore an idea in code before committing to a concept: going back and forth, trying dead ends, changing direction mid-session. Has three entry points: start a spike (scratch branch + live journal), resume a spike (re-load the journal and pick live documentation back up after a session break), and wrap up a spike (distill journal + diff into specs/_vibe-spike/.../chain-input.md, then ask what to do with the branch). Not part of the 0-8 chain; its chain-input.md feeds 1_brainstorming as raw input, not a replacement for it. Not for planned feature work, TDD implementation, or bug fixes — use writing-plans/executing or bugfixing instead."
+name: vibecoder
+description: "Run a freeform exploratory coding session (a spike) on a scratch branch, keep a live journal of what gets tried and why direction changes as it happens, then distill that journal plus the resulting diff into a chain-ready concept seed once the session wraps up. Use when the user wants to vibe-code, prototype freely, or explore an idea in code before committing to a concept: going back and forth, trying dead ends, changing direction mid-session. Has three entry points: start a spike (scratch branch + live journal), resume a spike (re-load the journal and pick live documentation back up after a session break), and wrap up a spike (distill journal + diff into specs/_vibecoder/.../chain-input.md, then ask what to do with the branch). Not part of the 0-8 chain; its chain-input.md feeds 1_brainstorming as raw input, not a replacement for it. Not for planned feature work, TDD implementation, or bug fixes — use writing-plans/executing or bugfixing instead."
 ---
 
 # Vibe Spike
@@ -33,7 +33,7 @@ Use this mode when the user wants to begin exploring an idea in code.
 3. Create the run folder and seed the journal:
 
    ```text
-   specs/_vibe-spike/VIBE-YYYYMMDD-HHMM-<slug>/
+   specs/_vibecoder/VIBE-YYYYMMDD-HHMM-<slug>/
    └── journal.md
    ```
 
@@ -54,7 +54,7 @@ by an unbroken live-documented session: starting a new chat on a `spike/*`
 branch, saying "resume the spike", or pointing at an existing run folder.
 
 1. Find the run folder. If the current branch matches a `journal.md`'s
-   recorded branch, use it. Otherwise list `specs/_vibe-spike/VIBE-*/` and ask
+   recorded branch, use it. Otherwise list `specs/_vibecoder/VIBE-*/` and ask
    which one, or offer to start a new spike if none fits.
 2. Read the full `journal.md` to reconstruct context — question, prior
    entries, last recorded state.
@@ -114,7 +114,7 @@ want to distill the spike into something usable.
 ## Output Location
 
 ```text
-specs/_vibe-spike/VIBE-YYYYMMDD-HHMM-<slug>/
+specs/_vibecoder/VIBE-YYYYMMDD-HHMM-<slug>/
 ├── journal.md        # written live during the spike
 └── chain-input.md    # written at wrap-up
 ```
@@ -182,7 +182,7 @@ assumption playback.
 - Never delete or overwrite the spike branch without an explicit answer from
   the user at wrap-up.
 - Do not edit application code during wrap-up; wrap-up only reads the branch
-  and writes into `specs/_vibe-spike/`.
+  and writes into `specs/_vibecoder/`.
 - Do not create a PROJ, PRD, or architecture doc from this skill directly.
 - `chain-input.md` must stay concise — if it grows past what fits in a
   brainstorming intake message, cut detail rather than let it become a second

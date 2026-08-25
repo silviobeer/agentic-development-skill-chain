@@ -143,7 +143,7 @@ unavailable.
 bugfixing
 refactor-dreamer
 sonar-cli
-vibe-spike
+vibecoder
 ```
 
 `bugfixing` is a focused repair workflow outside the feature chain: intake,
@@ -161,7 +161,7 @@ candidates, producing a `chain-input.md` that can feed back into the chain.
 `sonar-cli` is a focused helper for configuring and running SonarScanner
 CLI and triaging quality-gate data.
 
-`vibe-spike` runs a freeform exploratory coding session on a scratch branch:
+`vibecoder` runs a freeform exploratory coding session on a scratch branch:
 it keeps a live journal of what gets tried and why direction changes while
 the session happens, then distills the journal plus the resulting diff into
 a `chain-input.md` feature seed for `1_brainstorming` at wrap-up.
