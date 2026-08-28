@@ -240,12 +240,15 @@ Exit criteria:
 
 - Zero remaining P0/P1 code-review findings.
 - Full build passes.
-- If Sonar ran, zero BLOCKER/CRITICAL/MAJOR issues in feature files.
+- If Sonar ran, zero BLOCKER/CRITICAL/MAJOR issues, or every remaining one is
+  documented as carried-forward after a bounded 3-round fix-and-rescan loop.
+  A carried-forward Sonar issue does not block this gate — Sonar's loop never
+  escalates or stops the run, unlike every other gate item.
 - If Sonar was skipped, the skip reason is logged.
 - Declared integration/quality-phase tests pass.
 - No new lint errors.
 
-The lead must verify findings before fixing them. Automated review output can be wrong, too broad, or outside scope. Confirmed P0/P1 and major Sonar issues are fixed; lower-severity issues are logged for user decision unless time and scope allow.
+The lead must verify findings before fixing them. Automated review output can be wrong, too broad, or outside scope. Confirmed P0/P1 findings are fixed and re-reviewed. Confirmed Sonar BLOCKER/CRITICAL/MAJOR issues go through the 3-round fix loop: fix, rerun `sonar_cmd`, re-fetch issues, repeat; whatever survives round 3 is documented in `progress.md`, not escalated. Lower-severity issues are logged for user decision unless time and scope allow.
 
 ## Handoff to Skill 6
 

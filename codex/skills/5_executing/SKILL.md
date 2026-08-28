@@ -578,15 +578,15 @@ Do NOT blindly implement every finding. Apply this discipline:
 3. **EVALUATE** — Is this a real problem or a false positive?
    - **Push back when:** The finding breaks existing functionality, violates YAGNI (suggests "proper" patterns for unused scenarios), is technically incorrect, or conflicts with the user's explicit decisions
    - **YAGNI check:** If a reviewer suggests adding error handling for a scenario that can't happen, or abstracting code that's used once — grep the codebase for actual usage before implementing
-4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR issues; dispatch disjoint fixes concurrently and overlapping fixes serially
-5. **LOG** P2/P3 and Sonar MINOR/INFO to `progress.md` — these are addressed if time permits
+4. **FIX** what's real — spawn fix teammates for confirmed P0/P1; for Sonar BLOCKER/CRITICAL/MAJOR, run the bounded 3-round fix-and-rescan loop from `references/quality-gate.md` Gate 3 step 6 (dispatch disjoint fixes concurrently, overlapping fixes serially)
+5. **LOG** P2/P3, Sonar MINOR/INFO, and any Sonar BLOCKER/CRITICAL/MAJOR still open after 3 rounds to `progress.md` as carried-forward — these never block or escalate
 6. Clean up the team
 
 **Exit criteria:**
 - Zero P0/P1 code review findings
 - `build_cmd` from `wave-gate-config.json` passes once for the assembled PROJ
 - Every `quality` phase command passes once; CI/nightly workflow wiring is verified
-- If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues, or every remaining one is documented as carried-forward after the 3-round fix loop (carried-forward Sonar issues do not block this gate)
 - If Sonar was skipped because CLIs or project config were unavailable: the skip reason is logged in `progress.md`
 - Declared integration/quality-phase tests passing, no new lint errors
 

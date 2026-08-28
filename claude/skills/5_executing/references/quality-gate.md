@@ -114,12 +114,20 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
    - **MINOR** → log for user decision
    - **INFO** → log only
 
-6. Fix all BLOCKER/CRITICAL/MAJOR:
-   - Spawn fix subagent with the sonar issue details (file, line, message, rule)
-   - Re-run declared integration/quality-phase tests after fixes
-   - Update `scripts/sonar-tracker.md` if it exists (mark fixed items `[x]`)
+6. Fix BLOCKER/CRITICAL/MAJOR in a bounded loop, up to 3 rounds:
+   ```
+   for fix_round in 1..3:
+     if no BLOCKER/CRITICAL/MAJOR remain: break
+     spawn fix subagent(s) with the sonar issue details (file, line, message, rule);
+       cluster disjoint files concurrently, serialize overlapping files
+     re-run declared integration/quality-phase tests after fixes
+     re-run sonar_cmd (step 1) and re-fetch + re-classify issues (steps 2-5)
+   ```
+   - Each round's scan must independently satisfy step 2's no-silent-no-op check — a round that produces no fresh `.scannerwork/report-task.txt` did not run and cannot count toward the 3.
+   - Update `scripts/sonar-tracker.md` if it exists (mark fixed items `[x]`) after every round.
+   - **If BLOCKER/CRITICAL/MAJOR issues remain after round 3:** document each one in `5_progress/PROJ-<X>-progress.md` (file, line, rule, severity, what the last fix attempt changed and why the issue persisted). Do **not** escalate, do **not** stop the run, and do **not** block this gate on it — record it as carried-forward and continue to QA handoff. This differs from every other Quality Gate item: a code-review or build failure that survives 3 iterations escalates to the user; a Sonar finding that survives 3 rounds is documented and carried forward instead.
 
-7. Log MINOR/INFO to `5_progress/PROJ-<X>-progress.md`.
+7. Log MINOR/INFO, and any BLOCKER/CRITICAL/MAJOR still open after round 3, to `5_progress/PROJ-<X>-progress.md`.
 
 ---
 
@@ -130,12 +138,12 @@ The quality gate passes when ALL of these are true:
 - [ ] Every declared `quality` phase command passed once; CI/nightly commands are wired to their named workflows
 - [ ] Zero P0/P1 code review findings remain
 - [ ] Full PROJ build passes (`build_cmd` from `wave-gate-config.json`)
-- [ ] If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- [ ] If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues, or every remaining one is documented as carried-forward after 3 fix rounds (a carried-forward Sonar issue does not block this gate)
 - [ ] If Sonar was skipped: explicit skip reason is logged
 - [ ] Declared integration/quality-phase tests still passing
 - [ ] No new lint errors (`npm run lint`)
 
-If the gate cannot pass after 3 fix iterations on the same issue, escalate to user.
+For every gate item except Sonar's fix loop: if it cannot pass after 3 fix iterations on the same issue, escalate to user. Sonar's own 3-round loop (Gate 3, step 6) never escalates or blocks — it documents and moves on.
 
 ---
 
@@ -181,4 +189,7 @@ Status: ran | skipped (sonar CLI unavailable) | skipped (project not configured)
 ### Deferred (user decision)
 - P2: `src/features/foo/qux.ts:88` — Data clump, 3 params passed together
 - Minor: `src/features/foo/utils.ts:15` — Prefer replaceAll over replace with regex
+
+### Carried Forward (Sonar, 3 fix rounds exhausted)
+- Major: `src/features/foo/legacy-parser.ts:120` — Cognitive complexity 24 (limit 15); round 3 refactor reduced it to 18, still over limit — needs a structural split, not a local fix
 ```

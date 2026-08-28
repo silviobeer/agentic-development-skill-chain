@@ -74,14 +74,9 @@ If progress.md does not exist, you have skipped this step — STOP and create it
 ## Wave Completion Gate
 
 <HARD-GATE>
-Before spawning ANY teammate for a new wave N+1, you MUST first fill the Post-Wave-Notes, then run the Wave Gate script — it MUST exit 0.
+Before spawning ANY teammate for a new wave N+1, you MUST run the Wave Gate script — it MUST exit 0.
 
-**Pre-Gate step:** For each US in `3-4_plan/PROJ-<X>-wave-<N>-plan.md`, fill the `### Post-Wave Notes` placeholder block with the Skill-4-reserved sub-items:
-- `Deviations from plan:` — what ended up different from the task description? Write `—` if none.
-- `Surprising gotchas:` — anything a future dev/agent should know? Write `—` if none.
-- `New dependencies:` — new packages/libs introduced by this US? Write `—` if none.
-
-Source the content from `progress.md` + commit messages for the wave's SHA range. Keep each sub-item to one line. Skill 7 reads this verbatim; empty entries (`—`) are fine and explicit.
+Doc-input collection is owned by Skill 7. Do not fill documentation summaries or Post-Wave-Notes blocks during Skill 5. Keep `progress.md`, commit messages, and `agent.md` accurate; Skill 7 harvests those sources after QA.
 
 ```bash
 bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
@@ -459,26 +454,22 @@ After a wave worker completes or a recovery stage exposes a durable learning, wr
 ### 7. Wave review with CodeRabbit CLI
 
 <HARD-GATE>
-This step is MANDATORY. Do NOT skip it. Do NOT proceed to the smoke test or next wave without running CodeRabbit.
-If CodeRabbit fails to execute (e.g., not installed, auth error), log the error in progress.md and inform the user — but do NOT silently skip it.
+CodeRabbit is MANDATORY, but it is run by `wave-gate.sh`, not as a separate pre-gate command. Do NOT run a second per-wave review outside the gate.
+If CodeRabbit fails to execute (e.g., not installed, auth error), the gate exits non-zero. Fix the tool/auth problem and rerun the gate.
 </HARD-GATE>
 
-After the build check passes, run a CodeRabbit review on the wave's changes. This catches cross-cutting issues early — not at the end during the full Quality Gate.
+The wave gate runs CodeRabbit on the wave's changes. This catches cross-cutting issues early — not only at the end during the full Quality Gate.
 
 ```bash
-# Record wave start commit if not already done
-WAVE_BASE_SHA=$(git rev-parse HEAD~$(git log --oneline $WAVE_BASE_SHA..HEAD | wc -l) 2>/dev/null || echo $BASE_SHA)
-
-# Run CodeRabbit review — MUST execute, not skip
-coderabbit review --agent --base-commit $WAVE_BASE_SHA
+bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
-Where `$WAVE_BASE_SHA` is the commit before this wave started (record it at the start of each wave, similar to `BASE_SHA` for the full feature).
+The base commit must be either `WAVE_BASE_SHA` or tag `wave-${WAVE}-start-PROJ-${PROJ}`. Missing base = hard fail. No fallback is allowed.
 
 **How to handle findings:**
 - Each gate attempt retains `coderabbit-wave-<N>-attempt-<M>.jsonl` and its normalized sibling; never overwrite earlier review evidence.
 - Any cumulative open ledger severity not listed in the wave's `advisory_severities` blocks. Fix immediately — spawn a fix teammate before the next wave.
-- Listed advisory severities are logged and revisited at the PROJ-end Quality Gate if still relevant.
+- Listed advisory severities are logged by CodeRabbit output and revisited at the PROJ-end Quality Gate if still relevant.
 
 **Log in progress.md:**
 ```markdown
@@ -519,20 +510,13 @@ Log the result in `progress.md` under the wave section:
 
 **Why agent-browser as an option?** It runs as a standalone CLI — no MCP context required. This means it can also be delegated to a teammate if needed. Full browser testing is reserved for comprehensive QA in Skill 6.
 
-### 7c. Minimalism Review — moved to PROJ-end QA
+### 7c. Minimalism Review — Ken Takahashi
 
-Ken Takahashi (Minimalism / retrospective review) **no longer runs per wave**. CodeRabbit covers per-wave diff-review; Ken now runs once in Skill 6 against the assembled PROJ with PROJ-level scope. Rationale: per-wave Ken doubled review time without catching what CodeRabbit missed, and bloat is easier to spot in the full PROJ diff than in a single-wave diff.
+<HARD-GATE>
+Ken does **not** run per wave. CodeRabbit is the only per-wave review. Ken runs once at PROJ end in Skill 6, after all waves have assembled into a complete feature.
+</HARD-GATE>
 
-Skip this step. Continue to Step 8 (wave-gate.sh).
-
-<details>
-<summary>Legacy details (kept for reference; do not run)</summary>
-
-The previous per-wave Ken implementation lived here. It is removed in favor of a single PROJ-end Ken pass in Skill 6. The agent.md retrospective entries and AGENTS.md candidate harvesting still happen — just at PROJ scope, not wave scope.
-
-Legacy invocation (per-wave Codex companion / general-purpose subagent at wave-base SHA) is removed. The same persona prompt now runs once at PROJ scope — see Step 9.
-
-</details>
+Do not invoke Ken from Skill 5. Do not create Ken wave BUG IDs or Ken wave backlog sections. If minimalism concerns appear during implementation, write them as normal `agent.md` learnings or progress notes; Skill 6 will review the complete PROJ diff with Ken's PROJ-level lens.
 
 ### 8. Mark wave complete, auto-continue to next wave
 
@@ -595,15 +579,15 @@ Do NOT blindly implement every finding. Apply this discipline:
 3. **EVALUATE** — Is this a real problem or a false positive?
    - **Push back when:** The finding breaks existing functionality, violates YAGNI (suggests "proper" patterns for unused scenarios), is technically incorrect, or conflicts with the user's explicit decisions
    - **YAGNI check:** If a reviewer suggests adding error handling for a scenario that can't happen, or abstracting code that's used once — grep the codebase for actual usage before implementing
-4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR issues; dispatch disjoint fixes concurrently and overlapping fixes serially
-5. **LOG** P2/P3 and Sonar MINOR/INFO to `progress.md` — these are addressed if time permits
+4. **FIX** what's real — spawn fix teammates for confirmed P0/P1; for Sonar BLOCKER/CRITICAL/MAJOR, run the bounded 3-round fix-and-rescan loop from `references/quality-gate.md` Gate 3 step 6 (dispatch disjoint fixes concurrently, overlapping fixes serially)
+5. **LOG** P2/P3, Sonar MINOR/INFO, and any Sonar BLOCKER/CRITICAL/MAJOR still open after 3 rounds to `progress.md` as carried-forward — these never block or escalate
 6. Clean up the team
 
 **Exit criteria:**
 - Zero P0/P1 code review findings
 - `build_cmd` from `wave-gate-config.json` passes once for the assembled PROJ
 - Every `quality` phase command passes once; CI/nightly workflow wiring is verified
-- If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
+- If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues, or every remaining one is documented as carried-forward after the 3-round fix loop (carried-forward Sonar issues do not block this gate)
 - If Sonar was skipped because CLIs or project config were unavailable: the skip reason is logged in `progress.md`
 - Declared integration/quality-phase tests passing, no new lint errors
 
