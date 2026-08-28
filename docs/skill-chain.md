@@ -83,7 +83,7 @@ After decomposition:
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
 | 4b | setup | P0 once per PROJ: persistent PROJ worktree + branch/BASE_SHA, tool/auth preflight, reproducible dependency install, framework scripts copied into the repo |
-| 5 | executing | Implement waves with TDD and quality gates |
+| 5 | executing | Delegate code/test/fix edits to workers, run TDD plus one wave-scoped Ralph pass and hard wave gates, then an integration-focused PROJ gate and direct Skill 6 handoff |
 | 6 | qa | Run E2E QA, security, required six-persona opposite-provider evidence review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR with a body rendered from state.json + findings.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
@@ -92,13 +92,21 @@ After decomposition:
 
 After `checkpoint` (4a) seals Checkpoint 1, the host-neutral phase runner
 (`runner/run-phase.sh auto <X> <theme>`) drives P0 → P5 → P6 → P7 → P8
-unattended — dual Claude + Codex lanes with a single writer per phase,
+unattended — dual Claude + Codex lanes with a single writer-orchestrator per phase,
 `state.json`/`findings.json` as the only handoff, stop policy with rescue
 branch + stop report, and a rendered morning report at run end. If the
 `codex` CLI is missing or unauthenticated, the run degrades to
 single-provider with a model-opposite review lane — flagged in the
 morning report and PR body, never silent. See [runner/README.md](../runner/README.md)
 and CONCEPT.md for the full model.
+
+The writer lane owns decomposition, dispatch, integration, deterministic
+verification, gates, commits, and operational records. When delegation is
+available and permitted, it delegates every covered code, test, fix, and
+documentation edit to workers under its authority: disjoint ownership runs in
+parallel, dependencies or overlap run serially, and corrections return to a
+follow-up worker. Local editing is allowed only as an explicitly reported
+unavailable/prohibited fallback; the peer lane remains read-only.
 
 P0 creates or resumes a persistent sibling worktree for `proj/PROJ-X`; the
 runner re-enters it before P5 and keeps it through P8. Source and dependencies
@@ -111,10 +119,11 @@ and the safe P8 resume command that reseals before retrying cleanup.
 Wave plans carry structured AC/test-file mappings, a broad regression suite,
 auth-budget metadata, and deterministic frontend route expectations. Planning,
 Checkpoint 1, and P0 run the same consistency validator. A green wave gate
-certifies current ACs plus declared regressions—not every earlier AC command.
-Legacy string AC entries remain readable by the runtime for standalone use, but
-cannot pass the framework's evidence gate; they must be upgraded in Writing
-Plans and reapproved instead of being identified by their old array position.
+reuses exact same-HEAD evidence produced by its `--ac-only` pass, then certifies
+current ACs plus declared regressions—not every earlier AC command.
+Legacy string AC entries are rejected by the current wave gate. Upgrade them to
+structured AC metadata in Writing Plans and reapprove before execution; the
+runtime does not infer AC identity from an old array position.
 
 Stage 2 adds the bootstrap and the full context system:
 

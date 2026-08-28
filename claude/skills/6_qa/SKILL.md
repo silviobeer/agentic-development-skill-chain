@@ -55,6 +55,21 @@ triage, false-positive verification, fix dispatch, and fresh
 provider-opposite re-verification. This skill only tests and writes
 findings; it never dispatches fixes and never seals the P6 phase.
 
+### Fix-controller delegation contract
+
+The QA finder remains read-only. When the separate P6 controller or a
+user-requested standalone fix controller handles findings, every product,
+test, and defect edit MUST be worker-owned whenever Claude subagents are
+available and permitted, including trivial edits and integration corrections.
+The controller owns decomposition, dispatch, integration, deterministic
+verification, gates, and operational records. Dispatch independent tasks with
+disjoint ownership concurrently; serialize dependent or overlapping work (or
+give the overlap to one worker). Send failed verification or integration work
+back as a narrowly scoped follow-up task. The controller may edit locally only
+when delegation is unavailable or prohibited, and MUST report that reason
+explicitly. This does not change the finder's read-only role or the existing P6
+fix-controller loop.
+
 ## Claude Adaptation
 
 This Claude skill uses the Codex QA skill as the behavioral source of truth. Keep the gates, persona roles, severity rules, durable-context candidate behavior, and handoff behavior aligned with the Codex copy. Claude-specific differences are limited to tool invocation:
@@ -121,7 +136,7 @@ Run this in the background. Wait until it reports a local URL (typically `http:/
 ### 1. Read PRDs + Progress
 
 - Read every PRD in `specs/PROJ-<X>-<theme>/2_PRDs/` and `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md`
-- ACs are already verified by skill 5's outer Ralph loop — do not re-test them in code
+- ACs are already verified by skill 5's wave-scoped Outer Ralph pass — do not re-test them in code
 - Focus on: browser E2E validation, edge cases, adversarial scenarios, security, regression
 - Also inspect implementation shape for unnecessary complexity. QA must surface complexity that makes the feature harder to fix, test, or extend.
 - QA covers the entire PROJ — all PRDs together

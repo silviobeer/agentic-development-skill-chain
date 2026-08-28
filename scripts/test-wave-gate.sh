@@ -15,8 +15,9 @@ case_dir() {
   CASE="$TMP/$PLATFORM-$name"; LABEL="$PLATFORM/$name"; CASE_LOG="$TMP/$PLATFORM-$name-counter"; GATE_OUT="$TMP/$PLATFORM-$name.out"
   mkdir -p "$CASE/specs/PROJ-1-test/3-4_plan" "$CASE/specs/PROJ-1-test/5_progress" "$CASE/bin" "$CASE/scripts"
   printf '# Progress\n' >"$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md"
-  printf '%s\n' '#!/usr/bin/env bash' '[[ -z "${CR_FIXTURE:-}" ]] || command cat "$CR_FIXTURE"' 'exit "${CR_RC:-0}"' >"$CASE/bin/coderabbit"
+  printf '%s\n' '#!/usr/bin/env bash' '[[ -z "${CR_CALL_LOG:-}" ]] || printf "called\n" >>"$CR_CALL_LOG"' '[[ -z "${CR_FIXTURE:-}" ]] || command cat "$CR_FIXTURE"' 'exit "${CR_RC:-0}"' >"$CASE/bin/coderabbit"
   printf '%s\n' '#!/usr/bin/env bash' \
+    '[[ -z "${BROWSER_CALL_LOG:-}" ]] || printf "called\n" >>"$BROWSER_CALL_LOG"' \
     'while [[ "${1:-}" == --* ]]; do case "$1" in --session) SESSION="$2"; shift 2;; --state) [[ -f "$2" ]] || exit 9; shift 2;; *) shift;; esac; done' \
     'STATE="${BROWSER_STATE_DIR:?}/${SESSION:-default}"; cmd="${1:-}"; shift || true' \
     'case "$cmd" in open) printf "%s\n" "${BROWSER_FINAL_URL:-$1}" >"$STATE";; get) [[ "${1:-}" == url ]] && command cat "$STATE";; read) printf "%s\n" "${BROWSER_TEXT:-Welcome}";; errors) exit 0;; close) rm -f "$STATE";; *) exit 2;; esac' >"$CASE/bin/agent-browser"
@@ -41,11 +42,47 @@ default_config() {
 write_config() { printf '%s\n' "$1" >"$CASE/specs/PROJ-1-test/3-4_plan/wave-gate-config.json"; }
 commit_case() { git -C "$CASE" add .; git -C "$CASE" commit -qm fixture; git -C "$CASE" tag -f wave-1-start-PROJ-1 >/dev/null; }
 run_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" 1 1 test); }
+ac_only_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --ac-only 1 1 test); }
 status_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --status 1 1 test); }
 auth_control_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --auth-budget-negative-control 1 1 test); }
 
 run_suite() {
   GATE="$1"; PLATFORM="$2"
+
+  case_dir ac-only-cache-handoff
+  REST_LOG="$TMP/$PLATFORM-ac-only-rest" CR_CALL_LOG="$TMP/$PLATFORM-ac-only-coderabbit" BROWSER_CALL_LOG="$TMP/$PLATFORM-ac-only-browser"
+  export REST_LOG CR_CALL_LOG BROWSER_CALL_LOG
+  config=$(default_config | jq '
+    .auth_budget={"preflight_cmd":"true","exhausted_exit_code":75}
+    | .waves["1"].ac_commands[0].auth_consuming=true
+    | .waves["1"].regression_commands[0].command="printf R >> \"$REST_LOG\"; printf \"Running 2 tests\\n2 passed\\n\""
+    | .build_cmd="printf B >> \"$REST_LOG\""
+    | .sonar_cmd="printf S >> \"$REST_LOG\"; mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt"
+    | .frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/","expected_url":"/","expected_text":"Welcome","protected":false}]}
+  ')
+  write_config "$config"; commit_case
+  ac_only_gate >/dev/null
+  [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: AC-only did not execute the AC exactly once"
+  [[ ! -e "$REST_LOG" && ! -e "$CR_CALL_LOG" && ! -e "$BROWSER_CALL_LOG" ]] || fail "$LABEL: AC-only executed a later gate phase"
+  jq -e --arg head "$(git -C "$CASE" rev-parse HEAD)" '.ralph_status=="complete" and (.commands[0] | .id=="AC-1" and .verified_head==$head and .status=="passed")' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: AC-only did not persist canonical current-HEAD evidence"
+  run_gate >/dev/null
+  [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: full gate repeated the same-HEAD auth-consuming AC"
+  [[ $(cat "$REST_LOG") == RBS ]] || fail "$LABEL: full gate did not execute regression, build, and Sonar after AC-only"
+  [[ -s "$CR_CALL_LOG" && -s "$BROWSER_CALL_LOG" ]] || fail "$LABEL: full gate did not execute CodeRabbit and browser after AC-only"
+  unset REST_LOG CR_CALL_LOG BROWSER_CALL_LOG
+
+  case_dir ac-only-collects-failures
+  config=$(default_config | jq '.waves["1"].ac_commands=[
+    {"id":"AC-1","task":"T-1","command":"printf a >> \"$CASE_LOG\"; printf \"Running 1 test\\n\"; exit 2","test_files":["tests/a.ts"],"auth_consuming":false},
+    {"id":"AC-2","task":"T-2","command":"printf b >> \"$CASE_LOG\"; printf \"Running 1 test\\n\"; exit 3","test_files":["tests/b.ts"],"auth_consuming":false}
+  ]')
+  write_config "$config"; commit_case; expect_fail ac_only_gate
+  [[ $(cat "$CASE_LOG") == ab ]] || fail "$LABEL: AC-only did not execute both ordinary failing ACs"
+  jq -e '.ralph_status=="failed" and (.commands | length)==2 and all(.commands[]; .status=="failed")' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: AC-only did not retain both ordinary failure records"
+
+  case_dir full-gate-fails-fast
+  write_config "$config"; commit_case; expect_fail run_gate
+  [[ $(cat "$CASE_LOG") == a ]] || fail "$LABEL: full gate no longer fails fast on its first ordinary AC failure"
 
   case_dir cache
   write_config "$(default_config)"; commit_case
@@ -217,9 +254,9 @@ run_suite() {
 
   case_dir auth-pacing
   AUTH_TIMES="$TMP/$PLATFORM-auth-times"; export AUTH_TIMES
-  config=$(default_config | jq '.auth_budget={"preflight_cmd":"true","exhausted_exit_code":75} | .waves["1"].auth_pacing_seconds=1 | .waves["1"].ac_commands=[{"id":"AC-1","task":"T-1","command":"date +%s >> \"$AUTH_TIMES\"; printf '\''Running 1 test\\n1 passed\\n'\''","test_files":["tests/a.ts"],"auth_consuming":true},{"id":"AC-2","task":"T-2","command":"date +%s >> \"$AUTH_TIMES\"; printf '\''Running 1 test\\n1 passed\\n'\''","test_files":["tests/b.ts"],"auth_consuming":true}]')
+  config=$(default_config | jq '.auth_budget={"preflight_cmd":"true","exhausted_exit_code":75} | .waves["1"].auth_pacing_seconds=1 | .waves["1"].ac_commands=[{"id":"AC-1","task":"T-1","command":"date +%s%3N >> \"$AUTH_TIMES\"; printf '\''Running 1 test\\n1 passed\\n'\''","test_files":["tests/a.ts"],"auth_consuming":true},{"id":"AC-2","task":"T-2","command":"date +%s%3N >> \"$AUTH_TIMES\"; printf '\''Running 1 test\\n1 passed\\n'\''","test_files":["tests/b.ts"],"auth_consuming":true}]')
   write_config "$config"; commit_case; run_gate >/dev/null
-  mapfile -t auth_times <"$AUTH_TIMES"; [[ $((auth_times[1]-auth_times[0])) -ge 1 ]] || fail "$LABEL: auth-consuming commands were not paced"
+  mapfile -t auth_times <"$AUTH_TIMES"; [[ $((auth_times[1]-auth_times[0])) -ge 1000 ]] || fail "$LABEL: auth-consuming commands were not paced"
   unset AUTH_TIMES
 
   case_dir coderabbit-archive

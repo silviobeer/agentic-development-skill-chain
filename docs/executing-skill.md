@@ -1,10 +1,10 @@
 # Executing Skill
 
-**Last updated:** 2026-08-11
+**Last updated:** 2026-08-28
 
-The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification after each user story and hard gates between waves.
+The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification once per wave and hard gates between waves.
 
-Its main job is orchestration. The lead agent keeps the process moving, records proof in `progress.md`, dispatches implementation or fix work when useful, and personally owns acceptance-criteria verification and browser checks that require the main tool context.
+Its main job is orchestration. When delegation is available, workers own every code, test, and fix edit. The lead owns decomposition, dispatch, integration, deterministic verification, gates, commits, and operational records. Disjoint work runs concurrently; dependencies and overlapping ownership run serially. Local editing is only a visible fallback when delegation is unavailable or prohibited.
 
 ## Where It Fits
 
@@ -38,16 +38,15 @@ flowchart TD
   B --> C[Read PRDs, architecture, and wave plans]
   C --> D[Start wave N and tag wave base]
   D --> E[Implement each user story with TDD]
-  E --> F[Inner Ralph: subagent spec and code review]
-  F --> G[Outer Ralph: lead verifies acceptance criteria]
+  E --> F[One bounded Inner Ralph self-review per worker]
+  F --> G[One wave-scoped Outer Ralph pass]
   G --> H[Wave gate script]
   H -->|pass| I{More waves?}
   H -->|fail| J[Fix failing gate check]
   J --> H
   I -->|yes| D
-  I -->|no| K[PROJ quality gate]
-  K --> L[First-pass QA and fix loop]
-  L --> M[Handoff to Skill 6 QA]
+  I -->|no| K[Integration-focused PROJ quality gate]
+  K --> M[Handoff directly to mandatory Skill 6 QA]
 ```
 
 The loop is intentionally continuous. A green wave gate is the signal to start the next wave; the lead does not stop for user confirmation between waves unless there is a blocker.
@@ -76,12 +75,12 @@ Required setup includes:
 
 ### `progress.md`
 
-`progress.md` tracks the active wave, user-story task status, tests, acceptance-criteria verification, Ralph loop iterations, gate results, QA results, and blockers.
+`progress.md` tracks the active wave, user-story task status, tests, acceptance-criteria evidence, recovery stages, gate results, and blockers.
 
 It is updated after every meaningful action:
 
 - After each TDD task cycle.
-- After each inner or outer Ralph iteration.
+- After each bounded Inner Ralph result and each wave-scoped Outer Ralph recovery stage.
 - After wave gates.
 - After quality-gate checks.
 - Whenever a blocker appears.
@@ -144,50 +143,32 @@ Rules:
 - Refactors must not add behavior.
 - The implementer must report actual commands and observed results.
 
-## Inner Ralph Loop
+## Inner Ralph Self-Review
 
-After all tasks for a user story are implemented, the implementer runs an inner Ralph loop. This is a two-stage review inside the implementation worker's scope.
+After all tasks for a user story are implemented, its worker runs one bounded self-review covering task/spec compliance, error handling, type safety, test quality, boundaries, and architecture. The worker fixes confirmed issues once, reruns targeted tests, and reports unresolved issues without starting another self-review cycle.
 
-Stage 1: spec compliance
+The implementer does not verify acceptance criteria. That is reserved for the lead's wave-scoped Outer Ralph pass.
 
-- Compare the actual code against the task requirements.
-- Fix missing or incorrect behavior.
-- Re-run tests.
-- Repeat until clean.
+## Wave-Scoped Outer Ralph
 
-Stage 2: code quality
+After every worker in a wave returns and the lead integrates and commits their changes, the lead starts the canonical wave acceptance checks with:
 
-- Review error handling, type safety, test quality, boundaries, and architecture.
-- Fix confirmed issues.
-- Re-run tests.
-- Repeat until clean.
-
-The implementer does not verify acceptance criteria. That is reserved for the lead agent's outer Ralph loop.
-
-## Outer Ralph Loop
-
-The outer Ralph loop is the lead agent's deterministic acceptance-criteria check after each user story reports back.
-
-```text
-while not all ACs pass and iteration < 3:
-  for each AC:
-    run the deterministic check
-    if it fails:
-      capture the exact failure output
-      dispatch a fix with the failing AC and verbatim output
-      update progress.md
-  re-check all ACs
+```bash
+bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
 ```
 
-Rules:
+This AC-only pass uses the gate's timeout, auth-budget, pacing, and rate-limit controls and writes its results directly to `ralph-wave-<N>.json`. It collects every ordinary AC failure so disjoint repairs can be batched, while infrastructure and auth-budget exhaustion still fail fast. It exits before regressions, build, CodeRabbit, Sonar, browser smoke, component registry, progress certification, and next-wave tagging.
 
-- Use real commands or direct behavior verification.
-- Do not use subjective review as proof.
-- Pass failure output verbatim to the fix worker.
-- Update `progress.md` after each iteration.
-- Stop after 3 iterations on the same unresolved AC and document the full history.
+Evidence binds the canonical AC ID, task, exact command, test files, positive selected-test count, and committed `HEAD`. Reuse requires the exact AC ID and command at that same `HEAD`; cross-HEAD impact inference is not supported.
 
-If an AC still fails after 3 iterations, execution records the unresolved state and continues to the wave gate. The gate is still the hard proof before the next wave; it will fail if configured AC commands do not pass.
+Recovery has exactly four stages:
+
+1. Normal fix round 1, clustered by disjoint ownership.
+2. Normal fix round 2 with fresh workers.
+3. Fresh diagnosis without edits.
+4. A different implementer applies the diagnosis.
+
+After each edit is committed, the lead reruns the same `--ac-only` command. The new `HEAD` conservatively invalidates all earlier AC passes. If failures remain after stage four, or diagnosis finds an invalid or contradictory AC, execution uses the existing blocked-run evidence path. It does not loop indefinitely or weaken the AC.
 
 ## Wave Gate
 
@@ -197,7 +178,7 @@ The wave gate is the hard boundary between waves.
 bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
-The script validates:
+The script is the hard boundary and validates:
 
 - Every structured `ac_commands` entry for the wave exits 0 and selects tests.
 - A cached AC pass matches its ID, command, positive selected count, and committed `verified_head`.
@@ -214,17 +195,20 @@ The script validates:
   are covered by an authenticated E2E regression.
 - `gen-component-registry.mjs --check` passes: `docs/components.md` is current, every component carries its doc block, and every component has its `id="<kebab-name>"` section on the showcase page.
 
-If the script exits non-zero, execution stops at that gate, fixes the failure, and reruns the script. Only a passing script allows the next wave to start.
+The normal gate reuses exact same-HEAD AC-only evidence, avoiding a second auth-consuming AC run, then runs the declared regression suite and every remaining gate phase. Any committed or non-evidence uncommitted change prevents reuse.
+
+If the script exits non-zero, execution stops at that gate, dispatches any code
+correction to a follow-up worker, and reruns the script. Only a passing script
+allows the next wave to start.
 
 On success, the script appends the canonical passed block to `progress.md`.
 That proof means current ACs plus the declared broad regression suite passed;
 it does not imply that all earlier waves' AC commands were rerun.
 
-The runtime parser still accepts legacy string AC entries for standalone older
-projects. Framework planning gates intentionally do not certify those entries:
-they lack stable AC/task/test-file evidence and a mandatory regression suite.
-Before CP1/P0, reopen the plan in Writing Plans, add the structured metadata,
-and reapprove it; the framework never infers AC identity from an old array index.
+The current wave gate rejects legacy string AC entries because they lack stable
+AC/task/test-file evidence and a mandatory regression suite. Before execution,
+reopen the plan in Writing Plans, add the structured metadata, and reapprove it;
+the runtime never infers AC identity from an old array index.
 
 ## Build Policy
 
@@ -233,7 +217,7 @@ The skill avoids scattered build checks.
 - Wave builds run inside `scripts/wave-gate.sh`.
 - The assembled PROJ build runs inside the PROJ quality gate.
 
-If a build fails, the fix gets the verbatim compiler output and the failing gate is rerun.
+If a build fails, a fix worker gets the verbatim compiler output and the failing gate is rerun.
 
 ## CodeRabbit and Smoke Tests
 
@@ -245,7 +229,7 @@ Frontend smoke tests are also owned by the wave gate. They use `agent-browser` a
 
 After all waves pass, the quality gate checks the assembled feature diff from `BASE_SHA` to `HEAD`.
 
-It includes:
+It focuses on assembled cross-wave risks and does not replay wave ACs. It includes:
 
 - Full code review of the feature diff.
 - One PROJ-level build using `build_cmd`.
@@ -253,7 +237,7 @@ It includes:
   `sonar-scanner` are available and the project is configured. This is distinct
   from the mandatory per-wave `sonar_cmd`; its skip policy cannot satisfy or
   bypass a wave gate.
-- Test and lint verification.
+- Declared integration/quality-phase tests and lint verification.
 
 Exit criteria:
 
@@ -261,54 +245,37 @@ Exit criteria:
 - Full build passes.
 - If Sonar ran, zero BLOCKER/CRITICAL/MAJOR issues in feature files.
 - If Sonar was skipped, the skip reason is logged.
-- Tests pass.
+- Declared integration/quality-phase tests pass.
 - No new lint errors.
 
 The lead must verify findings before fixing them. Automated review output can be wrong, too broad, or outside scope. Confirmed P0/P1 and major Sonar issues are fixed; lower-severity issues are logged for user decision unless time and scope allow.
 
-## First-Pass QA and Fix Loop
-
-Skill 5 includes a first-pass QA loop before handing off to Skill 6.
-
-The lead runs browser E2E checks directly because Playwright MCP tools require the main context. In parallel, delegated QA streams can run security and UI audits.
-
-Fix policy:
-
-- Critical and High bugs are fixed immediately.
-- After each fix, rerun the specific check that found the bug.
-- Re-run relevant QA checks for regression.
-- Medium and Low bugs are presented to the user for release decision.
-- If the same bug survives 3 fix attempts, escalate with the full history.
-
-Skill 5 considers first-pass QA clean when there are no Critical or High bugs.
-
 ## Handoff to Skill 6
 
-Skill 6 is still required. Skill 5's QA is a first-pass filter, not the comprehensive release gate.
+Skill 6 is mandatory. Skill 5 performs no duplicate browser E2E, red-team, UI-audit, or other QA stage; it hands the green PROJ Quality Gate directly to Skill 6's comprehensive QA and fix controller.
 
 Before handoff, the lead verifies that `progress.md` contains:
 
-- Wave plan and Ralph iteration summaries.
+- Wave plans and wave-scoped Ralph evidence/recovery summaries.
 - Wave gate proof blocks.
 - Quality-gate code review, build, and Sonar results or explicit skip reason.
-- First-pass QA results.
 
 Skill 6 then runs the comprehensive QA panel, security review, simplicity review, PROJ retrospective, and `AGENTS.md` candidate collection. Skill 7 later uses those artifacts for documentation.
 
 ## Failure Handling
 
-The executing skill follows a 3-fix rule:
+Wave AC recovery follows the exact four-stage sequence above. For other repeated failures:
 
 - Reproduce the failure.
 - Read the full error and stack trace.
 - Form one hypothesis.
 - Make the smallest fix.
 - Re-run the failing check and relevant regressions.
-- After 3 failed attempts on the same issue, stop and escalate with the exact history.
+- Use the existing blocked/escalation path with the exact history when bounded recovery is exhausted.
 
 Escalate when:
 
-- The same AC fails after 3 outer Ralph iterations.
+- Wave-scoped Outer Ralph exhausts both normal fix rounds, fresh diagnosis, and the diagnosis-driven implementation.
 - The root cause is a spec or architecture problem.
 - A required dependency or external service is unavailable.
 - Requirements are ambiguous or contradictory.
@@ -318,10 +285,10 @@ Escalate when:
 The executing skill is strict because every transition has proof:
 
 - TDD proves implementation tasks.
-- Inner Ralph proves task-level spec and code review.
-- Outer Ralph proves acceptance criteria.
+- One bounded Inner Ralph self-review covers task-level spec and code review.
+- Wave-scoped Outer Ralph proves acceptance criteria against the committed wave result.
 - Wave gates prove a wave is safe to build on.
 - The quality gate proves the assembled feature.
-- First-pass QA proves there are no known Critical or High bugs before Skill 6.
+- Mandatory Skill 6 provides comprehensive QA without a duplicate Step 5 pass.
 
 That structure lets long implementation runs continue without repeatedly asking for permission while still leaving a durable audit trail for QA, documentation, and future agents.

@@ -11,6 +11,20 @@ data — the PR body comes from `state.json` + `findings.json` via a
 template script, never freehand. The human's job at CP2 is reviewing
 and merging; this skill's job is making that reviewable.
 
+## Delegation Contract
+
+Whenever Claude subagents are available and permitted, every delivery-time
+code, test, and defect edit MUST be worker-owned, including semantic-conflict
+resolution, CI/CP2 fixes, trivial edits, and integration corrections. The
+delivery lead owns decomposition, dispatch, integration, deterministic
+verification, gates, and operational records. Dispatch independent tasks with
+disjoint ownership concurrently; serialize dependent or overlapping work (or
+give the overlap to one worker). Send failed verification or integration work
+back as a narrowly scoped follow-up task. The lead may edit covered files
+locally only when delegation is unavailable or prohibited, and MUST report
+that reason explicitly. State, ledger, PR metadata, commits, and other
+operational records remain lead-owned through their existing commands.
+
 ## Input
 
 - `specs/PROJ-<X>-<theme>/state.json` at `P7:done` (or `P8:*` when resuming)

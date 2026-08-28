@@ -57,6 +57,14 @@ Artifact handling:
 
 ## Process
 
+### Mandatory Delegation Contract
+
+- When Claude `Agent` subagents are available, all design documentation, showcase, and component edits are worker-owned; dispatch each with narrow, explicit file ownership.
+- The lead owns decomposition, dispatch, integration, deterministic verification, gates, and operational records.
+- Dispatch independent tasks with disjoint ownership concurrently. Serialize dependencies and overlapping files.
+- Delegate integration corrections as `Agent` follow-up fix tasks; the lead must not patch covered edits directly.
+- Edit locally only when subagents are unavailable or delegation is prohibited, and report that reason explicitly.
+
 ### 1. Establish Mood Before Design Choices
 
 When no design system exists, ask this question **first**, before proposing colors, components, or fonts:

@@ -27,6 +27,17 @@ Update only what needs updating, but do not keep the docs shallow when the featu
 
 No per-feature documentation files by default. The PRDs under `specs/PROJ-<X>-<theme>/2_PRDs/` remain the detailed requirement source; link to them instead of copying acceptance criteria.
 
+## Mandatory Delegation Contract
+
+When Claude `Agent` subagents are available and permitted, workers own all
+product-source, test, defect-fix, and human-documentation edits this workflow
+requires. The lead owns decomposition, dispatch, integration, deterministic
+verification, gates, and operational records. Dispatch independent tasks with
+disjoint file ownership in parallel; serialize dependent or overlapping work.
+Send integration corrections to a follow-up worker. The lead may edit covered
+files locally only when delegation is unavailable or prohibited, and must report
+the reason explicitly.
+
 ## Decomposed PROJ Handling
 
 Documentation updates the completed PROJ while preserving the larger decomposition map:
@@ -75,7 +86,7 @@ This Claude skill uses the Codex documentation skill as the behavioral source of
 - Use project-root `AGENTS.md` for durable agent context.
 - Keep project-root `CLAUDE.md` pointer-only. It must reference `AGENTS.md` as required reading and must not contain curated rules.
 - Ask the user before merging any `AGENTS.md` candidate unless the current user request explicitly authorizes automatic merging.
-- Use Claude `Agent` subagents when available and useful. Otherwise, generate docs locally.
+- Apply the mandatory delegation contract whenever Claude `Agent` subagents are available and permitted.
 - Keep documentation edits scoped to triggered files.
 
 ## Documentation Standard

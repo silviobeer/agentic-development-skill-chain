@@ -9,7 +9,7 @@ Task tool:
   description: "Implement [US-N]: [user story short title]"
   prompt: |
     You are implementing a single user story. Your job is to implement all tasks
-    for this story using TDD, then run a 2-stage internal review.
+    for this story using TDD, then run one bounded internal self-review.
 
     ## User Story
     [FULL TEXT of the user story — Given/When/Then]
@@ -47,12 +47,11 @@ Task tool:
     6. Commit: `feat(PROJ-<X>-PRD-<Y>): implement [task name]`
 
     After all tasks:
-    7. Run 2-stage internal review:
-       - Stage 1: Spec compliance — does the implementation match the task requirements?
-         Read `references/spec-reviewer.md` for the review checklist.
-       - Stage 2: Code quality — error handling, type safety, test quality, architecture.
-         Read `references/code-reviewer.md` for the review checklist.
-    8. Fix any review findings (critical first), re-run tests, re-review until clean.
+    7. Run one bounded Inner Ralph self-review covering both:
+       - Spec compliance — does the implementation match the task requirements?
+       - Code quality — error handling, type safety, test quality, architecture.
+    8. Fix confirmed findings once, then re-run targeted tests. Report unresolved
+       issues to the main agent; do not start another self-review cycle.
     9. Report back.
 
     ## Rules
@@ -116,7 +115,7 @@ Task tool:
     - Tasks completed: [list]
     - Tests run: [test names, commands, actual output summary]
     - Files changed: [paths]
-    - Inner Ralph iterations: [N — how many review fix cycles were needed]
+    - Inner Ralph self-review: [clean | fixes applied | unresolved issues]
     - Walls hit & workarounds: [list or "none" — already written to agent.md]
     - Open concerns or escalations: [list or "none"]
 ```
@@ -125,5 +124,5 @@ Task tool:
 
 - Paste the full task text. The subagent must not read the spec or plan files.
 - Include enough prior-wave context so the subagent understands what already exists.
-- After the subagent reports back, the main agent runs the AC verification loop — not the subagent.
+- After every wave worker reports back, the main agent runs the wave-scoped AC verification pass — not the subagent.
 - For parallel waves: dispatch all US subagents in the same wave simultaneously using multiple Task tool calls in one message.

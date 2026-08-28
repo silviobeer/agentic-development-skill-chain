@@ -39,7 +39,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 4 | `writing-plans` | Wave-based implementation plans |
 | 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
 | 4b | `setup` | P0 once per PROJ: persistent isolated worktree, branch, preflight, framework scripts, dependencies, context bundles |
-| 5 | `executing` | Implement wave by wave with TDD, wave gates, debt markers |
+| 5 | `executing` | Worker-owned code/test/fix edits, TDD, one wave-scoped Ralph pass, hard wave gates, an integration-focused PROJ gate, then direct handoff to mandatory Skill 6 |
 | 6 | `qa` | End-to-end QA plus required six-persona opposite-provider evidence review; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
@@ -72,19 +72,26 @@ runner/run-phase.sh auto <proj-x> <theme>     # P0 → P5 → P6 → P7 → P8
 
 What makes an overnight run trustworthy:
 
-- **Dual lanes, one writer.** Every phase runs a fresh Claude and Codex
-  lane; exactly one may write, the peer is read-only. Handoff between
+- **Dual lanes, one writer orchestrator.** Every phase runs a fresh Claude and
+  Codex lane; exactly one top-level lane may write, and it delegates covered
+  edits to workers under its authority while the peer stays read-only. Handoff between
   phases happens only via `specs/PROJ-*/state.json` (written solely by
   `state.sh`) and the findings ledger `findings.json` (written solely by
   `ledger.mjs`).
+- **Subagent-first edits.** When delegation is available and permitted, workers
+  own all covered code, test, fix, and documentation edits. The lead owns
+  decomposition, dispatch, integration, deterministic verification, gates, and
+  operational records; disjoint work runs concurrently, overlap serially, and
+  local editing is only a visibly reported unavailable/prohibited fallback.
 - **Persistent PROJ worktree.** P0–P8 run on `proj/PROJ-X` in a registered
   sibling worktree. Dependencies are installed inside it; `.env.local`, the
   development database, and hosted-auth limits remain deliberately shared and
   are surfaced in state and reports. Migrations and auth-consuming gates use a
   common repository lock.
-- **Evidence-based wave gates.** A green wave proves the current AC commands
-  and the wave's declared broad regression suite. AC cache entries bind to ID,
-  command, selected tests, and committed HEAD; CodeRabbit attempts retain raw
+- **Evidence-based wave gates.** Step 4 runs `wave-gate.sh --ac-only` to put
+  current-HEAD AC results directly into the gate cache; the full gate reuses
+  exact ID + command + HEAD matches, then runs the declared broad regression
+  suite and every remaining phase. CodeRabbit attempts retain raw
   and normalized evidence and are judged against cumulative open ledger debt.
   The required project `sonar_cmd` also runs from that same PROJ worktree on
   every wave; it is never skipped based on a hard-coded CLI name.

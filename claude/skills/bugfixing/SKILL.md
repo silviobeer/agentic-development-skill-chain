@@ -14,16 +14,28 @@ user path.
 This is an optional workflow outside the numbered 0-to-8 feature chain. Do not
 create a PROJ, PRD, architecture document, or wave plan for an ordinary bugfix.
 
+## Mandatory Delegation Contract
+
+When subagents are available and permitted, workers own all product-source,
+regression-test, defect-fix, and human-documentation edits. The lead owns
+decomposition, dispatch, integration, deterministic verification, gates, and
+operational records. Dispatch independent tasks with disjoint file ownership in
+parallel; serialize dependent or overlapping work. Send integration corrections
+to a follow-up worker. The lead may edit covered files locally only when
+delegation is unavailable or prohibited, and must report the reason explicitly.
+
 ## Reuse The Existing Chain
 
 Reuse the repository's established machinery rather than defining parallel
 versions:
 
-- Follow `5_executing`'s outer Ralph rules: deterministic commands, verbatim
-  failures, positive controls, and at most three fix iterations.
+- Reuse `5_executing`'s deterministic evidence principles: actual commands,
+  verbatim failures, and positive controls. This skill retains its own cap of
+  at most three repair attempts.
 - Dispatch one `micro-fixer` from `4b_setup/manifests/roles/micro-fixer.md` for
   the implementation when delegation is available and permitted. If delegation
-  is unavailable, apply the same narrow prompt and implement locally.
+  is unavailable or prohibited, report why, apply the same narrow prompt, and
+  implement locally.
 - Follow `6_qa`'s browser procedure for UI reproduction and final verification.
 - Reuse the existing `.coderabbit.yaml` or `.coderabbit.yml` and the CodeRabbit
   review conventions from `5_executing`.

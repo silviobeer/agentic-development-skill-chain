@@ -1,11 +1,11 @@
 ---
 name: executing
-description: "Execute implementation plans user-story by user-story in dependency order, using TDD, Ralph acceptance-criteria loops, wave gates, code review, and QA handoff. Use when: (1) an implementation plan exists and is ready for execution, (2) feature tasks need to be implemented with disciplined verification. Not for: planning, architecture, or requirements."
+description: "Execute implementation plans user-story by user-story in dependency order, using TDD, wave-scoped Ralph verification, wave gates, code review, and QA handoff. Use when: (1) an implementation plan exists and is ready for execution, (2) feature tasks need to be implemented with disciplined verification. Not for: planning, architecture, or requirements."
 ---
 
 # Executing
 
-Orchestrate implementation user story by user story. The lead agent stays in the loop: after each US is implemented, it runs an outer Ralph loop, checking every acceptance criterion deterministically until all pass.
+Orchestrate implementation user story by user story. Workers own code, test, and fix edits; the lead owns decomposition, dispatch, integration, deterministic verification, gates, and operational records. After every worker in a wave finishes, the lead runs one wave-scoped Outer Ralph pass over that wave's acceptance criteria.
 
 ## Codex Adaptation
 
@@ -14,8 +14,9 @@ This skill was imported from a Claude workflow. In Codex, follow these overrides
 - Do not run `/compact`; Codex handles context compaction itself.
 - Do not require `claude --dangerously-skip-permissions`, `.claude/settings.json`, or `bypassPermissions`. Use the current Codex session permissions and the normal approval/sandbox policy.
 - Do not assume Claude agent teams, `Agent` tool syntax, `subagent_type`, or `run_in_background` fields exist.
-- Codex subagents may be used only when the active Codex instructions allow delegation. Otherwise, implement locally while keeping context lean.
-- Use `spawn_agent` roles available in Codex (`worker`, `explorer`, or default) when delegation is allowed; define disjoint file ownership for workers.
+- When Codex subagents are available and delegation is permitted, every code, test, and fix edit is worker-owned; there is no trivial-edit exception. Use `spawn_agent` roles available in Codex (`worker`, `explorer`, or default) with explicit file ownership and expected output.
+- Dispatch independent tasks with disjoint ownership concurrently. Serialize dependencies and overlapping file ownership. Integration corrections go back to a follow-up worker with the exact failure; the lead does not patch them directly.
+- Local implementation is allowed only when subagents are unavailable or delegation is prohibited. State that fallback reason explicitly in the user-visible update.
 - Use `multi_tool_use.parallel` for safe parallel local reads and commands.
 - Keep `.codex/skills` paths for reusable skill assets. Treat copied `.claude` permission templates as legacy references, not required setup.
 
@@ -25,10 +26,11 @@ This skill was imported from a Claude workflow. In Codex, follow these overrides
 
 ## Context Economy
 
-The orchestrator should stay lean so it survives the full PROJ → QA → docs chain.
+The orchestrator stays lean so it survives the full PROJ → QA → docs chain.
 
-- Prefer bounded local work for the immediate critical path.
-- Delegate only independent sidecar or worker tasks when Codex subagent policy permits it.
+- Delegate every implementation and correction edit when Codex subagent policy permits it.
+- Keep decomposition, dispatch, integration, deterministic checks, gates, state/findings/progress updates, and commits with the lead.
+- Run disjoint work concurrently; serialize dependent or overlapping work.
 - Keep subagent prompts narrow: paths, user-story ID, acceptance criteria, allowed files, expected output.
 - Keep returned summaries short; do not paste raw diffs or long logs into the main context.
 - If local work needs many file reads, first run focused searches and read only the files needed for the next decision.
@@ -86,7 +88,7 @@ For a provider signature only (`over_request_rate_limit`, `Request rate limit re
 Before P0 seals an auth-budget project, `bash scripts/wave-gate.sh --auth-budget-negative-control 1 <PROJ-X> <theme>` must return the configured exhausted exit code and persist `infrastructure_failed`. It exercises the configured hooks with `SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1` and never drains a real hosted bucket.
 
 The script validates:
-1. **Current Ralph ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass is reusable only for the same AC ID, command, positive selection, and committed `verified_head`; changed or uncommitted code cannot be certified.
+1. **Current wave ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass is reusable only for the same AC ID, command, positive selection, and committed `verified_head`; changed or uncommitted code cannot be certified.
 2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before build; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
 3. **Build** — `build_cmd` from config exits 0.
 4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
@@ -116,7 +118,7 @@ Two files are maintained throughout execution:
 ### `progress.md` (short-term memory)
 Created at the start of execution, lives in `specs/` alongside the plan.
 Tracks granular build state — task completion, test status, AC verification, and blockers.
-Updated after every task, after every Ralph loop iteration, and whenever a blocker occurs.
+Updated after every task, after the initial wave verification and each recovery stage, and whenever a blocker occurs.
 
 ```markdown
 # PROJ-X Progress
@@ -143,9 +145,11 @@ Updated after every task, after every Ralph loop iteration, and whenever a block
 | AC-2 | [verbatim from spec] | ✗ |
 | AC-3 | [verbatim from spec] | — |
 
-### Ralph Loop
-- Iterations: 1
-- AC-2 pass 1: FAIL — [exact failure reason] → fix subagent spawned
+### Wave-Scoped Ralph Evidence
+- Initial pass: AC-1 PASS; AC-2 FAIL — [exact failure reason]
+- Recovery stage: normal fix round 1 → follow-up worker dispatched
+- Reused during repair: AC-1 — verified at [committed HEAD]; changed files not plausibly affecting it
+- Rerun: AC-2 PASS — [exact command, positive selection, verified HEAD]
 - Commit: `feat(PROJ-<X>-PRD-<Y>): implement US-1 [name]`
 
 ---
@@ -191,23 +195,15 @@ Status: pending | passed
 
 ---
 
-## QA Results
-
-- Bugs found: N (Critical: N, High: N, Medium: N, Low: N)
-- Fixed: N
-- Deferred: N
-
----
-
 ## Open Blockers
 - US-7: [exact reason] — escalated to user [timestamp]
 ```
 
 **Update rules:**
 - Subagent updates task rows after each TDD cycle (tests written → tests passing → done)
-- Main agent updates AC rows after each Ralph loop iteration
+- Main agent updates AC rows after the initial wave pass and every recovery stage
 - `—` means not yet attempted; `✗` means attempted and failing; `✓` means passing
-- Ralph Loop section appended after each iteration with verbatim failure reason
+- Wave-Scoped Ralph Evidence records canonical AC, command, positive selection, committed HEAD, reuse/invalidation, and verbatim failure output
 
 ### `agent.md` (long-term memory)
 Lives in the feature's **source folder** (e.g., `src/features/deliveries/agent.md`).
@@ -243,7 +239,7 @@ Write to `agent.md` immediately when a learning occurs — not at the end. Futur
 
 Read the following before starting each PROJ:
 
-**All PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md`. These are the authoritative requirements source. Used by the outer Ralph loop to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
+**All PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md`. These are the authoritative requirements source. Used by the wave-scoped Outer Ralph pass to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
 
 **Architecture** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
 
@@ -268,10 +264,10 @@ For each PROJ-X plan (in order):
 0. Record BASE_SHA (git rev-parse HEAD)
 1. Create specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md
 2. Execute waves (Steps 1–5 below)
-3. Wave-end gate after each wave: ACs + Build + CodeRabbit + Smoke (Step 8)
+3. One wave-scoped Outer Ralph pass, then the wave-end gate: ACs + regressions + Build + CodeRabbit + Smoke (Steps 4 and 8)
 4. Quality Gate after all waves (Step 9)
-5. QA + Fix Loop (Step 10)
-6. Mark PROJ-X complete
+5. Handoff directly to mandatory Skill 6 QA (Step 10)
+6. Mark Step 5 complete
 → Next PROJ-X
 ```
 
@@ -329,7 +325,7 @@ One tag per (wave, PROJ) pair. Tags are local-only; do not push. If neither `WAV
 
 ### 3. Create team and spawn teammates for the wave
 
-**For waves with 2+ parallel user stories:** Create an agent team. The lead (you) coordinates.
+All implementation work is worker-owned when delegation is available. The lead decomposes the wave, assigns explicit disjoint ownership, dispatches workers, integrates their commits, runs deterministic verification and gates, and maintains operational records. **For waves with 2+ independent user stories:** create an agent team and dispatch them concurrently. Serialize dependent stories or any work with overlapping ownership.
 
 **Honor the plan's `## Execution` block before spawning.** `sequential` means
 dispatch exactly one US at a time even when `Can start when` says both are
@@ -373,7 +369,7 @@ Spawn teammates:
 Require plan approval for each implementer before they make changes.
 ```
 
-**For waves with a single user story:** Use a regular subagent (no team overhead needed). Pick the matching implementer type based on the US scope.
+**For waves with a single user story:** Use a regular subagent (no team overhead needed). Pick the matching implementer type based on the US scope. Local editing is permitted only when delegation is unavailable or prohibited; report that reason explicitly.
 
 Pass to each teammate (via `references/implementer.md` template):
 - Full user story (Given/When/Then)
@@ -396,39 +392,46 @@ Pass to each teammate (via `references/implementer.md` template):
 
 **UI implementation rule:** Existing React components and design tokens take precedence over exact HTML mockup CSS. Preserve the selected layout direction and interaction contract; do not replace a sidepanel with a modal, a wizard with a single page, or a brownfield component with a one-off styled element unless the user explicitly approved that change.
 
-Wait for all teammates in the wave to complete before running Ralph. Clean up the team after each wave.
+Wait for all teammates in the wave to complete before running Outer Ralph. If integration or verification exposes a correction, dispatch it to a follow-up worker; do not absorb the edit into the lead. Clean up the team after each wave.
 
-### 4. Outer Ralph loop (AC verification per US)
+### 4. Wave-scoped Outer Ralph (AC verification)
 
 <HARD-GATE>
-After EVERY teammate reports back → IMMEDIATELY run Ralph.
-This is not optional. This is not "later". This is not "after I commit".
-The NEXT thing you do after a teammate completes is verify ACs with actual commands.
-Do NOT commit, do NOT proceed to the next wave, do NOT spawn new teammates until the Ralph cap is reached and documented.
+After ALL workers in the wave report back and their changes are integrated, run one wave-scoped Outer Ralph pass. Run no story-scoped Outer Ralph pass. Do not proceed to the wave gate until the bounded recovery below passes or reaches the existing blocked path.
 </HARD-GATE>
 
-After subagents report back, the main agent runs a Ralph loop for each US:
+The lead starts the pass through the gate's AC-only mode so evidence is written in the canonical cache schema:
 
-```
-while not all ACs pass and loop_count < 3:
-  for each AC:
-    run the deterministic check (test command or direct behavior verification)
-    if fail:
-      collect exact failure output (test result, error, stack trace)
-      spawn fix teammate with: failing AC + verbatim failure output + previous attempts
-      update progress.md with iteration details
-  re-check all ACs
+```bash
+bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
 ```
 
-**Rules for the Ralph loop:**
+It runs each uncached AC sequentially under the gate's timeout, auth-budget, pacing, and rate-limit controls. Ordinary AC failures are all evidenced before the pass exits non-zero so disjoint repairs can be batched; infrastructure and exhausted auth budgets still stop immediately. Each evidence record binds the canonical AC ID, task, exact command, test files, positive selected-test count, and committed `HEAD`.
+
+```
+run bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
+for normal_fix_round in 1..2:
+  cluster failures by disjoint ownership
+  dispatch correction workers concurrently where safe
+  commit corrections, then rerun the same --ac-only command
+if failures remain:
+  dispatch one fresh diagnostic worker that makes no edits
+  dispatch a different implementer to apply the diagnosis
+  commit the correction, then rerun the same --ac-only command
+if failures still remain: use the existing blocked-run evidence path
+```
+
+**Rules for wave-scoped Ralph:**
 - Checks must be **deterministic** — run actual test commands, read actual output. No subjective judgment ("this looks like it works").
 - A test that depends on state outside itself — provider rate budget, file order, or clock — must establish that state itself or explicitly assert it. Never accept a green result merely because neighbouring tests primed the bucket or fixture.
 - Treat “nothing happened” as weak evidence: add a positive control that proves the valid session/input/path would have worked, and do not let polling matchers pass on their first attempt without proving the observed transition.
-- Failure output is passed **verbatim** to the fix subagent — not summarized, not interpreted.
-- The loop exits when every AC passes or after 3 iterations, whichever comes first.
-- If the same AC still fails after 3 iterations: document the unresolved AC, exact commands, failure output, and fix attempts in `progress.md`; continue the wave orchestration instead of escalating or hard-stopping here. The later wave gate still re-runs AC commands and remains the hard proof before the next wave.
+- Failure output is passed **verbatim** to correction and diagnostic workers — not summarized or interpreted.
+- The cache is deliberately conservative: only an exact AC ID + command match at the same committed `HEAD` is reused. Every correction commit changes `HEAD`, so `--ac-only` reruns all ACs; no cross-HEAD impact inference is supported.
+- Recovery has exactly four stages: normal fix round 1, normal fix round 2 with fresh workers, fresh diagnosis, then a different diagnosis-driven implementer. Do not add retries or silently weaken an AC.
+- If diagnosis finds an invalid or contradictory AC, record the evidence and use the existing blocked/escalation path.
+- The normal wave gate remains the hard boundary and reuses exact same-HEAD AC-only passes, then still runs the declared regression suite and every remaining gate phase. Any committed or non-evidence uncommitted change prevents reuse.
 
-Update `progress.md` after each Ralph iteration.
+Update `progress.md` after the initial pass, each recovery stage, each reuse or invalidation decision, and the final result.
 
 ### 5. No standalone build check
 
@@ -436,11 +439,11 @@ Do not run an extra build between Ralph and the wave gate. Build is intentionall
 - **Wave-end build:** `wave-gate.sh` runs `build_cmd` once per wave.
 - **PROJ-end build:** the Quality Gate verifies the assembled PROJ before QA.
 
-If a build failure is discovered by the wave gate, fix it immediately with the verbatim compiler output, then rerun the gate.
+If the wave gate finds a build failure, dispatch a fix worker with the verbatim compiler output, then rerun the gate.
 
 ### 6. Write learnings to `agent.md`
 
-After a US completes (or after a hard Ralph iteration), write any learnings to the source folder's `agent.md`. Include:
+After a wave worker completes or a recovery stage exposes a durable learning, write it to the source folder's `agent.md`. Include:
 - Walls hit and how they were bypassed
 - Surprising behavior in the framework/DB/tooling
 - Patterns that worked well
@@ -503,7 +506,7 @@ Log the result in `progress.md` under the wave section:
 - Details: [agent-browser output summary]
 ```
 
-**Why agent-browser instead of Playwright MCP?** It runs as a standalone CLI — no MCP context required. This means it can also be delegated to a teammate if needed. Full Playwright MCP testing is reserved for the comprehensive QA in Step 10.
+**Why agent-browser instead of Playwright MCP?** It runs as a standalone CLI — no MCP context required. This means it can also be delegated to a teammate if needed. Full Playwright MCP testing is reserved for comprehensive QA in Skill 6.
 
 ### 7c. Minimalism Review — Ken Takahashi
 
@@ -528,9 +531,9 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 Manual checklist editing in progress.md is no longer sufficient proof of wave completion — only the script's passed-block counts.
 
-### 9. Quality Gate (after all waves, before QA)
+### 9. PROJ Quality Gate (integration only, after all waves)
 
-After all waves for this PROJ-X are complete and all ACs verified, run the Quality Gate.
+After all waves for this PROJ-X are complete and their gates passed, run the Quality Gate. It evaluates the assembled cross-wave result; it does not replay wave ACs or replace the wave gates.
 
 See `references/quality-gate.md` for full instructions.
 
@@ -561,7 +564,7 @@ Spawn teammates:
 The lead also runs `build_cmd` and every `phase_commands` entry marked
 `quality` from `wave-gate-config.json` once for the assembled PROJ. CI/nightly
 entries are verified as wired to their named workflows, not replayed locally. The lead
-consolidates reviewer, build, test-phase, and optional Sonar results.
+consolidates reviewer, build, integration/quality-phase, and optional Sonar results. Do not rerun `ac_commands`; their canonical proof belongs to wave-scoped Ralph and `wave-gate.sh`.
 
 **After both teammates report — Handling Findings with Technical Rigor:**
 
@@ -572,7 +575,7 @@ Do NOT blindly implement every finding. Apply this discipline:
 3. **EVALUATE** — Is this a real problem or a false positive?
    - **Push back when:** The finding breaks existing functionality, violates YAGNI (suggests "proper" patterns for unused scenarios), is technically incorrect, or conflicts with the user's explicit decisions
    - **YAGNI check:** If a reviewer suggests adding error handling for a scenario that can't happen, or abstracting code that's used once — grep the codebase for actual usage before implementing
-4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR issues
+4. **FIX** what's real — spawn fix teammates for confirmed P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR issues; dispatch disjoint fixes concurrently and overlapping fixes serially
 5. **LOG** P2/P3 and Sonar MINOR/INFO to `progress.md` — these are addressed if time permits
 6. Clean up the team
 
@@ -582,73 +585,14 @@ Do NOT blindly implement every finding. Apply this discipline:
 - Every `quality` phase command passes once; CI/nightly workflow wiring is verified
 - If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
 - If Sonar was skipped because CLIs or project config were unavailable: the skip reason is logged in `progress.md`
-- All tests passing, no new lint errors
+- Declared integration/quality-phase tests passing, no new lint errors
 
 Update `progress.md` with Quality Gate results.
 
-### 10. QA + Fix Loop
-
-**IMPORTANT:** The lead runs browser E2E testing (Playwright MCP + `npm run dev`) because MCP tools require the main agent context. However, code-level analysis runs in parallel as agent team teammates.
-
-**How to run QA:** Create an agent team that splits QA work:
-
-```
-Create an agent team for QA of PROJ-X.
-
-Spawn teammates:
-- "red-team" using the red-team-tester agent type with prompt:
-  "Test feature PROJ-X for security vulnerabilities and edge cases.
-   Read PRDs at specs/PROJ-<X>-<theme>/2_PRDs/*.md for acceptance criteria.
-   Focus on: injection attacks, auth bypass, boundary values, race conditions."
-- "ui-audit" using the ui-auditor agent type with prompt:
-  "Audit PROJ-X UI changes for design system compliance.
-   BASE_SHA=$BASE_SHA. Check colors, typography, spacing, components, responsive."
-```
-
-**In parallel, the lead runs browser E2E testing directly:**
-1. Start dev server (`npm run dev`)
-2. Use Playwright MCP tools once per changed user flow; map that observation to all ACs it proves
-3. Take snapshots and screenshots as evidence
-4. Document findings
-
-**After all QA sources report:**
-1. Merge findings from lead (browser E2E), red-team, and ui-audit into `progress.md`
-2. Clean up the team
-
-```
-while QA reports Critical or High bugs:
-  for each Critical/High bug (in severity order):
-    spawn fix teammate with: bug description + reproduction steps + verbatim failure output
-    after fix: re-run the specific test that caught the bug to confirm it passes
-  re-run relevant QA checks for full regression pass
-
-if only Medium/Low bugs remain:
-  framework run (state.json exists) — autonomy policy §8, no user question:
-    auto-defer every Medium/Low as debt — ledger record
-    (node scripts/ledger.mjs add <X> <theme>, status deferred) plus a
-    `ponytail:` marker where applicable; the human decides at Checkpoint 2
-  interactive run (no state.json):
-    present to user and ask: "Which bugs should be fixed before release?"
-    fix user-selected bugs, then re-run QA one final time
-```
-
-**Rules:**
-- Do NOT skip QA — it runs automatically after every Quality Gate, not on request.
-- Browser E2E (Playwright MCP) MUST run in the lead context — teammates lack MCP tools.
-- Red-team and ui-audit teammates work on code-level analysis in parallel with browser testing.
-- Fix subagents receive the verbatim bug report from QA (never a summary).
-- After each fix, re-run the specific failing test before the next QA pass.
-- If the same bug persists after 3 fix attempts: interactive run — escalate to user with full history; framework run — STOP CONDITION (§8): park the run (rescue branch, state → blocked, stop report), never keep retrying past the cap.
-- QA is considered clean only when it reports no Critical or High bugs.
-
-Update `progress.md` with QA results. Mark this PROJ-X as complete.
-
----
-
-## 11. Handoff to Skill 6 (QA)
+## 10. Handoff to Skill 6 (QA)
 
 <HARD-GATE>
-Skill 5 does a first-pass QA in Step 10 (red-team + ui-audit + browser E2E) to catch Critical/High bugs before the Quality Gate proof. **Skill 6 is the comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
+Skill 5 stops after implementation, wave gates, and the integration-focused PROJ Quality Gate. **Skill 6 is the mandatory comprehensive QA** with the six-persona panel (Chen/Weber/Sharma/Mueller/Rodriguez/Takahashi) + PROJ Retrospective + AGENTS.md candidate collection.
 
 **Framework runs (state.json exists):** seal the phase first —
 `bash scripts/quality-gate-proof.sh <X> <theme>` MUST exit 0 first, then run
@@ -658,17 +602,17 @@ do NOT continue into Skill 6 inside this session.
 
 Before invoking Skill 6 (interactive runs):
 
-1. Verify wave plans, Ralph iterations, and Quality-Gate review output are all summarized in `progress.md`.
+1. Verify wave plans, wave-scoped Ralph recovery stages, and Quality-Gate review output are all summarized in `progress.md`.
 2. Run `bash scripts/quality-gate-proof.sh <X> <theme>`; it rejects a missing
    section, build evidence, or Sonar disposition, and rejects a Sonar skip when
    the configured scanner was available.
 3. Suggest that the user run QA with a different model than the one that executed the implementation, for example GPT reviewing Claude-built work or Claude reviewing GPT-built work.
 4. Invoke Skill 6: `/6_qa`. Skill 6 follows its own release gate and hands passing or Medium/Low-only work directly to Skill 7.
 
-**Do NOT skip Skill 6** even if Step 10 reported zero bugs. The persona panel and PROJ retrospectives produce `AGENTS.md` candidates and `## PROJ Retrospective` notes that Skill 7 consumes — skipping them means docs are incomplete.
+**Do NOT skip Skill 6.** Step 5 deliberately performs no duplicate QA stage; the persona panel and PROJ retrospectives produce `AGENTS.md` candidates and `## PROJ Retrospective` notes that Skill 7 consumes.
 </HARD-GATE>
 
-## 12. Final Summary Report
+## 11. Final Summary Report
 
 After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined report:
 
@@ -676,8 +620,8 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 >
 > ## PROJ-A: [topic]
 > Implementation:
-> - US-1: ✓ (N ACs, N Ralph iterations)
-> - US-2: ✓ (N ACs, 0 Ralph iterations)
+> - Wave 1: ✓ (N ACs, recovery stage reached: initial | fix-1 | fix-2 | diagnosis | diagnosis-fix)
+> - Wave 2: ✓ (N ACs, recovery stage reached: ...)
 >
 > Quality Gate:
 > - Code Review: X found, X fixed, X deferred
@@ -697,14 +641,14 @@ After ALL PROJ-X plans are complete AND Skill 6 has finished, present a combined
 
 ## Subagent Responsibility (per US)
 
-Each subagent:
+Each implementation subagent:
 1. Reads `agent.md` if provided in the prompt
 2. Implements all tasks for its US in order (TDD per task — see below)
 3. Reports task status after each TDD cycle; the lead updates `progress.md` and commits for parallel waves
-4. Runs an **inner Ralph loop** (2-stage review) after all tasks complete
+4. Runs one bounded **Inner Ralph self-review** after all tasks complete
 5. Reports back with full detail
 
-The subagent does NOT verify ACs — that is the main agent's outer Ralph loop.
+The subagent does NOT verify ACs — that belongs to the lead's wave-scoped Outer Ralph pass.
 
 ### TDD cycle (per task)
 
@@ -718,16 +662,15 @@ No production code without a failing test first.
 
 Never claim a test passes without running the command and reading actual output.
 
-### Inner Ralph loop (2-stage review, after all tasks in US)
+### Inner Ralph self-review (one bounded pass, after all tasks in US)
 
 ```
-while review not clean:
-  Stage 1 — Spec compliance (references/spec-reviewer.md):
-    read actual code, verify against task requirements
-    if issues: fix (critical first), re-run tests, repeat Stage 1
-  Stage 2 — Code quality (references/code-reviewer.md):
-    only runs after Stage 1 passes
-    if issues: fix, re-run tests, repeat Stage 2
+review the completed story once for:
+  - task/spec compliance
+  - error handling, type safety, test quality, and architecture
+fix confirmed issues within the worker's ownership
+run targeted tests once after the fixes
+report any unresolved issue to the lead; do not start another self-review cycle
 ```
 
 Escalate to main agent only if a fix requires spec/architecture changes.
@@ -749,12 +692,12 @@ Do NOT guess. Follow `references/debugging.md`:
 2. Write a failing test reproducing the bug, then fix
 3. Run ALL tests — the fix must not introduce regressions
 
-**The 3-Fix Rule:** If 3+ fix attempts fail on the same bug → STOP. This is an architectural or understanding problem. Escalate to the user with full iteration history.
+**Bounded recovery:** Wave AC failures use exactly the four Outer Ralph recovery stages in Step 4. Other repeated implementation failures use the existing blocked/escalation path with full attempt history.
 
 **Always write the wall + workaround to `agent.md` when you find one.**
 
 **Escalate to user if:**
-- Outer Ralph has run 3+ iterations on the same AC
+- Wave-scoped Outer Ralph exhausted both normal fixes, fresh diagnosis, and the diagnosis-driven implementation
 - Root cause is in the spec or architecture
 - Missing dependency, broken environment, external service down
 - Requirements are ambiguous or contradictory

@@ -35,7 +35,12 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
 
 ## Invariants the runner owns
 
-- **Single writer:** one lane per phase may write; the peer lane runs
+- **Single writer-orchestrator:** one top-level lane per phase may write. It
+  delegates covered edits to workers under its authority, while retaining
+  decomposition, integration, deterministic verification, gates, commits, and
+  operational records. Disjoint worker ownership may run concurrently;
+  dependencies and overlap are serialized, and local edits require an explicit
+  unavailable/prohibited-delegation fallback. The peer lane runs
   with read-only tools (`--allowedTools Read,Grep,Glob` /
   `codex exec --sandbox read-only`; the P6 finder additionally gets
   `Bash` to run tests, with a working-tree integrity check after it).

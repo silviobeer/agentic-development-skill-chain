@@ -1,11 +1,11 @@
 # Quality Gate
 
-Runs once per PROJ-X after all waves complete and all ACs are verified.
+Runs once per PROJ-X after all waves complete and their wave gates pass.
 Must pass before handing off to QA.
 
 ## Prerequisites
 
-- All waves complete, all ACs verified by outer Ralph loop
+- All waves complete with passed wave-gate proof
 - Record `BASE_SHA` (commit before first implementation change) at the start of execution
 
 ## Gate 0: Declared Quality-Phase Tests
@@ -23,7 +23,7 @@ assembled-PROJ coverage, not another run of every wave AC.
 
 ## Gate 1: Code Review Expert
 
-Full review of the entire feature diff — catches cross-cutting issues the per-US inner Ralph loop may miss.
+Full review of the entire feature diff — catches cross-wave integration issues that story-scoped implementation tests may miss. Do not replay wave ACs here.
 
 ### Steps
 
@@ -49,8 +49,8 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
    - **P3 Low** — Style, naming, minor suggestion → log only
 
 4. Fix all P0/P1:
-   - Spawn fix subagent per issue (or batch related issues)
-   - Re-run all tests after fixes
+   - Spawn a fix subagent per issue (or batch related issues); run disjoint fixes concurrently and overlapping fixes serially
+   - Re-run declared integration/quality-phase tests after fixes
    - Re-review the fix diff to ensure no regressions
 
 5. Log P2/P3 to `5_progress/PROJ-<X>-progress.md` under the Quality Gate section.
@@ -59,14 +59,7 @@ Full review of the entire feature diff — catches cross-cutting issues the per-
 
 ## Gate 2: PROJ-End Build
 
-Run the full project build once after all waves have passed:
-
-```bash
-# Use build_cmd from specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json
-npm run build
-```
-
-If the build fails, fix it with the verbatim compiler output and rerun the build before Sonar/QA. This is the PROJ-level build check; do not add extra builds between individual implementation tasks.
+Run `build_cmd` from `wave-gate-config.json` once for the assembled PROJ. If it fails, dispatch a fix worker with the verbatim compiler output and rerun the build. Do not add builds between individual implementation tasks.
 
 ---
 
@@ -116,7 +109,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
 
 6. Fix all BLOCKER/CRITICAL/MAJOR:
    - Spawn fix subagent with the sonar issue details (file, line, message, rule)
-   - Re-run tests after fixes
+   - Re-run declared integration/quality-phase tests after fixes
    - Update `scripts/sonar-tracker.md` if it exists (mark fixed items `[x]`)
 
 7. Log MINOR/INFO to `5_progress/PROJ-<X>-progress.md`.
@@ -132,7 +125,7 @@ The quality gate passes when ALL of these are true:
 - [ ] Full PROJ build passes (`build_cmd` from `wave-gate-config.json`)
 - [ ] If Sonar ran: zero BLOCKER/CRITICAL/MAJOR sonar issues in feature files
 - [ ] If Sonar was skipped: explicit skip reason is logged
-- [ ] All tests still passing (`npm run test`)
+- [ ] Declared integration/quality-phase tests still passing
 - [ ] No new lint errors (`npm run lint`)
 
 If the gate cannot pass after 3 fix iterations on the same issue, escalate to user.

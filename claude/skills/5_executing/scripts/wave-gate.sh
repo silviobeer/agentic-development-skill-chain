@@ -4,13 +4,16 @@ set -euo pipefail
 
 STATUS_ONLY=false
 AUTH_BUDGET_NEGATIVE_CONTROL=false
+AC_ONLY=false
+AC_ONLY_FAILED=false
 case "${1:-}" in
   --status) STATUS_ONLY=true; shift ;;
   --auth-budget-negative-control) AUTH_BUDGET_NEGATIVE_CONTROL=true; shift ;;
+  --ac-only) AC_ONLY=true; shift ;;
 esac
 WAVE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 if [[ -z "$WAVE" || -z "$PROJ" || -z "$THEME" ]]; then
-  echo "Usage: $0 [--status|--auth-budget-negative-control] <wave-number> <proj-x> <theme>" >&2
+  echo "Usage: $0 [--status|--auth-budget-negative-control|--ac-only] <wave-number> <proj-x> <theme>" >&2
   exit 64
 fi
 
@@ -304,20 +307,27 @@ for ((index=0; index<AC_COUNT; index++)); do
     continue
   fi
   if [[ "$auth" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
-    last=$(tr -cd '0-9' <"$LAST_AUTH"); wait_for=$((AUTH_PACING_SECONDS - ($(date +%s) - last)))
+    last=$(tr -cd '0-9' <"$LAST_AUTH"); [[ ${#last} -ge 13 ]] || last=$((last * 1000))
+    wait_for=$(( (AUTH_PACING_SECONDS * 1000 - ($(date +%s%3N) - last) + 999) / 1000 ))
     [[ "$wait_for" -le 0 ]] || sleep_with_heartbeat "$wait_for"
   fi
   attempts=$(jq -r --arg id "$id" '[.commands[]? | select(.id==$id)][0].attempts // 0' "$RALPH_STATE")
   for retry in 1 2; do
     attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"; rate_limit_log="${log%.log}-rate-limit-evidence.log"
-    [[ "$auth" == true ]] && date +%s >"$LAST_AUTH"
+    [[ "$auth" == true ]] && date +%s%3N >"$LAST_AUTH"
     heartbeat; set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log"); heartbeat
     [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for AC ${id}" 73
     [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for AC ${id} (log: $hook_log)" 74
     if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during AC ${id}" "$AUTH_EXHAUSTED_RC"; fi
     if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
-    if [[ "$rc" -eq 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "AC ${id} selected 0 tests"; fi
-    if [[ "$rc" -eq 124 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"; fail "AC ${id} timed out"; fi
+    if [[ "$rc" -eq 0 ]]; then
+      record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"
+      if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} selected 0 tests"; fi
+    fi
+    if [[ "$rc" -eq 124 ]]; then
+      record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"
+      if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} timed out"; fi
+    fi
     rate_limited=false
     provider_rate_limited "$log" && rate_limited=true
     if [[ "$rate_limited" == false && "$auth" == true && -n "$AUTH_RATE_LIMIT_EVIDENCE_CMD" ]]; then
@@ -334,11 +344,20 @@ for ((index=0; index<AC_COUNT; index++)); do
       case "$evidence_rc" in 0) rate_limited=true ;; 1) ;; *) infra_fail "rate-limit evidence hook failed for AC ${id} rc=${evidence_rc} (log: $rate_limit_log)" "$evidence_rc" ;; esac
     fi
     if [[ "$rate_limited" == true && "$retry" -eq 1 ]]; then echo "   ↻ provider rate limit evidenced; pausing"; record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
-    record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "AC ${id} failed rc=${rc}, selected=${selected} (log: $log)"
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"
+    if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} failed rc=${rc}, selected=${selected} (log: $log)"; fi
   done
   assert_verified_head
   assert_clean_worktree
 done
+
+if [[ "$AC_ONLY" == true ]]; then
+  rm -f "$RALPH_PID"; OWNS_RALPH=false
+  status=complete; rc=0
+  if [[ "$AC_ONLY_FAILED" == true ]]; then status=failed; rc=1; fi
+  tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg status "$status" --arg updated "$(date -Iseconds)" '.ralph_status=$status|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
+  exit "$rc"
+fi
 
 step "2/7 Declared broad regression suite"
 REG_COUNT=$(jq -r "${WAVE_KEY}.regression_commands // [] | length" "$CFG")

@@ -166,7 +166,9 @@ render_prompt() { # role task_text out_var — writes prompt file, sets $out_var
   local role="$1" task="$2" out_var="$3" rules out tpl
   out="$LANE_DIR/${PHASE}-${role}-prompt.md"
   if [ "$role" = "writer" ]; then
-    rules="- You are the ONLY lane allowed to write files, run mutating commands, and commit. One writer per phase — never assume a second writer exists.
+    rules="- You are the ONLY top-level writer lane and the phase orchestrator. When the loaded skill requires delegation and workers are available, you MUST spawn workers for covered edits; those workers write under your authority. Do not implement those edits yourself.
+- You own decomposition, dispatch, integration, deterministic verification, gates, commits, and operational records. Dispatch disjoint work concurrently; serialize dependencies or overlapping ownership; send integration corrections to follow-up workers.
+- Only when worker delegation is unavailable or prohibited may you edit locally, and you MUST state that reason in your output.
 - Follow the skill's own workflow, including its wave gates and escalation rules."
   else
     rules="- You are STRICTLY READ-ONLY on the repository: never modify tracked files, never commit. Running tests/dev servers is allowed where your tools permit it.

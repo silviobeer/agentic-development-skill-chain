@@ -17,6 +17,14 @@ does not create a PROJ, PRD, architecture document, or wave plan. Its output
 is raw input for `1_brainstorming`, not a replacement for the concept work
 brainstorming does.
 
+## Mandatory Delegation Contract
+
+- When subagents are available, exploratory code edits are worker-owned; dispatch each with narrow, explicit file ownership. The lead retains the journal, `chain-input.md`, and other operational records.
+- The lead owns decomposition, dispatch, integration, deterministic verification, gates, and operational records.
+- Dispatch independent tasks with disjoint ownership concurrently. Serialize dependencies and overlapping files.
+- Delegate integration corrections to a follow-up worker; the lead must not patch exploratory code directly.
+- Edit locally only when subagents are unavailable or delegation is prohibited, and report that reason explicitly.
+
 ## Working Modes
 
 ### Start a spike
