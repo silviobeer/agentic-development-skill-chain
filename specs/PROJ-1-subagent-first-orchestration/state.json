@@ -1,0 +1,11 @@
+{
+  "proj": "PROJ-1",
+  "theme": "subagent-first-orchestration",
+  "phase": "CP1",
+  "status": "pending",
+  "updated_at": "2026-08-28T14:58:28+02:00",
+  "degraded": false,
+  "lanes": [],
+  "authorship": {},
+  "history": []
+}
