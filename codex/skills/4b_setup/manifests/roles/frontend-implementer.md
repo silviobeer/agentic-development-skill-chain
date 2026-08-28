@@ -13,7 +13,7 @@ inject:
   - api-contracts-own-wave
   - test-conventions
   - ground-file
-budget_tokens: 3000
+budget_tokens: 4200
 matcher: "^(skillchain-)?frontend-implementer$"
 claude:
   agent_file: true

@@ -184,15 +184,43 @@ fi
 # false-green wave gate. sonar_cmd is commonly wrapped (`npm run sonar`), so
 # this checks the real prerequisites (binary + token in the environment) —
 # not the command string, which can't be statically resolved through a wrapper.
+# A standalone sonar-scanner binary is one way to have the engine, not the only
+# one: an npm-wrapped scanner (@sonar/scan, sonarqube-scanner) downloads and runs
+# the same engine, and such a wrapper commonly sources its own token file. So
+# resolve one level of npm/pnpm script wrapper and accept either shape — proven
+# for this repo by the recorded P0 negative control (green analysis, exit 1 on a
+# bad token). Anything unresolvable is still a hard stop.
 if [ -f "$GATE_CFG" ] && jq -e '.sonar_cmd | select(type=="string" and test("\\S"))' "$GATE_CFG" >/dev/null 2>&1; then
-  if ! have sonar-scanner; then
-    say "❌ sonar-scanner MISSING (hard — wave-gate-config.json declares a mandatory sonar_cmd)"
+  sonar_cmd=$(jq -r '.sonar_cmd' "$GATE_CFG")
+  sonar_def="$sonar_cmd"
+  sonar_script=$(printf '%s' "$sonar_cmd" | sed -nE 's/^(npm run|pnpm run|pnpm|yarn) ([A-Za-z0-9:._-]+)$/\2/p')
+  if [ -n "$sonar_script" ] && [ -f package.json ]; then
+    sonar_def=$(jq -r --arg s "$sonar_script" '.scripts[$s] // ""' package.json)
+  fi
+
+  sonar_engine=""
+  if have sonar-scanner; then
+    sonar_engine="sonar-scanner on PATH"
+  elif printf '%s' "$sonar_def" | grep -qE '@sonar/scan|sonarqube-scanner|sonar-scanner'; then
+    sonar_engine="npm-wrapped scanner engine"
+  fi
+
+  sonar_auth=""
+  if [ -n "${SONAR_TOKEN:-}" ]; then
+    sonar_auth="SONAR_TOKEN in env"
+  elif printf '%s' "$sonar_def" | grep -q '\.env\.local' \
+    && [ -f .env.local ] && grep -q '^SONAR_TOKEN=' .env.local; then
+    sonar_auth="SONAR_TOKEN sourced from .env.local by sonar_cmd"
+  fi
+
+  if [ -z "$sonar_engine" ]; then
+    say "❌ no scanner engine for sonar_cmd '$sonar_cmd' (hard — no sonar-scanner on PATH and no npm-wrapped scanner in its definition)"
     HARD_MISSING+=("sonar-scanner")
-  elif [ -z "${SONAR_TOKEN:-}" ]; then
-    say "❌ SONAR_TOKEN not set (hard — sonar-scanner needs it; \`sonar auth status\` alone does not authenticate the scanner, see sonar-cli skill)"
+  elif [ -z "$sonar_auth" ]; then
+    say "❌ SONAR_TOKEN not reachable by sonar_cmd (hard — not in env and not in an .env.local the command sources; \`sonar auth status\` alone does not authenticate the scanner, see sonar-cli skill)"
     HARD_MISSING+=("sonar-scanner-auth")
   else
-    say "✓ sonar-scanner present, SONAR_TOKEN set (mandatory wave sonar_cmd)"
+    say "✓ scanner engine ($sonar_engine), auth ($sonar_auth) for mandatory wave sonar_cmd"
   fi
 fi
 
@@ -201,6 +229,7 @@ fi
 if [ -f biome.json ]; then
   node - <<'NODE'
 const fs = require("fs");
+const { execFileSync } = require("child_process");
 const path = "biome.json";
 const raw = fs.readFileSync(path, "utf8");
 const config = JSON.parse(raw);
@@ -209,12 +238,23 @@ config.files ??= {};
 // Biome 2 removed `files.ignore` in favour of negated patterns in
 // `files.includes`, and rejects the old key outright — writing it makes
 // `biome check` exit non-zero on configuration alone. Follow whichever form
-// the target repo already uses.
+// the target repo already uses; otherwise use the installed Biome major.
 if (Array.isArray(config.files.includes)) {
   const negations = ignored.map((f) => `!${f}`);
   config.files.includes = [...new Set([...config.files.includes, ...negations])];
-} else {
+} else if (Array.isArray(config.files.ignore)) {
   config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
+} else {
+  let major = config.$schema?.match(/\/schemas\/(\d+)(?:\.|\/)/)?.[1];
+  for (const command of ["biome", "./node_modules/.bin/biome"]) {
+    if (major) break;
+    try {
+      major = execFileSync(command, ["--version"], { encoding: "utf8" }).match(/\b(\d+)\./)?.[1];
+    } catch {}
+  }
+  if (!major) throw new Error("Cannot determine Biome major version; add $schema to biome.json");
+  if (Number(major) >= 2) config.files.includes = ["**", ...ignored.map((f) => `!${f}`)];
+  else config.files.ignore = ignored;
 }
 // Keep the target's own indentation: this file is linted by the formatter it
 // configures, so reflowing it to two spaces fails a tab-indented repo's lint.
