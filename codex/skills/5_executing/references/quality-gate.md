@@ -63,9 +63,11 @@ Run `build_cmd` from `wave-gate-config.json` once for the assembled PROJ. If it 
 
 ---
 
-## Gate 3: Optional Sonar Scan
+## Gate 3: Sonar Scan (once per PROJ)
 
-Fetch fresh SonarQube Cloud/Server issues for files touched by this feature when both Sonar CLIs are available.
+This is the only Sonar run in the whole PROJ — no wave gate runs Sonar.
+`sonar_cmd`'s scanner submission already covers the full project, so by
+definition this single run analyzes every wave's cumulative changes.
 
 ### Preflight
 
@@ -76,20 +78,25 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
 - If both commands exist, run this gate using the `sonar-cli` skill guidance.
 - If either command is missing, skip this gate and record `SonarCloud: skipped (sonar CLI unavailable)` in `5_progress/PROJ-<X>-progress.md`.
 - If both commands exist but the project has no Sonar config and no explicit user/plan requirement to create one, skip this gate and record `SonarCloud: skipped (project not configured)`.
-- A skipped Sonar gate does not block QA handoff.
+- `scripts/quality-gate-proof.sh` rejects a skip when both CLIs and `sonar-project.properties` are present — treat this gate as required whenever the project is Sonar-configured.
 
 ### Steps
 
-1. Get the list of files changed by this feature:
+1. Run the exact top-level `sonar_cmd` from `wave-gate-config.json` (the same
+   command used to describe the scan in the plan) from the persistent PROJ
+   worktree:
    ```bash
-   git diff BASE_SHA..HEAD --name-only
+   bash -c "$SONAR_CMD"
    ```
+   Do not substitute an ad hoc `sonar-scanner` invocation — reuse the
+   configured command so there is one source of truth for how this project is
+   scanned. Wait for the scan to complete before proceeding.
 
-2. Run the Sonar scanner to upload the latest code for analysis:
-   ```bash
-   sonar-scanner
-   ```
-   If the repo provides a matching script such as `npm run sonar` that runs coverage first and then `sonar-scanner`, use that script instead. Wait for the scan to complete before proceeding.
+2. Confirm the scan actually ran, not a silent no-op: `sonar_cmd` exiting 0
+   is not sufficient proof by itself — `sonar analyze`/`sonar verify` alone can
+   exit 0 having checked nothing. Require a `.scannerwork/report-task.txt`
+   (only `sonar-scanner` writes this) with an mtime at or after this step's
+   start.
 
 3. Fetch current Sonar issues, measures, and quality-gate status:
    ```bash
@@ -99,7 +106,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
    sonar api get "/api/qualitygates/project_status?projectKey=<project-key>"
    ```
 
-4. Filter issues to only files from step 1.
+4. Filter issues to files changed by this feature: `git diff BASE_SHA..HEAD --name-only`.
 
 5. Classify by SonarCloud severity:
    - **BLOCKER / CRITICAL** → must fix

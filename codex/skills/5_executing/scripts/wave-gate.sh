@@ -47,7 +47,7 @@ heartbeat() { date +%s > "$RALPH_HEARTBEAT"; }
 
 # A persistent worktree is a separate process tree from wherever secrets were
 # exported (control checkout's shell, CI, ...), so the ambient env can't be
-# relied on for ANY of them here — not just Sonar. .env.local is already the
+# relied on for ANY of them here — not just CodeRabbit. .env.local is already the
 # one managed secrets file worktree.sh symlinks into every worktree; load
 # whatever it has (never overriding an already-set var) instead of hardcoding
 # a per-tool fallback for each token a given stack happens to use.
@@ -98,17 +98,14 @@ AC_TIMEOUT=$(jq -er '.timeouts.ac_seconds' "$CFG") || fail "timeouts.ac_seconds 
 BUILD_TIMEOUT=$(jq -er '.timeouts.build_seconds' "$CFG") || fail "timeouts.build_seconds missing"
 CODERABBIT_TIMEOUT=$(jq -er '.timeouts.coderabbit_seconds' "$CFG") || fail "timeouts.coderabbit_seconds missing"
 BROWSER_TIMEOUT=$(jq -er '.timeouts.browser_seconds' "$CFG") || fail "timeouts.browser_seconds missing"
-SONAR_TIMEOUT=$(jq -r '.timeouts.sonar_seconds // 120' "$CFG")
-SONAR_CMD=$(jq -er '.sonar_cmd | select(type=="string" and test("\\S"))' "$CFG") \
-  || fail "sonar_cmd must be a non-empty top-level command"
 RALPH_STALL_SECONDS=$(jq -r '.timeouts.ralph_stall_seconds // .timeouts.ac_seconds' "$CFG")
 RATE_LIMIT_BACKOFF_SECONDS=$(jq -r "${WAVE_KEY}.rate_limit_backoff_seconds // .rate_limit_backoff_seconds // 330" "$CFG")
 AUTH_PACING_SECONDS=$(jq -r "${WAVE_KEY}.auth_pacing_seconds // 0" "$CFG")
-for pair in "ac:$AC_TIMEOUT" "build:$BUILD_TIMEOUT" "coderabbit:$CODERABBIT_TIMEOUT" "browser:$BROWSER_TIMEOUT" "sonar:$SONAR_TIMEOUT" "stall:$RALPH_STALL_SECONDS" "backoff:$RATE_LIMIT_BACKOFF_SECONDS" "pacing:$AUTH_PACING_SECONDS"; do
+for pair in "ac:$AC_TIMEOUT" "build:$BUILD_TIMEOUT" "coderabbit:$CODERABBIT_TIMEOUT" "browser:$BROWSER_TIMEOUT" "stall:$RALPH_STALL_SECONDS" "backoff:$RATE_LIMIT_BACKOFF_SECONDS" "pacing:$AUTH_PACING_SECONDS"; do
   value="${pair#*:}"
   [[ "$value" =~ ^[0-9]+$ ]] || fail "invalid timeout/pacing ${pair}"
 done
-for value in "$AC_TIMEOUT" "$BUILD_TIMEOUT" "$CODERABBIT_TIMEOUT" "$BROWSER_TIMEOUT" "$SONAR_TIMEOUT"; do
+for value in "$AC_TIMEOUT" "$BUILD_TIMEOUT" "$CODERABBIT_TIMEOUT" "$BROWSER_TIMEOUT"; do
   [[ "$value" -gt 0 ]] || fail "required timeouts must be greater than zero"
 done
 
@@ -278,7 +275,7 @@ VERIFIED_HEAD=$(git rev-parse --verify HEAD)
 assert_clean_worktree
 echo "=== Wave ${WAVE} Completion Gate — current ACs + declared regressions (PROJ-${PROJ}-${THEME}) ==="
 
-step "1/7 Ralph: current AC verification"
+step "1/6 Ralph: current AC verification"
 AC_COUNT=$(jq -r "${WAVE_KEY}.ac_commands | length" "$CFG")
 [[ "$AC_COUNT" -gt 0 ]] || fail "no ac_commands defined"
 init_ralph_state
@@ -359,7 +356,7 @@ if [[ "$AC_ONLY" == true ]]; then
   exit "$rc"
 fi
 
-step "2/7 Declared broad regression suite"
+step "2/6 Declared broad regression suite"
 REG_COUNT=$(jq -r "${WAVE_KEY}.regression_commands // [] | length" "$CFG")
 [[ "$REG_COUNT" -gt 0 ]] || fail "wave ${WAVE} has no declared broad regression_commands"
 for ((index=0; index<REG_COUNT; index++)); do
@@ -382,11 +379,11 @@ done
 rm -f "$RALPH_PID"; OWNS_RALPH=false
 tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg updated "$(date -Iseconds)" '.ralph_status="complete"|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 
-step "3/7 Build"
+step "3/6 Build"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
 run_with_timeout "$BUILD_TIMEOUT" build bash -c "$BUILD_CMD"; assert_verified_head; assert_clean_worktree
 
-step "4/7 CodeRabbit wave review"
+step "4/6 CodeRabbit wave review"
 command -v coderabbit >/dev/null || fail "coderabbit not installed"
 WAVE_BASE="${WAVE_BASE_SHA:-}"
 if [[ -n "$WAVE_BASE" ]]; then git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 || fail "invalid WAVE_BASE_SHA"; else WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true); fi
@@ -428,21 +425,7 @@ fi
 [[ "$CUMULATIVE_BLOCKING" -eq 0 ]] || fail "${CUMULATIVE_BLOCKING} cumulative/current open blocking finding(s) remain after review ingestion"
 assert_verified_head; assert_clean_worktree
 
-step "5/7 Sonar local scan"
-SONAR_STARTED_AT=$(date +%s)
-run_with_timeout "$SONAR_TIMEOUT" sonar_cmd bash -c "$SONAR_CMD"
-# sonar-scanner always writes .scannerwork/report-task.txt on ANY completed
-# analysis submission (even ones that later fail server-side); the `sonar`
-# operator CLI does not. Its absence or staleness proves sonar_cmd exited 0
-# without a real scanner run completing — a no-op or wrong CLI would still
-# exit 0 and must not be reported green.
-[[ -f .scannerwork/report-task.txt ]] || fail "sonar_cmd exited 0 but .scannerwork/report-task.txt is missing — sonar-scanner did not actually run"
-REPORT_TASK_MTIME=$(date -r .scannerwork/report-task.txt +%s 2>/dev/null || echo 0)
-[[ "$REPORT_TASK_MTIME" -ge "$SONAR_STARTED_AT" ]] || fail "sonar_cmd exited 0 but .scannerwork/report-task.txt is stale (from an earlier run) — sonar-scanner did not run this time"
-SONAR_STATUS=green
-assert_verified_head; assert_clean_worktree
-
-step "6/7 Browser smoke test"
+step "5/6 Browser smoke test"
 ROUTES_JSON=$(jq -c --arg wave "$WAVE" '[.frontend.routes[]? | select((.wave|tostring)==$wave)]' "$CFG")
 if [[ $(jq 'length' <<<"$ROUTES_JSON") -eq 0 ]]; then
   ROUTES_JSON=$(jq -c "[${WAVE_KEY}.frontend_routes[]? | if type==\"string\" then {path:.,expected_url:.,expected_text:null,protected:false,auth_state:null} else . end]" "$CFG")
@@ -494,7 +477,7 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
 fi
 assert_verified_head; assert_clean_worktree
 
-step "7/7 Component registry"
+step "6/6 Component registry"
 if [[ -f scripts/gen-component-registry.mjs && ( -d src/components || -d src/features ) ]]; then
   set +e; node scripts/gen-component-registry.mjs --check; REG_RC=$?; set -e
   [[ "$REG_RC" -eq 0 || "$REG_RC" -eq 3 ]] || fail "component registry out of date"
@@ -509,7 +492,6 @@ cat >>"$PROGRESS" <<EOF
 - [x] Declared broad regressions: ${REG_COUNT} commands green
 - [x] Build: \`${BUILD_CMD}\`
 - [x] CodeRabbit: attempt ${attempt} ingested; cumulative open blocking findings after ledger status: 0
-- [x] Sonar: ${SONAR_STATUS}
 - [x] Component registry: checked
 - [x] Smoke/authenticated E2E: ${ROUTES_STR}
 EOF

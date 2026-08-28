@@ -199,14 +199,13 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 ```json
 {
   "build_cmd": "npm run build",
-  "sonar_cmd": "npm run sonar:wave",
+  "sonar_cmd": "npm run sonar",
   "timeouts": {
     "ac_seconds": 300,
     "ralph_stall_seconds": 300,
     "build_seconds": 600,
     "coderabbit_seconds": 600,
-    "browser_seconds": 120,
-    "sonar_seconds": 300
+    "browser_seconds": 120
   },
   "auth_provider_rate_limited": true,
   "auth_budget": {
@@ -294,11 +293,10 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 
 **Rules:**
 - `build_cmd`: whatever builds the project fully (`npm run build`, `tsc --noEmit`, `cargo build`, etc.)
-- `sonar_cmd`: required non-empty project command for the per-wave Sonar scan.
-  The gate always runs this exact command from the persistent PROJ worktree;
-  use the repository's real entry point (`sonar-scanner`, an `npm` script, or a
-  wrapper) rather than assuming a binary named `sonar` exists. Missing,
-  timed-out, or non-zero execution blocks the wave.
+- `sonar_cmd`: required non-empty project command for the once-per-PROJ Sonar
+  scan, run only by the PROJ-end Quality Gate (not by any wave gate). Use the
+  repository's real entry point (`sonar-scanner`, an `npm` script, or a
+  wrapper) rather than assuming a binary named `sonar` exists.
 - `frontend.dev_url`: dev server URL for agent-browser smoke tests (default `http://localhost:3000`)
 - `timeouts`: required budgets for long-running gate steps. Use seconds. The gate fails if any key is missing:
   - `ac_seconds`: per AC command
@@ -306,7 +304,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   - `build_seconds`: full project build
   - `coderabbit_seconds`: per-wave CodeRabbit review
   - `browser_seconds`: per route smoke test
-  - `sonar_seconds`: per-wave `sonar_cmd` (optional; defaults to 120)
+  - `sonar_seconds`: unused by the wave gate; the PROJ-end Quality Gate's Sonar step is not timed from this config
 - `ac_commands[]`: one structured object per AC built in this wave. `id` is the unique canonical
   AC ID, `task` exactly matches its stable `### Task ...` heading, `command` is
   exactly the command in that task's `Gate commands` block, and `test_files` is

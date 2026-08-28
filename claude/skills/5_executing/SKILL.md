@@ -98,8 +98,9 @@ The script validates:
 2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before build; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
 3. **Build** — `build_cmd` from config exits 0.
 4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
-5. **Sonar** — the required top-level `sonar_cmd` runs with a timeout from the current persistent PROJ worktree. The gate does not assume an executable named `sonar`; missing, timed-out, or non-zero project commands are red.
-6. **Smoke Test** — the configured dev server is reused or started by the gate. Anonymous routes must match URL and characteristic content; redirects are failures. Protected routes require auth state or authenticated E2E coverage.
+5. **Smoke Test** — the configured dev server is reused or started by the gate. Anonymous routes must match URL and characteristic content; redirects are failures. Protected routes require auth state or authenticated E2E coverage.
+
+The wave gate does not run Sonar. The top-level `sonar_cmd` runs once, at the PROJ-end Quality Gate (Step 9) after all waves pass — not per wave.
 
 A green wave gate proves the current wave's ACs plus its declared broad
 regression suite. It does not claim that every earlier AC command was rerun.
@@ -176,7 +177,7 @@ Status: pending | passed
 | P2 Medium | 0 | 0 | 0 |
 | P3 Low | 0 | 0 | 0 |
 
-### PROJ-end SonarCloud (separate from mandatory per-wave `sonar_cmd`)
+### SonarCloud (once per PROJ, via top-level `sonar_cmd`)
 Status: pending | ran | skipped (sonar CLI unavailable) | skipped (project not configured)
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
@@ -554,10 +555,12 @@ After all waves for this PROJ-X are complete and their gates passed, run the Qua
 
 See `references/quality-gate.md` for full instructions.
 
-**Run code review, PROJ-end build, and optional Sonar in parallel where safe:**
+**Run code review, PROJ-end build, and Sonar in parallel where safe:**
 
-This optional PROJ-end analysis is additional to the mandatory `sonar_cmd`
-that every wave gate has already run. Its skip policy never applies to a wave.
+Sonar runs exactly once per PROJ, here — no wave gate runs it. Skip is allowed
+only when the tooling genuinely is not available; `scripts/quality-gate-proof.sh`
+rejects a skip when both CLIs and `sonar-project.properties` are present, so
+treat this as required whenever the project is Sonar-configured.
 
 Before launching the Sonar stream, check tool availability:
 
@@ -565,8 +568,8 @@ Before launching the Sonar stream, check tool availability:
 command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
 ```
 
-- If both CLIs are available, run the Sonar quality-gate stream using the `sonar-cli` skill guidance.
-- If either CLI is missing, skip Sonar and record `SonarCloud: skipped (sonar CLI unavailable)` in `progress.md`. Missing Sonar tooling does not block execution or QA handoff.
+- If both CLIs are available, run the Sonar quality-gate stream using the `sonar-cli` skill guidance, executing the top-level `sonar_cmd` from `wave-gate-config.json` as the analysis command.
+- If either CLI is missing, skip Sonar and record `SonarCloud: skipped (sonar CLI unavailable)` in `progress.md`.
 
 ```
 Create an agent team for Quality Gate of PROJ-X.
@@ -575,13 +578,13 @@ Spawn teammates:
 - "reviewer" using the code-reviewer-gate agent type with prompt:
   "Review the feature diff from BASE_SHA=$BASE_SHA. Check references/code-reviewer.md for the full checklist."
 - "sonar" only if `sonar` and `sonar-scanner` are installed, using the sonar-cli skill with prompt:
-  "Run the Sonar quality-gate stream for files changed since BASE_SHA=$BASE_SHA. Use sonar-scanner for project analysis and sonar CLI/API for quality gate, issue, coverage, and duplication data. If project Sonar config is absent, log SonarCloud as skipped rather than blocking."
+  "Run the once-per-PROJ Sonar scan: execute the top-level sonar_cmd from wave-gate-config.json from the persistent PROJ worktree, then use sonar CLI/API for quality gate, issue, coverage, and duplication data. Verify a fresh .scannerwork/report-task.txt after sonar_cmd exits 0 so a silent no-op doesn't read as green. If project Sonar config is absent, log SonarCloud as skipped rather than blocking."
 ```
 
 The lead also runs `build_cmd` and every `phase_commands` entry marked
 `quality` from `wave-gate-config.json` once for the assembled PROJ. CI/nightly
 entries are verified as wired to their named workflows, not replayed locally. The lead
-consolidates reviewer, build, integration/quality-phase, and optional Sonar results. Do not rerun `ac_commands`; their canonical proof belongs to wave-scoped Ralph and `wave-gate.sh`.
+consolidates reviewer, build, integration/quality-phase, and Sonar results. Do not rerun `ac_commands`; their canonical proof belongs to wave-scoped Ralph and `wave-gate.sh`.
 
 **After teammates report — Handling Findings with Technical Rigor:**
 

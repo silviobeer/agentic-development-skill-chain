@@ -93,8 +93,9 @@ What makes an overnight run trustworthy:
   exact ID + command + HEAD matches, then runs the declared broad regression
   suite and every remaining phase. CodeRabbit attempts retain raw
   and normalized evidence and are judged against cumulative open ledger debt.
-  The required project `sonar_cmd` also runs from that same PROJ worktree on
-  every wave; it is never skipped based on a hard-coded CLI name.
+  No wave gate runs Sonar; the required project `sonar_cmd` runs once per PROJ
+  in the PROJ-end Quality Gate, from that same PROJ worktree, never skipped
+  based on a hard-coded CLI name.
 - **Bounded evidence retention.** CodeRabbit raw output is kept because the
   local gate parses it. CI and Sonar evidence remains in their source systems,
   while cross-review persists validated normalized findings instead of full

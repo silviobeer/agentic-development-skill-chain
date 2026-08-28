@@ -14,7 +14,7 @@ Use the two Sonar CLIs for different jobs:
 
 If the user is confused about the two tools, read `references/cli-distinction.md`.
 
-Never wire a wave gate's `sonar_cmd` (`wave-gate-config.json`) to `sonar analyze`/`sonar verify` alone: without a language analyzer installed, both can exit 0 having checked every file and found nothing — a silent no-op that looks green. `sonar-scanner` is the only command that proves a real analysis ran; the wave gate additionally verifies this by requiring a fresh `.scannerwork/report-task.txt` (which only `sonar-scanner` writes) after `sonar_cmd` succeeds.
+Never wire the PROJ-end `sonar_cmd` (`wave-gate-config.json`, run once per PROJ by the Quality Gate — no wave gate runs Sonar) to `sonar analyze`/`sonar verify` alone: without a language analyzer installed, both can exit 0 having checked every file and found nothing — a silent no-op that looks green. `sonar-scanner` is the only command that proves a real analysis ran; verify this yourself by requiring a fresh `.scannerwork/report-task.txt` (which only `sonar-scanner` writes) after `sonar_cmd` succeeds.
 
 ## Project Setup Workflow
 

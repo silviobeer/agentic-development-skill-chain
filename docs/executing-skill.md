@@ -157,7 +157,7 @@ After every worker in a wave returns and the lead integrates and commits their c
 bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
 ```
 
-This AC-only pass uses the gate's timeout, auth-budget, pacing, and rate-limit controls and writes its results directly to `ralph-wave-<N>.json`. It collects every ordinary AC failure so disjoint repairs can be batched, while infrastructure and auth-budget exhaustion still fail fast. It exits before regressions, build, CodeRabbit, Sonar, browser smoke, component registry, progress certification, and next-wave tagging.
+This AC-only pass uses the gate's timeout, auth-budget, pacing, and rate-limit controls and writes its results directly to `ralph-wave-<N>.json`. It collects every ordinary AC failure so disjoint repairs can be batched, while infrastructure and auth-budget exhaustion still fail fast. It exits before regressions, build, CodeRabbit, browser smoke, component registry, progress certification, and next-wave tagging.
 
 Evidence binds the canonical AC ID, task, exact command, test files, positive selected-test count, and committed `HEAD`. Reuse requires the exact AC ID and command at that same `HEAD`; cross-HEAD impact inference is not supported.
 
@@ -186,10 +186,6 @@ The script is the hard boundary and validates:
 - The configured `build_cmd` exits 0.
 - CodeRabbit archives unique raw and normalized evidence for every attempt,
   ingests validated finding records, and leaves no cumulative open blocking ledger findings.
-- The required top-level `sonar_cmd` runs with a timeout in the current
-  persistent PROJ worktree and reports nothing blocking. It may invoke
-  `sonar-scanner`, an npm script, or a project wrapper; the gate does not use a
-  `command -v sonar` shortcut or skip a missing command.
 - The gate reuses or starts the configured dev server. Anonymous routes retain
   the expected URL and text; redirects fail. Protected routes use auth state or
   are covered by an authenticated E2E regression.
@@ -233,10 +229,11 @@ It focuses on assembled cross-wave risks and does not replay wave ACs. It includ
 
 - Full code review of the feature diff.
 - One PROJ-level build using `build_cmd`.
-- Optional additional PROJ-end Sonar scan when both `sonar` and
-  `sonar-scanner` are available and the project is configured. This is distinct
-  from the mandatory per-wave `sonar_cmd`; its skip policy cannot satisfy or
-  bypass a wave gate.
+- The once-per-PROJ Sonar scan, using the top-level `sonar_cmd`. No wave gate
+  runs Sonar; this is the only run, and it covers every wave's cumulative
+  changes since `sonar_cmd`'s scanner submission analyzes the whole project.
+  Skip is allowed only when `sonar`/`sonar-scanner` are unavailable or the
+  project has no Sonar config — `quality-gate-proof.sh` rejects any other skip.
 - Declared integration/quality-phase tests and lint verification.
 
 Exit criteria:

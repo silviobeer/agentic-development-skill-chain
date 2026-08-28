@@ -57,7 +57,6 @@ run_suite() {
     | .waves["1"].ac_commands[0].auth_consuming=true
     | .waves["1"].regression_commands[0].command="printf R >> \"$REST_LOG\"; printf \"Running 2 tests\\n2 passed\\n\""
     | .build_cmd="printf B >> \"$REST_LOG\""
-    | .sonar_cmd="printf S >> \"$REST_LOG\"; mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt"
     | .frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/","expected_url":"/","expected_text":"Welcome","protected":false}]}
   ')
   write_config "$config"; commit_case
@@ -67,7 +66,7 @@ run_suite() {
   jq -e --arg head "$(git -C "$CASE" rev-parse HEAD)" '.ralph_status=="complete" and (.commands[0] | .id=="AC-1" and .verified_head==$head and .status=="passed")' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: AC-only did not persist canonical current-HEAD evidence"
   run_gate >/dev/null
   [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: full gate repeated the same-HEAD auth-consuming AC"
-  [[ $(cat "$REST_LOG") == RBS ]] || fail "$LABEL: full gate did not execute regression, build, and Sonar after AC-only"
+  [[ $(cat "$REST_LOG") == RB ]] || fail "$LABEL: full gate did not execute regression and build after AC-only"
   [[ -s "$CR_CALL_LOG" && -s "$BROWSER_CALL_LOG" ]] || fail "$LABEL: full gate did not execute CodeRabbit and browser after AC-only"
   unset REST_LOG CR_CALL_LOG BROWSER_CALL_LOG
 
@@ -125,45 +124,12 @@ run_suite() {
   write_config "$config"; commit_case; expect_fail run_gate
   grep -q 'HEAD changed during gate verification' "$GATE_OUT" || fail "$LABEL: gate certified a commit created during build"
 
-  case_dir sonar-current-worktree
+  case_dir sonar-not-run-by-wave-gate
   SONAR_CWD_LOG="$TMP/$PLATFORM-sonar-cwd"; export SONAR_CWD_LOG
-  config=$(default_config | jq '.sonar_cmd="pwd -P > \"$SONAR_CWD_LOG\"; mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt"')
+  config=$(default_config | jq 'del(.sonar_cmd) | del(.timeouts.sonar_seconds)')
   write_config "$config"; commit_case; run_gate >/dev/null
-  [[ -s "$SONAR_CWD_LOG" ]] || fail "$LABEL: configured sonar_cmd was not executed"
-  [[ $(cat "$SONAR_CWD_LOG") == "$CASE" ]] || fail "$LABEL: sonar_cmd did not run in the current PROJ worktree cwd"
+  [[ ! -e "$SONAR_CWD_LOG" ]] || fail "$LABEL: wave gate must not run any sonar_cmd — that is PROJ-end only"
   unset SONAR_CWD_LOG
-
-  case_dir sonar-missing
-  config=$(default_config | jq 'del(.sonar_cmd)')
-  write_config "$config"; commit_case; expect_fail run_gate
-  grep -q 'sonar_cmd must be a non-empty top-level command' "$GATE_OUT" || fail "$LABEL: missing sonar_cmd did not block clearly"
-
-  case_dir sonar-nonzero
-  config=$(default_config | jq '.sonar_cmd="exit 23"')
-  write_config "$config"; commit_case; expect_fail run_gate
-  grep -q 'sonar_cmd failed with exit 23' "$GATE_OUT" || fail "$LABEL: non-zero sonar_cmd did not block"
-
-  case_dir sonar-changes-head
-  config=$(default_config | jq '.sonar_cmd="mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt; git commit --allow-empty -m sonar-moved-head >/dev/null"')
-  write_config "$config"; commit_case; expect_fail run_gate
-  grep -q 'HEAD changed during gate verification' "$GATE_OUT" || fail "$LABEL: sonar_cmd was allowed to move certified HEAD"
-
-  case_dir sonar-dirties-worktree
-  config=$(default_config | jq '.sonar_cmd="mkdir -p .scannerwork && date +%s > .scannerwork/report-task.txt; mkdir -p src; printf dirty > src/sonar-output.txt"')
-  write_config "$config"; commit_case; expect_fail run_gate
-  grep -q 'commit them before certification' "$GATE_OUT" || fail "$LABEL: sonar_cmd dirty output escaped the worktree invariant"
-
-  case_dir sonar-no-report-task
-  config=$(default_config | jq '.sonar_cmd="true"')
-  write_config "$config"; commit_case; expect_fail run_gate
-  grep -q 'sonar-scanner did not actually run' "$GATE_OUT" || fail "$LABEL: sonar_cmd exiting 0 without a scanner report was accepted as green"
-
-  case_dir sonar-stale-report-task
-  config=$(default_config | jq '.sonar_cmd="true"')
-  write_config "$config"; commit_case
-  mkdir -p "$CASE/.scannerwork"; printf stale >"$CASE/.scannerwork/report-task.txt"; touch -d '@1000000000' "$CASE/.scannerwork/report-task.txt"
-  expect_fail run_gate
-  grep -q 'sonar-scanner did not run this time' "$GATE_OUT" || fail "$LABEL: a stale scanner report from an earlier run was accepted as fresh evidence"
 
   case_dir regression-empty
   config=$(default_config | jq '.waves["1"].regression_commands[0].command="printf '\''Running 0 tests\\n'\''"')
