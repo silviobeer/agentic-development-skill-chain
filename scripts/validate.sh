@@ -97,6 +97,10 @@ check_identical "$ROOT/claude/skills/4b_setup/scripts/state.sh" \
   "$ROOT/codex/skills/4b_setup/scripts/state.sh" \
   "$ROOT/claude/skills/4a_checkpoint/scripts/state.sh" \
   "$ROOT/codex/skills/4a_checkpoint/scripts/state.sh"
+check_identical "$ROOT/claude/skills/4b_setup/scripts/env-local.sh" \
+  "$ROOT/codex/skills/4b_setup/scripts/env-local.sh" \
+  "$ROOT/claude/skills/5_executing/scripts/env-local.sh" \
+  "$ROOT/codex/skills/5_executing/scripts/env-local.sh"
 check_identical "$ROOT/claude/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/claude/skills/0b_intake/scripts/curation-caps.sh" \
