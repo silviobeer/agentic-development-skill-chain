@@ -54,11 +54,26 @@ say()  { echo "  $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # Preflight runs in the control checkout's shell, which may not be the same
-# session any secret (SONAR_TOKEN or otherwise) was exported into.
-source "$SCRIPT_DIR/env-local.sh"
+# session any secret (SONAR_TOKEN or otherwise) was exported into. .env.local
+# is the one managed secrets file worktree.sh symlinks into every worktree —
+# load whatever it has (never overriding an already-set var) instead of
+# hardcoding a per-tool fallback for each token a given stack happens to use.
+load_env_local() {
+  local file="$1" line key value
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key="${line%%=*}"; value="${line#*=}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+    [[ -n "${!key:-}" ]] && continue
+    export "$key=$value"
+  done <"$file"
+}
+load_env_local .env.local
 agent_browser_contract() {
   agent-browser open --help >/dev/null 2>&1 \
-    && agent-browser read --help >/dev/null 2>&1 \
+    && agent-browser snapshot --help >/dev/null 2>&1 \
     && agent-browser errors --help >/dev/null 2>&1
 }
 
@@ -79,7 +94,7 @@ fi
 # agent-browser — hard for legacy per-wave routes and structured top-level routes
 if [ -f "$GATE_CFG" ] && jq -e '[.waves[]?.frontend_routes[]?, .frontend.routes[]?] | length > 0' "$GATE_CFG" >/dev/null 2>&1; then
   if have agent-browser && agent_browser_contract; then
-    say "✓ agent-browser (frontend waves planned; open/read/errors contract)"
+    say "✓ agent-browser (frontend waves planned; open/snapshot/errors contract)"
   else
     say "❌ agent-browser MISSING or incompatible (hard — frontend waves planned)"
     HARD_MISSING+=("agent-browser")
@@ -214,7 +229,6 @@ fi
 if [ -f biome.json ]; then
   node - <<'NODE'
 const fs = require("fs");
-const { execFileSync } = require("child_process");
 const path = "biome.json";
 const raw = fs.readFileSync(path, "utf8");
 const config = JSON.parse(raw);
@@ -223,23 +237,12 @@ config.files ??= {};
 // Biome 2 removed `files.ignore` in favour of negated patterns in
 // `files.includes`, and rejects the old key outright — writing it makes
 // `biome check` exit non-zero on configuration alone. Follow whichever form
-// the target repo already uses; otherwise use the installed Biome major.
+// the target repo already uses.
 if (Array.isArray(config.files.includes)) {
   const negations = ignored.map((f) => `!${f}`);
   config.files.includes = [...new Set([...config.files.includes, ...negations])];
-} else if (Array.isArray(config.files.ignore)) {
-  config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
 } else {
-  let major = config.$schema?.match(/\/schemas\/(\d+)(?:\.|\/)/)?.[1];
-  for (const command of ["biome", "./node_modules/.bin/biome"]) {
-    if (major) break;
-    try {
-      major = execFileSync(command, ["--version"], { encoding: "utf8" }).match(/\b(\d+)\./)?.[1];
-    } catch {}
-  }
-  if (!major) throw new Error("Cannot determine Biome major version; add $schema to biome.json");
-  if (Number(major) >= 2) config.files.includes = ["**", ...ignored.map((f) => `!${f}`)];
-  else config.files.ignore = ignored;
+  config.files.ignore = [...new Set([...(config.files.ignore ?? []), ...ignored])];
 }
 // Keep the target's own indentation: this file is linted by the formatter it
 // configures, so reflowing it to two spaces fails a tab-indented repo's lint.

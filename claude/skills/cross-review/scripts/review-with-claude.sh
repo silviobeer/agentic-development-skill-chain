@@ -7,23 +7,20 @@
 # stamped with "provider":"claude". The invocation runs as its own process
 # group and is killed whole (TERM then KILL) on timeout — no orphans.
 #
-# Usage: review-with-claude.sh --prompt <file> [--model M] [--timeout S] [--max-turns N]
+# Usage: review-with-claude.sh --prompt <file> [--model M] [--timeout S]
 # Exit:  0 valid finding lines on stdout · 1 CLI failed/timeout/zero valid lines · 64 usage
 set -euo pipefail
 
-PROMPT="" MODEL="" TIMEOUT=600 MAX_TURNS=5
+PROMPT="" MODEL="" TIMEOUT=600
 while [ $# -gt 0 ]; do
   case "$1" in
-    --prompt)    PROMPT="${2:?}"; shift 2 ;;
-    --model)     MODEL="${2:?}"; shift 2 ;;
-    --timeout)   TIMEOUT="${2:?}"; shift 2 ;;
-    --max-turns) MAX_TURNS="${2:?}"; shift 2 ;;
+    --prompt)  PROMPT="${2:?}"; shift 2 ;;
+    --model)   MODEL="${2:?}"; shift 2 ;;
+    --timeout) TIMEOUT="${2:?}"; shift 2 ;;
     *) echo "review-with-claude.sh: unknown option $1" >&2; exit 64 ;;
   esac
 done
 [ -n "$PROMPT" ] && [ -f "$PROMPT" ] || { echo "review-with-claude.sh: --prompt <file> required" >&2; exit 64; }
-case "$MAX_TURNS" in ''|*[!0-9]*) echo "review-with-claude.sh: --max-turns must be a positive integer" >&2; exit 64 ;; esac
-[ "$MAX_TURNS" -gt 0 ] || { echo "review-with-claude.sh: --max-turns must be a positive integer" >&2; exit 64; }
 command -v claude >/dev/null 2>&1 || { echo "review-with-claude.sh: claude CLI not found" >&2; exit 1; }
 
 # Claude Code's documented stdin ceiling is 10 MB. Detect it here so callers
@@ -55,14 +52,8 @@ SCHEMA='{"type":"object","properties":{"findings":{"type":"array","minItems":1,"
 # the user's subscription OAuth while disabling user/project customization
 # (plugins, hooks, skills, MCP); strict MCP prevents configured connectors from
 # re-entering. `--tools ""` then disables the built-in tool set as well.
-# --json-schema structured output is itself a tool-use round trip (one turn to
-# reason, a second to emit the schema-validated result), so it needs at least
-# 2 turns even with zero tools; --max-turns 1 was below that floor and could
-# cut the run off as error_max_turns before a valid result ever formed. The
-# default here gives headroom above the observed floor; the wall-clock
-# --timeout below remains the real worst-case bound, not the turn count.
 setsid claude -p ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} \
-  --safe-mode --strict-mcp-config --tools "" --max-turns "$MAX_TURNS" --effort low \
+  --safe-mode --strict-mcp-config --tools "" --max-turns 3 --effort low \
   --no-session-persistence --output-format json --json-schema "$SCHEMA" \
   <"$PROMPT" >"$RAW" 2>&1 &
 PID=$!
@@ -100,6 +91,7 @@ fi
 
 NORMALIZED="$(jq -c '
   .structured_output.findings
+  | if any(.category != "review-clean") then map(select(.category != "review-clean")) else . end
   | map(. + {provider: "claude"})
   | unique_by([(.category // ""), (.file // ""), (.line // 0), .summary])[]
 ' "$RAW" 2>/dev/null || true)"
@@ -111,10 +103,4 @@ if [ "$VALID" -eq 0 ]; then
   exit 1
 fi
 
-CLEAN="$(printf '%s\n' "$NORMALIZED" | jq -s '[.[] | select(.category == "review-clean")] | length')"
-FINDINGS="$(printf '%s\n' "$NORMALIZED" | jq -s '[.[] | select(.category != "review-clean")] | length')"
-if [ "$CLEAN" -gt 0 ] && [ "$FINDINGS" -gt 0 ]; then
-  echo "review-with-claude.sh: review-clean and findings appeared together — output contract violated" >&2
-  exit 1
-fi
 printf '%s\n' "$NORMALIZED"
