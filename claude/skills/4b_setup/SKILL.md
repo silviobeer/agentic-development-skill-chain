@@ -119,7 +119,7 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
 the WHOLE 4b_setup helper set first — `preflight.sh`, `ponytail-check.sh`,
 `compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh`,
-`worktree.sh`, `validate-wave-plan.mjs` from
+`worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh` from
 `~/.claude/skills/4b_setup/scripts/` — preflight calls its siblings; a
 lone copy also works, it falls back to the installed skill tree). It checks
 the CONCEPT.md §7 CLI list including auth states and a bounded live
@@ -133,6 +133,17 @@ probe per provider (claude hard, codex degradable) and writes the
 - Exit 1 → hard tool missing = **stop condition (§8)**: transition to
   blocked (`bash scripts/state.sh transition <X> <theme> P0 blocked`),
   write the stop report, do not continue.
+
+For a repo with `supabase/migrations/`, preflight also runs
+`migration-drift-check.sh`: every git worktree of this repo shares ONE local
+Supabase Postgres instance, so another worktree may have applied migrations
+absent from this worktree's own `supabase/migrations/` folder — code and
+grants here would then silently run against a schema this branch never
+declared. That is a stop condition too (fix: `supabase db reset` from this
+worktree); a worktree merely having *pending* local migrations is normal and
+not flagged. `wave-gate.sh` re-runs the same check at the start of every
+wave, since a wave can run long after P0 in a repo another worktree has
+since advanced.
 
 Preflight also reports the repo's **structure state** — a missing
 `docs/components.md`, a still hand-written one, a missing or oversized
@@ -162,7 +173,7 @@ files; overwrite older copies and note it in the commit):
 
 | From (installed skill) | To |
 |---|---|
-| `4b_setup/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs` | `scripts/` |
+| `4b_setup/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh` | `scripts/` |
 | `4b_setup/manifests/roles/*.md` | `templates/roles/` |
 | `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
 | `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |

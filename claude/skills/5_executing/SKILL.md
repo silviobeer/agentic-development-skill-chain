@@ -342,7 +342,11 @@ worktrees. Every database migration command—including one delegated to a story
 agent—and every other explicitly `auth_consuming` command must therefore be
 wrapped as `scripts/worktree.sh with-shared-lock -- <command>`. Put that exact
 constraint in the agent prompt; never let parallel agents run migrations
-outside the project lock.
+outside the project lock. That lock only stops concurrent collisions;
+`wave-gate.sh` separately re-checks at the start of every wave that this
+worktree's own `supabase/migrations/` still matches what the shared DB has
+actually applied (`scripts/migration-drift-check.sh`), since a sibling
+worktree can advance the schema between waves with no lock involved at all.
 
 **Choose the right implementer type per US.** Where the current session can
 spawn P0's `skillchain-<role>` agent types, use them. Otherwise use the normal

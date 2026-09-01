@@ -160,7 +160,12 @@ that is not listed there; never add one without an architecture decision.
 - P0–P8 run in the registered persistent PROJ worktree, not the control checkout.
 - Dependencies are worktree-local. `.env.local`, the development database, and
   hosted-auth limits are shared resources; never print secrets and serialize
-  migrations or auth-consuming gates through the configured lock.
+  migrations or auth-consuming gates through the configured lock. The lock
+  only prevents concurrent collisions — it does not stop one worktree's
+  migrations from silently changing the schema another worktree still trusts.
+  If this project uses Supabase, `preflight.sh` and `wave-gate.sh` guard
+  against that automatically (`scripts/migration-drift-check.sh`); see the
+  `supabase-local-dev` skill for the manual check outside that flow.
 
 ## Curated context
 - `docs/PRODUCT.md` — what the product is, and is not

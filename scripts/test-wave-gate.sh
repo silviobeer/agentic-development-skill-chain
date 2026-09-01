@@ -20,7 +20,7 @@ case_dir() {
     '[[ -z "${BROWSER_CALL_LOG:-}" ]] || printf "called\n" >>"$BROWSER_CALL_LOG"' \
     'while [[ "${1:-}" == --* ]]; do case "$1" in --session) SESSION="$2"; shift 2;; --state) [[ -f "$2" ]] || exit 9; shift 2;; *) shift;; esac; done' \
     'STATE="${BROWSER_STATE_DIR:?}/${SESSION:-default}"; cmd="${1:-}"; shift || true' \
-    'case "$cmd" in open) printf "%s\n" "${BROWSER_FINAL_URL:-$1}" >"$STATE";; get) [[ "${1:-}" == url ]] && command cat "$STATE";; read) printf "%s\n" "${BROWSER_TEXT:-Welcome}";; errors) exit 0;; close) rm -f "$STATE";; *) exit 2;; esac' >"$CASE/bin/agent-browser"
+    'case "$cmd" in open) printf "%s\n" "${BROWSER_FINAL_URL:-$1}" >"$STATE";; get) [[ "${1:-}" == url ]] && command cat "$STATE";; snapshot) printf "%s\n" "${BROWSER_TEXT:-Welcome}";; errors) exit 0;; close) rm -f "$STATE";; *) exit 2;; esac' >"$CASE/bin/agent-browser"
   printf '%s\n' '#!/usr/bin/env bash' '[[ "${CURL_ALWAYS_READY:-1}" == 1 || -f "${READY_FILE:-/nonexistent}" ]]' >"$CASE/bin/curl"
   printf '%s\n' '#!/usr/bin/env bash' \
     '[[ "${1:-}" == with-shared-lock ]] || exit 64' \

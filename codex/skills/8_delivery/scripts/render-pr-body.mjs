@@ -17,8 +17,29 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const [projX, theme, templateArg] = process.argv.slice(2);
+
+function storyStatus(metadata) {
+  return metadata && typeof metadata === "object" ? metadata.status : metadata;
+}
+
+function storySummary(metadata) {
+  if (!metadata || typeof metadata !== "object") return String(metadata ?? "unknown");
+  return [metadata.title, metadata.status, Number.isInteger(metadata.wave) ? `wave ${metadata.wave}` : null]
+    .filter((value) => typeof value === "string" && value.length > 0)
+    .join(" — ") || "status unknown";
+}
+
+if (projX === "--selftest") {
+  if (storySummary("complete") !== "complete") throw new Error("string story metadata changed");
+  if (storySummary({ status: "complete", wave: 2 }) !== "complete — wave 2") throw new Error("object story metadata failed");
+  if (storySummary({ title: "Register", status: "complete" }) !== "Register — complete") throw new Error("story title failed");
+  if (storyStatus({ status: "gap" }) !== "gap") throw new Error("object gap status failed");
+  console.log("✓ render-pr-body story metadata self-test");
+  process.exit(0);
+}
+
 if (!projX || !theme) {
-  console.error("Usage: render-pr-body.mjs <proj-x> <theme> [template-path]");
+  console.error("Usage: render-pr-body.mjs <proj-x> <theme> [template-path] | --selftest");
   process.exit(64);
 }
 
@@ -43,7 +64,7 @@ const count = (pred) => findings.filter(pred).length;
 const stories = Object.entries(state.waves?.stories ?? {});
 
 const storiesBlock = stories.length
-  ? stories.map(([us, st]) => `- ${us}: ${st}`).join("\n")
+  ? stories.map(([us, metadata]) => `- ${us}: ${storySummary(metadata)}`).join("\n")
   : "_no per-story status recorded_";
 
 const gateSummary = [
@@ -56,7 +77,7 @@ const gateSummary = [
   `- Open blocking (critical/high): ${count((f) => f.status === "open" && (f.severity === "critical" || f.severity === "high"))}`,
 ].join("\n");
 
-const gaps = stories.filter(([, st]) => st === "gap").map(([us]) => `- ${us}: Ralph cap hit — shipped as known gap`);
+const gaps = stories.filter(([, metadata]) => storyStatus(metadata) === "gap").map(([us]) => `- ${us}: Ralph cap hit — shipped as known gap`);
 const knownGaps = gaps.length ? gaps.join("\n") : "none";
 
 const debt = findings.filter((f) => f.status === "deferred");

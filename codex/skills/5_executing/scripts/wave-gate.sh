@@ -262,6 +262,22 @@ VERIFIED_HEAD=$(git rev-parse --verify HEAD)
 assert_clean_worktree
 echo "=== Wave ${WAVE} Completion Gate — current ACs + declared regressions (PROJ-${PROJ}-${THEME}) ==="
 
+# Every wave re-trusts the ONE shared local Supabase DB; another worktree of
+# this repo may have advanced its schema since this worktree last checked
+# (with-shared-lock only serializes concurrent migrations, not this
+# sequential drift). P0 preflight checked this once at PROJ start; re-check
+# here since a wave gate can run long after that, in a repo already advanced
+# by another worktree.
+if [[ -d supabase/migrations ]]; then
+  if [[ -x scripts/migration-drift-check.sh ]]; then
+    step "Migration drift check"
+    scripts/migration-drift-check.sh \
+      || fail "local Supabase DB has migrations this worktree's supabase/migrations/ doesn't (see message above) — run \`supabase db reset\` from this worktree"
+  else
+    fail "supabase/migrations/ present but scripts/migration-drift-check.sh is missing (copy the 4b_setup helper set into scripts/)"
+  fi
+fi
+
 step "1/6 Ralph: current AC verification"
 AC_COUNT=$(jq -r "${WAVE_KEY}.ac_commands | length" "$CFG")
 [[ "$AC_COUNT" -gt 0 ]] || fail "no ac_commands defined"
@@ -397,6 +413,8 @@ jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.
 [[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
 [[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
 if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
+CR_SCRUBBED=$(mktemp "${CR_RAW}.tmp.XXXXXX")
+jq -c 'if .type=="review_context" then del(.workingDirectory) else . end' "$CR_RAW" >"$CR_SCRUBBED" && mv "$CR_SCRUBBED" "$CR_RAW"
 
 LEDGER_AVAILABLE=false
 if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then LEDGER_AVAILABLE=true; fi
@@ -456,7 +474,7 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
       browser=(agent-browser --session "$session"); [[ -z "$auth_state" ]] || browser+=(--state "$auth_state")
       run_with_timeout "$BROWSER_TIMEOUT" "smoke ${path}" "${browser[@]}" open "$target"
       actual=$("${browser[@]}" get url); [[ "$actual" == "$expected" ]] || fail "smoke ${path} redirected/resolved to '${actual}', expected '${expected}'"
-      text_out=$("${browser[@]}" read); [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
+      text_out=$("${browser[@]}" snapshot); [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
       "${browser[@]}" errors >/dev/null || fail "browser errors on ${path}"
       "${browser[@]}" close >/dev/null 2>&1 || true
     done

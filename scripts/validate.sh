@@ -29,6 +29,7 @@ OPTIONAL_SKILLS=(
   bugfixing
   refactor-dreamer
   sonar-cli
+  supabase-local-dev
   vibecoder
 )
 EXPECTED=("${CORE_SKILLS[@]}" "${OPTIONAL_SKILLS[@]}")
@@ -123,7 +124,7 @@ check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
 for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
          4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
-         4b_setup/scripts/context-injector.mjs \
+         4b_setup/scripts/context-injector.mjs 4b_setup/scripts/migration-drift-check.sh \
          4b_setup/manifests/roles/micro-fixer.md 4b_setup/manifests/roles/implementer.md \
          4b_setup/manifests/roles/frontend-implementer.md 4b_setup/manifests/roles/backend-implementer.md \
          4b_setup/manifests/roles/reviewer.md 4b_setup/manifests/roles/explore.md \
@@ -159,6 +160,7 @@ fi
 bash "$ROOT/scripts/test-wave-plan-validator.sh"
 bash "$ROOT/scripts/test-ledger.sh"
 bash "$ROOT/scripts/test-preflight-biome.sh"
+bash "$ROOT/scripts/test-migration-drift-check.sh"
 bash "$ROOT/scripts/test-worktree.sh"
 bash "$ROOT/scripts/test-wave-gate.sh"
 bash "$ROOT/scripts/test-cross-review.sh"

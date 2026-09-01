@@ -58,7 +58,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 source "$SCRIPT_DIR/env-local.sh"
 agent_browser_contract() {
   agent-browser open --help >/dev/null 2>&1 \
-    && agent-browser read --help >/dev/null 2>&1 \
+    && agent-browser snapshot --help >/dev/null 2>&1 \
     && agent-browser errors --help >/dev/null 2>&1
 }
 
@@ -79,7 +79,7 @@ fi
 # agent-browser — hard for legacy per-wave routes and structured top-level routes
 if [ -f "$GATE_CFG" ] && jq -e '[.waves[]?.frontend_routes[]?, .frontend.routes[]?] | length > 0' "$GATE_CFG" >/dev/null 2>&1; then
   if have agent-browser && agent_browser_contract; then
-    say "✓ agent-browser (frontend waves planned; open/read/errors contract)"
+    say "✓ agent-browser (frontend waves planned; open/snapshot/errors contract)"
   else
     say "❌ agent-browser MISSING or incompatible (hard — frontend waves planned)"
     HARD_MISSING+=("agent-browser")
@@ -144,12 +144,32 @@ fi
 for tool in sonar sonar-scanner; do
   if have "$tool"; then say "✓ $tool"; else say "– $tool missing: skip (logged)"; SKIPPED+=("$tool"); fi
 done
+SUPABASE_AVAILABLE=false
 if have supabase; then
-  say "✓ supabase"
+  say "✓ supabase"; SUPABASE_AVAILABLE=true
 elif have npx && npx supabase --version >/dev/null 2>&1; then
-  say "✓ supabase (via npx)"
+  say "✓ supabase (via npx)"; SUPABASE_AVAILABLE=true
 else
   say "– supabase missing: skip (logged)"; SKIPPED+=("supabase")
+fi
+
+# Git worktrees of this repo share ONE local Supabase Postgres instance
+# (same supabase/config.toml project_id). A worktree that never re-checks
+# the DB's actually-applied migrations against its OWN supabase/migrations/
+# can silently trust a schema another worktree advanced out from under it
+# (see migration-drift-check.sh) — the with-shared-lock only serializes
+# concurrent migrations, not this sequential drift.
+if [ "$SUPABASE_AVAILABLE" = true ] && [ -d supabase/migrations ]; then
+  if DRIFT_SH="$(resolve_helper migration-drift-check.sh)"; then
+    if bash "$DRIFT_SH"; then
+      say "✓ local Supabase DB matches this worktree's migrations"
+    else
+      say "❌ local Supabase DB has migrations this worktree's supabase/migrations/ doesn't (hard — see message above; run \`supabase db reset\` from this worktree)"
+      HARD_MISSING+=("migration-drift")
+    fi
+  else
+    say "⚠ migration-drift-check.sh not found — cannot verify the local DB matches this worktree's migrations"
+  fi
 fi
 if have sonar; then
   if [ -n "${SONAR_TOKEN:-}" ] || sonar auth status >/dev/null 2>&1; then
