@@ -99,7 +99,8 @@ roulette). Concurrency of MODELS is the default; concurrency of WRITES is
 not. One lane owns each artifact/file at a time, while the other produces
 an independent proposal, test strategy, or review. User stories run in
 dependency waves; every wave is checked by a hard gate
-(ACs/tests, build, CodeRabbit review, Sonar secrets scan, browser smoke).
+(ACs/tests, build, CodeRabbit review, browser smoke). Sonar's `sonar_cmd`
+runs once per PROJ, at the PROJ-end Quality Gate, not per wave (§7).
 Mode 1 pairs both providers concurrently around one write owner;
 file-disjoint stories may run as a shared-checkout team inside the
 writer lane (Mode 2, cheap); isolated writer processes with worktrees
@@ -967,8 +968,8 @@ main
   of 3.
 - **Order per parallel wave:** per-US Ralph runs IN the worktree
   (cwd = worktree; the code is not merged yet) → merge gate →
-  wave gate (build, CodeRabbit, Sonar, smoke) ONCE on the merged PROJ
-  branch.
+  wave gate (build, CodeRabbit, smoke) ONCE on the merged PROJ
+  branch. Sonar runs once per PROJ at PROJ end, not per wave (§7).
 - Mode 3 uses a semantic **merge gate**: merge in dependency order, fix
   trivial conflicts, escalate semantic ones. Additionally: **union merge of
   the agent.md files**.
@@ -1047,7 +1048,8 @@ port allocation. Mode 3 stays disabled until this passes.
 | `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component) |
 | `codex` | Codex phase lane + provider-opposite review via `codex exec` | 🟡 preferred, degradable — missing/unauthenticated → single-provider run with model-opposite review, flagged in report + PR body, never silent |
 | `agent-browser` | smoke tests in the wave gate, browser E2E in P6 | ✅ hard for frontend waves; backend-only: unused |
-| `sonar_cmd` dependencies | project-defined local scan + secrets check in every wave gate | ✅ hard through the configured command |
+| `sonar_cmd` dependencies | project-defined local scan + secrets check, once per PROJ at the PROJ-end Quality Gate — no wave gate runs it | ✅ hard through the configured command |
+| `supabase` (drift check) | `migration-drift-check.sh`: compares the shared local DB's applied migrations against this worktree's own `supabase/migrations/` | 🟡 only if Supabase in the stack; hard-fails P0 preflight and every wave gate on drift |
 | `sonar` | optional additional PROJ-end Sonar CLI/API stream | 🟡 skippable with explicit PROJ-end disposition; never skips `sonar_cmd` |
 | `sonar-scanner` | full quality gate at PROJ end (P6) | 🟡 skippable with log entry |
 | `supabase` | migrations, types, local instances (if the product uses Supabase) | 🟡 only if Supabase in the stack |
@@ -1070,20 +1072,24 @@ progress.md/state.json. Auth is checked too (`gh auth status`,
   visible. The waiting rule in §8 is only a fallback for outages.
 - The `.coderabbit.yaml` preflight (exists in Skill 5) remains.
 
-### Sonar — Two Stages (project command plus full-project job)
+### Sonar — One Stage, PROJ end only
 - **`sonar_cmd`**: required project-defined local change analysis + secrets
-  scan in every WAVE GATE — fast, local, no CI round trip. It runs from the
-  persistent PROJ worktree and may call `sonar-scanner`, an npm script, or a
-  wrapper. Missing or non-zero execution blocks; there is no hard-coded
-  `command -v sonar` skip. Secrets are found BEFORE they enter the branch
-  history, not at PROJ end.
-- **`sonar-scanner`**: full project analysis + quality gate ONCE at
-  PROJ end (P6). Setup/auth/coverage per the `sonar-cli` skill.
+  scan, run ONCE per PROJ at the PROJ-end Quality Gate — no wave gate runs
+  it (a wave gate certifies ACs, regressions, build, CodeRabbit, and smoke
+  only). It runs from the persistent PROJ worktree and may call
+  `sonar-scanner`, an npm script, or a wrapper. Missing or non-zero execution
+  blocks; there is no hard-coded `command -v sonar` skip. Because it runs
+  once against the whole assembled PROJ diff, it covers every wave's
+  cumulative changes, not just the latest one.
+- **`sonar-scanner`**: the same PROJ-end run also feeds the full quality-gate
+  CLI/API stream (issues, coverage, duplication). Setup/auth/coverage per the
+  `sonar-cli` skill.
 - **Environment: SonarQube Cloud, already set up** (org, token, project
   config present) — the P0 preflight only verifies auth
   (`sonar auth status`, `SONAR_TOKEN`) instead of doing setup.
-- The PROJ-end scanner may still be dispositioned separately. The per-wave
-  `sonar_cmd` is mandatory and fails closed.
+- Skip is allowed only when `sonar`/`sonar-scanner` are unavailable or the
+  project has no Sonar config; any other skip is rejected. The PROJ-end
+  `sonar_cmd` is otherwise mandatory and fails closed.
 
 ### Claude + Codex CLI Adapters
 - `claude -p` and `codex exec` are first-class phase lanes. The runner
@@ -1234,7 +1240,7 @@ sequentially).
 | Wave gate red | fix and re-run; 3× red on the SAME check → stop condition |
 | Critical bug survives 3 fix attempts | stop condition |
 | Semantic merge conflict (parallel) | 1 resolution attempt with the contract as reference; unresolved → stop condition |
-| Tool missing / auth broken / env broken | stop condition (never skip silently; the per-wave `sonar_cmd` is mandatory) |
+| Tool missing / auth broken / env broken | stop condition (never skip silently; the PROJ-end `sonar_cmd` is mandatory) |
 | Rate limit exhausted (CodeRabbit) | wait until the window frees up, max 1h; then stop condition |
 | Security-critical (secrets in code, auth bypass) not auto-fixable | stop condition, do NOT commit the wave |
 
@@ -1284,7 +1290,7 @@ notification failure never loses or invalidates the report.
 | P3 reads/writes the curated ARCHITECTURE.md, produces a delta | Skill 3 (per-PROJ architecture without a baseline) |
 | P0 setup with context pack + injector hook | FIRST-ACTION block + if/else context logic in Skill 5 |
 | Paired Claude + Codex lanes by default; worktrees for concurrent writers | one host process plus same-host subagents in a shared checkout |
-| required project `sonar_cmd` in every wave gate | Sonar only at PROJ end |
+| required project `sonar_cmd`, secrets caught before merge | Sonar only at PROJ end (this concept originally proposed running `sonar_cmd` in every wave gate; the shipped implementation kept it PROJ-end-only — see §7) |
 | Findings ledger as the central fix queue | 4 separate finding streams |
 | Minimalism ladder in implementer prompts | only the Ken review at PROJ end (Ken stays as the net) |
 | Folder agent.md with protocol + curation | agent.md per feature only, without curation |
@@ -1401,7 +1407,11 @@ agentic workflow — take them or leave them.
    worktree, migrations applied from zero. Ralph's AC runs become
    deterministic (no state bleed between iterations or between parallel
    stories), and migration collisions between parallel stories surface
-   at the merge gate instead of corrupting a shared dev DB.
+   at the merge gate instead of corrupting a shared dev DB. Until this is
+   built, `migration-drift-check.sh` (§7) is a lighter, shipped mitigation:
+   it does not prevent the shared DB from drifting, but it stops any
+   worktree from silently trusting a schema a sibling worktree already
+   changed underneath it.
 
 3. **Dev container as the environment contract.** A
    `devcontainer.json`/base image that pins node, pnpm, jq, and the

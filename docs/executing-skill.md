@@ -64,6 +64,11 @@ Required setup includes:
   data and hosted-auth budgets remain shared and use the configured common lock.
 - CodeRabbit config at `.coderabbit.yaml` or `.coderabbit.yml`, with focused path filters.
 - Supabase CLI or equivalent Supabase tooling when the project uses Supabase.
+  On a Supabase project, every wave gate also re-checks that the shared local
+  DB's applied migrations still match this worktree's own
+  `supabase/migrations/` (`migration-drift-check.sh`) — the common lock above
+  only serializes concurrent migrations, not one worktree silently advancing
+  the schema a sibling worktree still trusts.
 - Playwright MCP when planned frontend routes require full QA later.
 - `agent-browser`, `coderabbit`, and `jq` CLIs for wave gates.
 - `BASE_SHA`, recorded with `git rev-parse HEAD`.

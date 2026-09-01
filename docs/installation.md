@@ -61,5 +61,5 @@ the ladder, recorded in state.json and flagged in the reports.
   again; do not try to push from `~/.claude/skills/` or `~/.codex/skills/`.
 - Re-running the installers also refreshes the shared P0/P8 worktree helper,
   the plan-consistency validator, and the provider-specific Wave Gate.
-- The 0-to-8 core chain and its `cross-review` mechanism are installed, along with the documented optional skills: `bugfixing`, `refactor-dreamer`, and `sonar-cli`.
+- The 0-to-8 core chain and its `cross-review` mechanism are installed, along with the documented optional skills: `bugfixing`, `refactor-dreamer`, `sonar-cli`, `supabase-local-dev`, and `vibecoder`.
 - `CLAUDE.md` is not installed as a skill. It is a repo-level pointer file only.

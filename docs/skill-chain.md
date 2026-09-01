@@ -116,6 +116,14 @@ removes the worktree only after green final CI, an identical pushed upstream
 commit, and a clean tree; otherwise reports retain its path, cleanup reason,
 and the safe P8 resume command that reseals before retrying cleanup.
 
+`worktree.sh`'s shared lock only serializes concurrent migrations — it does
+nothing about one worktree advancing the shared database's schema while a
+sibling worktree keeps trusting its own, older `supabase/migrations/`. For a
+project on Supabase, `preflight.sh` (P0) and `wave-gate.sh` (every wave) both
+run `migration-drift-check.sh`, hard-failing with the exact drifted migration
+version(s) and the `supabase db reset` fix. See the `supabase-local-dev`
+skill for the same check outside the chain's P0/wave-gate flow.
+
 Wave plans carry structured AC/test-file mappings, a broad regression suite,
 auth-budget metadata, and deterministic frontend route expectations. Planning,
 Checkpoint 1, and P0 run the same consistency validator. A green wave gate

@@ -87,7 +87,12 @@ What makes an overnight run trustworthy:
   sibling worktree. Dependencies are installed inside it; `.env.local`, the
   development database, and hosted-auth limits remain deliberately shared and
   are surfaced in state and reports. Migrations and auth-consuming gates use a
-  common repository lock.
+  common repository lock — which only serializes concurrent migrations. On a
+  Supabase project, `migration-drift-check.sh` additionally guards the
+  sequential case: preflight (once, at P0) and every wave gate re-verify that
+  the shared local DB's applied migrations still match this worktree's own
+  `supabase/migrations/`, hard-failing with the drifted version(s) and the fix
+  otherwise.
 - **Evidence-based wave gates.** Step 4 runs `wave-gate.sh --ac-only` to put
   current-HEAD AC results directly into the gate cache; the full gate reuses
   exact ID + command + HEAD matches, then runs the declared broad regression
@@ -151,6 +156,7 @@ unavailable.
 bugfixing
 refactor-dreamer
 sonar-cli
+supabase-local-dev
 vibecoder
 ```
 
@@ -168,6 +174,14 @@ candidates, producing a `chain-input.md` that can feed back into the chain.
 
 `sonar-cli` is a focused helper for configuring and running SonarScanner
 CLI and triaging quality-gate data.
+
+`supabase-local-dev` diagnoses shared-local-Supabase-DB problems on a repo
+using local Supabase: migration drift between git worktrees of the same
+repo (they share one local Postgres instance, keyed by `config.toml`'s
+committed `project_id`), RLS/grant surprises from testing as the `postgres`
+superuser, and `config.toml` vs. deployed truth. Gives the same
+`migration-drift-check.sh` check the chain runs automatically at P0/wave-gate,
+for use outside that flow — a plain dev session on `main`, a manual repro.
 
 `vibecoder` runs a freeform exploratory coding session on a scratch branch:
 it keeps a live journal of what gets tried and why direction changes while
