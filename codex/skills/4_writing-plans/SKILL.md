@@ -461,7 +461,7 @@ bash scripts/cross-review.sh plan <X> <theme> \
     specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
   --ground-truth specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
     specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/GUIDELINES.md \
-  --author-provider <current-writer> --round 1
+  --author-provider <current-writer> --persist --round 1
 ```
 
 Drop any path that does not exist — the script fails on a missing file. This is
@@ -470,6 +470,12 @@ reject it here. Do not silently trim: tell the user which inputs you left out,
 and prefer dropping ground truth over dropping a wave plan.
 Resolve Critical/High findings with the user before execution. On no, record
 that the human declined it.
+
+`--persist` is required, not optional — it appends this round to `.cross_review[]`
+in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
+path reads both to decide whether it can skip its own interactive walk-through;
+without `--persist`, CP1 has no way to tell "declined" from "ran clean" and
+always falls through to the full interactive loop.
 
 Once the cross-review is settled (done or declined), say once:
 

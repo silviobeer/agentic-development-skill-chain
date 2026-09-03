@@ -29,6 +29,14 @@ ends in exactly one of `adopt` / `change (how)` / `reject (why)` /
 Never silently absorb feedback by editing an artifact with no recorded
 rationale, and never seal an approval while a cascade is unapplied.
 
+CP1 has one narrow exception: Step 0's fast path, which auto-adopts and seals
+without an interactive prompt — but only when the upstream cross-reviews
+already did the judging and came back clean. It is still a recorded decision
+(one decision-log entry, same as any other), it is still conditional on the
+machine validator, and anything that actually needed a human call still gets
+the full loop. It removes a redundant re-confirmation, not the checkpoint
+itself.
+
 ## Input
 
 1. `specs/PROJ-<X>-<theme>/architecture-delta.md` (or `3-4_plan/PROJ-<X>-architecture.md`)
@@ -38,6 +46,51 @@ rationale, and never seal an approval while a cascade is unapplied.
 5. `specs/PROJ-<X>-<theme>/decisions.md` from earlier rounds (if present)
 
 ## Workflow (CP1 — the main application)
+
+### 0. Fast path — auto-approve when upstream was already clean
+
+Before presenting anything, check whether this round needs the interactive
+walk-through at all. All four must hold, checked in this order (cheapest
+first):
+
+1. `specs/PROJ-<X>-<theme>/decisions.md` has no open or deferred entry from an
+   earlier round. An earlier round that left something open is a standing
+   decision this round must still honor or revisit — never silently paper
+   over it. Fails → no fast path, continue at Step 1.
+2. Both cross-reviews actually ran — `.cross_review[]` in state.json (appended
+   by `cross-review.sh --persist`, never by hand) has at least one record with
+   `mode == "architecture"` and at least one with `mode == "plan"`:
+   ```bash
+   bash ~/.claude/skills/4a_checkpoint/scripts/state.sh get <X> <theme> \
+     '[.cross_review[]? | .mode] | (index("architecture") != null) and (index("plan") != null)'
+   ```
+   `false` (a mode never ran — declined, or run without `--persist`) → no fast
+   path, continue at Step 1.
+3. Nothing from those rounds is still open. This is the exact query
+   `cross-review.sh` itself uses to decide BLOCKING — reuse it rather than
+   inventing a second definition of "clean":
+   ```bash
+   jq '[.findings[]? | select(.status == "open") | select(.severity == "critical" or .severity == "high") | select(.source == "cross-review" or ((.sources // []) | index("cross-review")))] | length' \
+     specs/PROJ-<X>-<theme>/findings.json 2>/dev/null || echo 0
+   ```
+   Nonzero (a finding needed a human decision and nobody resolved it in the
+   ledger) → no fast path, continue at Step 1.
+4. Run the machine consistency validator (exact command in Step 4 below). Any
+   error → no fast path, continue at Step 1.
+
+If all four hold: skip the interactive walk-through (Steps 1-2) and the
+cascade (Step 4 — nothing changed, so there is nothing to cascade). Append one
+decision-log entry to `decisions.md` (`templates/decisions.md.tmpl`):
+Decision `adopt`, Detail "auto-approved — architecture and plan cross-review
+both clean, validator green", Cascade `none`. Go straight to Step 5 (Seal the
+approval) and tell the user in one line that CP1 auto-approved and why.
+
+This is the only auto-approve path. Anything cross-review didn't clear, or
+that a human already had to judge, or that an earlier round left open, always
+gets the interactive loop below — that is precisely the case where a rubber
+stamp is not safe. The fast path removes a redundant re-confirmation of
+already-reviewed artifacts; it does not remove the one check that only fires
+when something is actually wrong.
 
 ### 1. Present a compact review package — never raw artifacts
 
@@ -155,8 +208,9 @@ turn them into a baseline the developer actually stands behind.
 
 ## Completion Checklist
 
-- [ ] Review package presented compactly (summary, waves, risks)
-- [ ] Every point closed as adopt / change / reject / defer — none skipped
+- [ ] Fast path checked first (Step 0); took it only if decisions.md was clean, `.cross_review[]` had both an `architecture` and a `plan` record, the findings ledger had zero open Critical/High from cross-review, and the validator passed
+- [ ] Review package presented compactly (summary, waves, risks) — fast-path rounds skip this
+- [ ] Every point closed as adopt / change / reject / defer — none skipped (or the single fast-path `adopt` entry)
 - [ ] Decision log appended with one `D-<X>-<NN>` entry per point
 - [ ] Every change cascaded through ALL affected artifacts; Cascade field filled
 - [ ] Plan self-review re-run after cascades — consistent

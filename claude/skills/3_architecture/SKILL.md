@@ -264,7 +264,7 @@ bash scripts/cross-review.sh architecture <X> <theme> \
     specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
   --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
     specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
-  --author-provider <current-writer> --round 1
+  --author-provider <current-writer> --persist --round 1
 ```
 
 Drop the `migration-design.md` line if this PROJ has no such file.
@@ -275,6 +275,12 @@ it can only check the PRDs it is given. If the embedded-context cap rejects the
 call, name to the user which inputs you left out before re-running.
 Resolve Critical/High findings with the user before plan writing. On no, record
 that the human declined it.
+
+`--persist` is required, not optional — it appends this round to `.cross_review[]`
+in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
+path reads both to decide whether it can skip its own interactive walk-through;
+without `--persist`, CP1 has no way to tell "declined" from "ran clean" and
+always falls through to the full interactive loop.
 
 ## Git Commit
 ```
