@@ -15,8 +15,9 @@ Read both sources:
 - Architecture: `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
 - All PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (requirements per feature)
 - For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+- If present, `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md` (DDL/trigger/validation detail behind a data-migration decision)
 
-The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance.
+The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance. The migration-design note, if present, is the source of migration-level SQL/trigger detail — cite it by decision, do not copy it.
 
 ## Decomposed PROJ Handling
 
@@ -64,6 +65,16 @@ Wave 3: PROJ-<X>-PRD-1-US-3 (full-stack)
 ```
 
 Record the dependency analysis — you will put it into the first wave plan as a reference.
+
+**Append the wave shape to the architecture delta.** Other stories' wave plans are
+never injected into an implementer's context bundle (by design — see
+`compile-context-bundles.mjs`'s never-inject list), so a Wave 2 implementer has no
+other way to know Wave 1/Wave 3 exist without reading them. `architecture` (3)
+already created `specs/PROJ-<X>-<theme>/architecture-delta.md` with the decisions
+section; append one `## Wave shape` section to that same file, one line per wave
+(scope, complexity/model, execution mode, what it depends on) — no task detail, that
+stays in the wave plans. If the delta file is missing (older PROJ, architecture ran
+before this rule existed), create it with just this section.
 
 ### 3. Break each wave into tasks
 
@@ -380,7 +391,7 @@ After writing all wave files, review them with fresh eyes:
 
 1. **Placeholder scan:** Any "TBD", "TODO", incomplete descriptions, vague behaviour?
 2. **AC coverage:** Every AC from every PRD is covered by at least one task across the waves?
-3. **Task decomposition:** Each task completable in under an hour?
+3. **Task decomposition:** Each task completable in under an hour? A task whose "What to build" needs more than a short paragraph, or that quotes literal SQL/DDL/trigger bodies instead of describing the resulting behaviour, is over-specified — split it or move the detail to `migration-design.md` and cite it ("per migration-design.md Decision 3") instead of restating it.
 4. **Type consistency:** File paths match the project structure?
 5. **Dependency check:** Can each wave actually run after its predecessors?
 6. **No vague instructions:** Every "What to build" has concrete inputs/outputs?
@@ -388,6 +399,8 @@ After writing all wave files, review them with fresh eyes:
 8. **Post-Wave Notes placeholder:** Every US has the empty `### Post-Wave Notes` block for Skill 7's documentation harvest.
 9. **Components-section complete:** every UI task declares `Reuse:` and `Create new:`. Registry `docs/components.md` is freshly generated (`node scripts/gen-component-registry.mjs`), and every `Create new:` names the semantic neighbours checked against it (Badge/Chip/Tag, Card/Panel, Drawer/Sheet) and why none fit. A new component without that comparison is an unreviewed duplicate risk — the cheapest place to catch it is here, before anyone writes code.
 10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `1d_mockups/implementation-handoff.md`; every UI task carries the relevant constraints.
+11. **No narrated-diff scaffolding:** no "Post-cross-review addition," "Post-cross-review correction," "an earlier draft," or similar language in any task. Feedback is reconciled by rewriting the task as if correct the first time; review-round history stays in the cross-review output, not the plan.
+12. **Wave shape appended to the delta:** `architecture-delta.md` has a `## Wave shape` section covering every wave in this PROJ.
 
 Fix issues inline. Move on.
 
@@ -423,7 +436,8 @@ Ask the user to review the wave-plan artifacts with a different model before exe
 
 - Exact file paths always
 - Describe behaviour precisely ("reject input where X is empty, return 400 with message Y")
-- No pre-written test or implementation code — that belongs to the teammate/subagent
+- No pre-written test or implementation code — that belongs to the teammate/subagent. This includes literal SQL/DDL: describe the schema change and its validation in prose, or cite `migration-design.md` by decision — never paste the statement into a task.
+- Cite architecture decisions by ID ("per architecture Decision 4"); do not restate their rationale — the architecture doc is the source of WHY, the task is the source of WHAT
 - DRY, YAGNI, TDD, frequent commits
 - Every frontend or full-stack US must include a **Smoke Test** section with route + verification. Backend-only US omit this.
 - ACs must be deterministically verifiable — Ralph loop checks each AC with actual test commands.

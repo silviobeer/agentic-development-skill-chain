@@ -94,6 +94,15 @@ Exit codes: `0` clean or non-blocking only; `3` Critical/High findings;
 current handoff: fix and perform one re-review (`--round 2`); a remaining red
 round goes to the human. Medium/Low findings are reported or deferred as debt.
 
+**Applying a finding: reconcile, don't narrate.** Rewrite the affected section of
+the artifact as if it were correct the first time. Never leave "Correction
+(post-review)," "Post-cross-review addition," "an earlier draft said X," or similar
+narrated-diff scaffolding in the artifact itself — that turns every future reader
+into an archaeologist who has to reconstruct current truth from a change log. The
+round's findings and the fix are already recorded in the cross-review output
+consumed at handoff time; the artifact only needs to be correct, not annotated with
+its own history.
+
 ## Routing and output integrity
 
 - Claude-authored artifacts go to Codex; Codex-authored artifacts go to Claude.

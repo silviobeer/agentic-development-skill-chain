@@ -162,13 +162,14 @@ function sourceContent(id) {
     case "product":              return { title: "Product (docs/PRODUCT.md)", text: readOr("docs/PRODUCT.md", "no intake baseline yet") };
     case "architecture-overview":return { title: "Architecture overview (docs/ARCHITECTURE.md)", text: readOr("docs/ARCHITECTURE.md", "no intake baseline yet") };
     case "architecture-delta": {
-      // Until Stage 3 introduces the baseline/delta rework, the architecture
-      // skill writes 3-4_plan/PROJ-<X>-architecture.md — fall back to it so the
-      // bundle carries the PROJ's actual architecture decisions.
+      // The architecture skill (3) always writes this file, and writing-plans (4)
+      // appends its Wave shape section. The full-doc fallback below exists only
+      // for PROJs planned before that rule shipped; a bundle built from the full
+      // document risks the per-role token budget the delta exists to protect.
       const delta = join(BASE, "architecture-delta.md");
       if (existsSync(delta)) return { title: `Architecture delta of this PROJ (${delta})`, text: readFileSync(delta, "utf8").trim() };
       const arch = join(BASE, "3-4_plan", `PROJ-${projX}-architecture.md`);
-      if (existsSync(arch)) return { title: `PROJ architecture (${arch} — architecture-delta.md ships with Stage 3)`, text: readFileSync(arch, "utf8").trim() };
+      if (existsSync(arch)) return { title: `PROJ architecture (${arch} — no architecture-delta.md found; legacy PROJ or missed step)`, text: readFileSync(arch, "utf8").trim() };
       return { title: `Architecture delta of this PROJ (${delta})`, text: `_(source missing: ${delta} and ${arch} — no new decisions recorded)_` };
     }
     case "guidelines":           return { title: "Guidelines (docs/GUIDELINES.md)", text: readOr("docs/GUIDELINES.md", "no intake baseline yet") };

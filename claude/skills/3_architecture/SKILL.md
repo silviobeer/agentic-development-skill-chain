@@ -87,6 +87,15 @@ That's enough. Field-level details and per-entity columns are a wave-plan / impl
 #### C) Key Tech Decisions (cross-cutting only)
 Only decisions that multiple PRDs or multiple user stories depend on. Justify WHY for a PM audience, and mark which PRDs are affected.
 
+**Length discipline:** each decision is a short paragraph — state, reason, affected
+PRDs, roughly 3-6 sentences. Cite a PRD or concept requirement by ID ("per PRD-2 US-2
+AC-9") rather than quoting or re-deriving its text; the reader can open the PRD for
+the exact wording. Don't walk through why an edge case doesn't apply or narrate the
+reasoning that got you to the decision — state the decision and its one real reason.
+A decision that needs more than that to be verifiable is a sign the detail belongs in
+`migration-design.md` (see the escape valve below), not that this paragraph should
+grow to hold it.
+
 Examples of what belongs here:
 - "Real-time updates via Supabase subscriptions (not polling) — because users need instant feedback. Affects: PRD-2, PRD-3."
 - "Server-side auth check via middleware — because all routes need protection. Affects: all PRDs."
@@ -98,6 +107,19 @@ Examples of what does NOT belong here (leave to implementers):
 - Specific API route naming
 - Tailwind class patterns
 - Zod schema shapes
+
+**Escape valve — irreversible one-time data migrations:** a PROJ that reclassifies,
+merges, or renames live data sometimes has a decision whose WHY cannot be verified
+without DDL-level detail: uniqueness scope, trigger invariants, row-count/content
+validation, rollback conditions. That detail is real architecture work, but it does
+not belong in this PM-facing file. Write it to
+`specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md` instead, and reference
+it from this document with one line per decision, e.g. "Migration ordering and
+validation are detailed in `PROJ-<X>-migration-design.md` § Decision 3." The
+architecture doc still names the decision and its WHY in plain language — it just
+does not carry the SQL/trigger/validation-query text itself. If you catch yourself
+writing a CHECK constraint, a trigger body, or a literal `UPDATE`/`ALTER TABLE`
+statement into this file, that sentence belongs in the migration-design note.
 
 #### C2) UI Implementation Constraints (only if UI handoff exists)
 Summarize only constraints that affect multiple PRDs or waves:
@@ -148,7 +170,61 @@ Template:
 [New packages with affected PRDs]
 ```
 
+If any Cross-Cutting Tech Decision used the migration-design escape valve above, write
+`specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md` alongside the architecture
+file — free-form, organized by decision, DDL/trigger/validation detail welcome there.
+
 **The architecture does NOT modify PRD files.** PRDs stay focused on requirements. Tech design is a separate document.
+
+**Reconciling review or user feedback:** when cross-review or the user's own review
+changes a decision, rewrite the affected section as if it were correct the first time.
+Do not leave "Correction (post-review)," "an earlier draft said X," or similar narrated-diff
+scaffolding in the file — that history belongs to the cross-review round output, not the
+architecture doc. A reader opening this file for the first time should never need to
+reconstruct what used to be true to find out what is true now.
+
+### 4a. Write the Architecture Delta (always)
+
+Every implementer subagent's context bundle (compiled by `4b_setup`) injects this
+PROJ's architecture decisions under a hard 6500–7000 token budget shared with the
+product doc, guidelines, security baseline, and (for UI stories) the design system.
+The bundle compiler prefers a condensed delta file over the full architecture
+document, and a bundle that doesn't fit its budget gets the implementer role
+**blocked outright** — not truncated. A full architecture document with any real
+depth (a handful of cross-cutting decisions with their WHY, an entity list, a
+migration-heavy PROJ) can easily exceed that budget on its own. Do not leave this to
+be discovered mid-execution: write the delta yourself, every time, as part of this
+same step — never something a later skill has to notice and improvise around.
+
+Save to `specs/PROJ-<X>-<theme>/architecture-delta.md` (PROJ root, not `3-4_plan/`):
+
+```markdown
+# PROJ-<X> Architecture Delta
+
+Condensed decision summary for implementer context bundles. Full rationale and
+detail: `3-4_plan/PROJ-<X>-architecture.md`.
+
+## Scope
+[2-4 sentences — same substance as the Overview section, compressed further]
+
+## Data model decisions
+- [One line per decision: the WHAT and a short parenthetical WHY. No elaboration,
+  no edge-case walkthroughs, no SQL.]
+
+## [Other Cross-Cutting Tech Decisions groupings as needed]
+- [Same one-line format]
+```
+
+This is a compression pass, not a new writing task — every line in the delta must
+trace to something already said, in more detail, in the full architecture file.
+Target well under 1500 tokens (roughly 100–150 lines) regardless of how large the
+full document is; if the full document already fits comfortably under that on its
+own (a small PROJ, few decisions), the delta will simply be a shorter restatement —
+still write it, so the bundle compiler never has to fall back to the full document.
+
+Waves do not exist yet at this point in the chain — do not add a wave-shape section
+here. `writing-plans` (4) appends one to this same file once the wave graph exists;
+leave it that section for that skill.
 
 ### 5. User Review
 - Present the architecture for review
@@ -164,14 +240,18 @@ Template:
 - [ ] Cross-cutting tech decisions documented (WHY, not HOW)
 - [ ] Each decision marks which PRDs are affected
 - [ ] No over-specification — component trees, API shapes, and UI patterns are left to implementers
+- [ ] No SQL/DDL/trigger text in the architecture file — moved to `migration-design.md` if any decision needed it
+- [ ] No "Correction (post-review)" or "earlier draft" narration left in the file — feedback is reconciled, not appended
+- [ ] Each decision is ~3-6 sentences; PRD/concept text is cited by ID, not quoted or re-derived
 - [ ] New dependencies listed (skip existing packages)
 - [ ] Architecture file saved to `3-4_plan/PROJ-<X>-architecture.md`
+- [ ] Architecture delta saved to `architecture-delta.md`, decisions only, every line traceable to the full document
 - [ ] User has reviewed and approved
 - [ ] `specs/INDEX.md` status updated to "In Progress" (if INDEX exists)
 
 ## Handoff
 After approval, tell the user:
-> "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
+> "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`, with a condensed `architecture-delta.md` for implementer context bundles. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
 
 Before handing off, explicitly ask: "Shall I run the optional
 opposite-provider cross-review of this architecture now? Default: yes." Wait
@@ -181,10 +261,13 @@ every input that establishes truth for it:
 ```bash
 bash scripts/cross-review.sh architecture <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
+    specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
   --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
     specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
   --author-provider <current-writer> --round 1
 ```
+
+Drop the `migration-design.md` line if this PROJ has no such file.
 
 Drop any path that does not exist — the script fails on a missing file. Never
 drop a PRD to stay quiet: the reviewer checks that no requirement was lost, and
