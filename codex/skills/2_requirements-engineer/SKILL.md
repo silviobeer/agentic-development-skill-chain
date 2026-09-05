@@ -204,15 +204,15 @@ The review must test concept/UI traceability, missing or contradictory stories,
 acceptance-criteria testability, edge and permission behavior, cross-PRD
 consistency, scope drift, and premature architecture.
 
-- Exit `0`: show Medium/Low findings to the user, apply accepted changes, and
-  obtain final approval.
-- Exit `3`: resolve every Critical/High finding with the user, update the PRDs,
-  and run one final `--round 2`. If a blocking finding remains, stop the
-  handoff and present the unresolved decision; never silently ignore it.
-- Exit `1`: the review did not run. Fix the infrastructure problem before
-  handoff.
+Follow `cross-review`'s automatic loop: reconcile findings of any severity
+within approved scope and run `--round 2`, then `--round 3` while findings
+remain. Stop early with no findings; exit `0` may still contain Medium/Low.
+Ask the user only for unresolved product decisions. After round 3, remaining
+Critical/High findings block handoff; report or defer remaining Medium/Low.
+Exit `1` means the review did not run: fix infrastructure before handoff.
 
-Two rounds is the maximum. The review is read-only and does not replace final
+Three rounds is the automatic maximum; additional manually requested rounds
+have no limit. The review is read-only and does not replace final
 product-owner approval.
 
 ### 6. Handoff

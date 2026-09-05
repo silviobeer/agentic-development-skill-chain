@@ -8,9 +8,9 @@ description: "Route a concept, PRD set, architecture, implementation plan, QA ev
 Same-model review is an echo chamber. This skill asks the other provider to
 try to break an artifact, with identical severity rules and normalized JSON
 Lines output for every mode. It never starts by itself: the producing skill
-invokes it at handoff. Requirements, QA, and P7 documentation are mandatory
-gates; concept, architecture, and plan reviews may still be elected by the
-user.
+invokes it automatically when its outputs are saved, before user approval or
+handoff. Concept, architecture, plan, requirements, QA, and P7 documentation
+reviews are mandatory gates; do not ask the user whether to start them.
 
 ## Modes
 
@@ -33,6 +33,10 @@ permission to run commands, making read-only behaviour independent of sandbox
 support.
 
 ## Run it
+
+If `scripts/cross-review.sh` has not been installed in the project yet, use
+`~/.codex/skills/cross-review/scripts/cross-review.sh` in the commands below.
+Run from the project root so artifact paths resolve correctly.
 
 Before P0, state.json does not exist. Pass the author explicitly; findings are
 written to stdout for the human, never to a ledger:
@@ -91,8 +95,23 @@ bash scripts/cross-review.sh docs <X> <theme> \
 
 Exit codes: `0` clean or non-blocking only; `3` Critical/High findings;
 `1` infrastructure failure; `64` invalid use. Critical/High findings block the
-current handoff: fix and perform one re-review (`--round 2`); a remaining red
-round goes to the human. Medium/Low findings are reported or deferred as debt.
+current handoff.
+
+The producing skill automatically reconciles findings and re-reviews with
+`--round 2`, then `--round 3` while findings remain, including Medium/Low.
+No confirmation is needed for another round or fixes within approved scope;
+ask only when resolving a finding requires a product decision. Stop early
+when there are no findings. Exit `0` alone does not mean zero findings: inspect
+the emitted findings or the persisted round's `findings_added` count.
+Each script invocation runs one read-only review; the producing skill applies
+fixes between calls (QA delegates fixes to its P6 controller). On persistent
+runs, update finding status through `ledger.mjs` before re-review.
+Three rounds is the automatic maximum: remaining Critical/High findings block handoff
+and go to the human; remaining Medium/Low findings are reported or deferred
+as debt. Additional manually requested rounds have no limit: continue with
+`--round 4`, `--round 5`, and so on, preserving the same finding and handoff
+gates. A manual request authorizes the requested rounds, not an unbounded
+automatic loop. Infrastructure failures are not completed review rounds.
 
 **Applying a finding: reconcile, don't narrate.** Rewrite the affected section of
 the artifact as if it were correct the first time. Never leave "Correction

@@ -426,11 +426,43 @@ deployment response that will validate it. Do not compare configuration to a
 handwritten wish-list, and never call a mutating command such as `config:push`
 "verification" unless it reads the deployed value back and compares it.
 
+### 6a. Automatic Cross-Review
+
+Immediately after saving the complete wave plans and gate config and passing
+the deterministic validator, invoke `cross-review` in the same turn, before
+user approval or execution handoff. Do not ask whether to run it. Review the
+complete set — a wave left out is a wave whose sequencing nobody checked:
+
+```bash
+bash scripts/cross-review.sh plan <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md \
+    specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
+  --ground-truth specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/GUIDELINES.md \
+  --author-provider <current-writer> --persist --round 1
+```
+
+Drop any path that does not exist — the script fails on a missing file. This is
+the largest input in the chain, so the embedded-context cap is most likely to
+reject it here. Do not silently trim: tell the user which inputs you left out,
+and prefer dropping ground truth over dropping a wave plan.
+Follow `cross-review`'s automatic reconcile/re-review loop through round 3
+while findings of any severity remain; stop early when clean. Escalate remaining
+Critical/High findings before execution. Ask only for unresolved product
+decisions. Re-run the deterministic validator after any review-driven plan/config
+changes. Additional manually requested rounds have no limit.
+
+`--persist` is required, not optional — it appends this round to `.cross_review[]`
+in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
+path reads both to decide whether it can skip its own interactive walk-through;
+without `--persist`, CP1 has no evidence that the review ran and
+always falls through to the full interactive loop.
+
 ### 7. User Review
 
 Present all wave plans for approval. Adjust if needed.
 
-Ask the user to review the wave-plan artifacts with a different model before execution, for example GPT reviewing Claude output or Claude reviewing GPT output. The second-model review should look for missing AC coverage, unsafe wave ordering, vague tasks, missing component-reuse constraints, and weak gate commands.
+Present the automatic cross-review result with the wave plans. Re-run the deterministic validator after user-requested changes before handoff.
 
 ## Rules
 
@@ -448,36 +480,7 @@ Ask the user to review the wave-plan artifacts with a different model before exe
 
 ## Execution Handoff
 
-After saving all wave plans + the gate config:
-
-Ask before offering execution: "Shall I run the optional opposite-provider
-cross-review of these implementation plans now? Default: yes." Wait for a
-yes/no answer. On yes, run it over the complete set of plans — a wave left out
-is a wave whose sequencing nobody checked:
-
-```bash
-bash scripts/cross-review.sh plan <X> <theme> \
-  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md \
-    specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
-  --ground-truth specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
-    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/GUIDELINES.md \
-  --author-provider <current-writer> --persist --round 1
-```
-
-Drop any path that does not exist — the script fails on a missing file. This is
-the largest input in the chain, so the embedded-context cap is most likely to
-reject it here. Do not silently trim: tell the user which inputs you left out,
-and prefer dropping ground truth over dropping a wave plan.
-Resolve Critical/High findings with the user before execution. On no, record
-that the human declined it.
-
-`--persist` is required, not optional — it appends this round to `.cross_review[]`
-in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
-path reads both to decide whether it can skip its own interactive walk-through;
-without `--persist`, CP1 has no way to tell "declined" from "ran clean" and
-always falls through to the full interactive loop.
-
-Once the cross-review is settled (done or declined), say once:
+Once cross-review is complete and the user has approved the plans, say once:
 
 > "Cross-review settled. If you want the rest to run unattended, say
 > **'continue automatic until delivery, goal is PR draft'** — that means:

@@ -12,6 +12,10 @@ const clean = (value) => value.trim().replace(/^`|`$/g, "");
 const normalizeCommand = (value) => value.trim().replace(/\s+/g, " ");
 const sameSet = (left, right) =>
   left.size === right.size && [...left].every((value) => right.has(value));
+const MAX_TASK_BODY_LINES = 55;
+const NARRATED_DIFF_PATTERN = /Post-cross-review|an earlier draft/i;
+const EMBEDDED_SQL_PATTERN =
+  /\bRAISE EXCEPTION\b|\bCREATE (TABLE|TRIGGER|FUNCTION)\b|\bALTER TABLE\b|\bBEFORE (INSERT|UPDATE|DELETE)\b|\bUPDATE\s+\w+\s+SET\b|\bINSERT INTO\b/i;
 
 if (!process.argv[2]) {
   console.error("usage: validate-wave-plan.mjs <3-4_plan-directory> [repository-root]");
@@ -61,7 +65,7 @@ for (const file of planFiles) {
     if (taskMatch) {
       const task = `Task ${taskMatch[1].trim()}`;
       if (tasks.has(task)) fail(`wave ${wave}: duplicate task identifier ${task}`);
-      currentTask = { fulfills: new Set(), testFiles: new Set(), commands: new Map() };
+      currentTask = { fulfills: new Set(), testFiles: new Set(), commands: new Map(), body: [] };
       tasks.set(task, currentTask);
       inFiles = false;
       inGateCommands = false;
@@ -79,6 +83,7 @@ for (const file of planFiles) {
       }
     }
 
+    if (currentTask) currentTask.body.push(line);
     if (!currentTask) continue;
     const fulfillsMatch = line.match(/^\*\*Fulfills:\*\*\s*(.+)$/);
     if (fulfillsMatch) {
@@ -130,6 +135,17 @@ for (const file of planFiles) {
     }
     for (const id of metadata.commands.keys()) {
       if (!metadata.fulfills.has(id)) fail(`wave ${wave} ${task}: Gate command ${id} is absent from Fulfills`);
+    }
+    const bodyText = metadata.body.join("\n");
+    const bodyLines = metadata.body.filter((line) => line.trim() !== "").length;
+    if (bodyLines > MAX_TASK_BODY_LINES) {
+      fail(`wave ${wave} ${task}: task body is ${bodyLines} non-blank lines (max ${MAX_TASK_BODY_LINES}) — over-specified; split it or move migration/DDL detail to migration-design.md and cite it`);
+    }
+    if (NARRATED_DIFF_PATTERN.test(bodyText)) {
+      fail(`wave ${wave} ${task}: contains narrated-diff scaffolding ("Post-cross-review"/"an earlier draft") — reconcile review feedback by rewriting the task, not by appending review history`);
+    }
+    if (EMBEDDED_SQL_PATTERN.test(bodyText)) {
+      fail(`wave ${wave} ${task}: contains literal SQL/DDL — describe the resulting behaviour in prose, or cite migration-design.md by decision`);
     }
   }
   for (const id of acceptanceCriteria) {

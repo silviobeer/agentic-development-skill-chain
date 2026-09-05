@@ -179,7 +179,7 @@
         "required": ["mode", "round", "reviewer_provider"],
         "properties": {
           "mode": { "type": "string", "description": "Call site, e.g. docs (P7). P3/P4 modes are Stage 3." },
-          "round": { "type": "integer", "description": "1 or 2 — max 2 rounds, then §8 escalation" },
+          "round": { "type": "integer", "description": "Positive integer — up to 3 automatic rounds while findings remain; manually requested rounds have no limit" },
           "reviewer_provider": { "enum": ["claude", "codex"] },
           "reviewer_model": { "type": "string" },
           "degraded_fallback": { "type": "boolean", "description": "true when model-opposite within the surviving provider (opposite provider unavailable)" },

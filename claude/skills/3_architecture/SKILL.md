@@ -226,9 +226,44 @@ Waves do not exist yet at this point in the chain — do not add a wave-shape se
 here. `writing-plans` (4) appends one to this same file once the wave graph exists;
 leave it that section for that skill.
 
+### 4b. Automatic Cross-Review
+
+Immediately after saving the architecture and its delta (plus migration design
+when present), invoke `cross-review` in the same turn, before user approval or
+handoff. Do not ask whether to run it. Review the outputs against every input
+that establishes truth for them:
+
+```bash
+bash scripts/cross-review.sh architecture <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
+    specs/PROJ-<X>-<theme>/architecture-delta.md \
+    specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
+  --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
+  --author-provider <current-writer> --persist --round 1
+```
+
+Drop the `migration-design.md` line if this PROJ has no such file.
+
+Drop any path that does not exist — the script fails on a missing file. Never
+drop a PRD to stay quiet: the reviewer checks that no requirement was lost, and
+it can only check the PRDs it is given. If the embedded-context cap rejects the
+call, name to the user which inputs you left out before re-running.
+Follow `cross-review`'s automatic reconcile/re-review loop through round 3
+while findings of any severity remain; stop early when clean. Escalate remaining
+Critical/High findings before plan writing. Ask only for unresolved product
+decisions. Keep the delta aligned when reconciling findings. Additional manually
+requested rounds have no limit.
+
+`--persist` is required, not optional — it appends this round to `.cross_review[]`
+in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
+path reads both to decide whether it can skip its own interactive walk-through;
+without `--persist`, CP1 has no evidence that the review ran and
+always falls through to the full interactive loop.
+
 ### 5. User Review
 - Present the architecture for review
-- Ask the user to review the architecture artifact with a different model before approval, for example GPT reviewing Claude output or Claude reviewing GPT output
+- Present the automatic cross-review result alongside the architecture
 - Ask: "Does this design make sense across all PRDs? Any questions?"
 - Wait for approval before suggesting handoff
 
@@ -252,35 +287,6 @@ leave it that section for that skill.
 ## Handoff
 After approval, tell the user:
 > "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`, with a condensed `architecture-delta.md` for implementer context bundles. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
-
-Before handing off, explicitly ask: "Shall I run the optional
-opposite-provider cross-review of this architecture now? Default: yes." Wait
-for a yes/no answer. On yes, run it with the architecture under review and
-every input that establishes truth for it:
-
-```bash
-bash scripts/cross-review.sh architecture <X> <theme> \
-  --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
-    specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
-  --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
-    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
-  --author-provider <current-writer> --persist --round 1
-```
-
-Drop the `migration-design.md` line if this PROJ has no such file.
-
-Drop any path that does not exist — the script fails on a missing file. Never
-drop a PRD to stay quiet: the reviewer checks that no requirement was lost, and
-it can only check the PRDs it is given. If the embedded-context cap rejects the
-call, name to the user which inputs you left out before re-running.
-Resolve Critical/High findings with the user before plan writing. On no, record
-that the human declined it.
-
-`--persist` is required, not optional — it appends this round to `.cross_review[]`
-in state.json and ingests findings into the ledger. `4a_checkpoint`'s CP1 fast
-path reads both to decide whether it can skip its own interactive walk-through;
-without `--persist`, CP1 has no way to tell "declined" from "ran clean" and
-always falls through to the full interactive loop.
 
 ## Git Commit
 ```

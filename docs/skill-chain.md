@@ -39,7 +39,7 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-`cross-review`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Requirements, P6 QA, and P7 documentation require it; concept, architecture, and plan reviews are opt-in with a default of yes. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_brainstorming` as raw input.
+`cross-review`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_brainstorming` as raw input.
 
 ## Legacy PROJ Folders
 
@@ -156,12 +156,12 @@ Stage 2 adds the bootstrap and the full context system:
   ≤30 non-blank lines, ARCHITECTURE ≤200 lines, agent.md ≤100 lines) and
   TRUTH (`cross-review`: the provider opposite the curation author
   reviews the docs delta against the PROJ diff; Critical/High block the
-  phase, max 2 rounds). The runner re-verifies both gates after the seal.
+  phase, up to 3 automatic rounds while findings remain; manual rounds have no limit). The runner re-verifies both gates after the seal.
 - **`cross-review`:** symmetric opposite-provider review mechanism
   (Claude-authored → `codex exec`, Codex-authored → authenticated, isolated
   `claude -p` with validated structured output; degraded fallback =
   model-opposite, always flagged). Active call sites:
-  required PRD review in Step 2, optional concept/architecture/plan reviews,
+  required PRD review in Step 2, automatic concept/architecture/plan reviews,
   required P6 QA evidence review, and the P7 docs truth gate. Review prompts
   have a 900,000-byte default embedded-material cap; large diffs use explicit
   pathspecs and name every omitted changed path.

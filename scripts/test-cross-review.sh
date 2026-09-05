@@ -11,7 +11,11 @@ cat >"$CASE/bin/codex" <<'EOF'
 #!/usr/bin/env bash
 if [[ "${1:-} ${2:-}" == "login status" ]]; then exit 0; fi
 cat >"$PROMPT_CAPTURE"
-printf '%s\n' '{"severity":"low","category":"review-clean","summary":"scoped review clean"}'
+if [ -n "${REVIEW_OUTPUT:-}" ]; then
+  printf '%s\n' "$REVIEW_OUTPUT"
+else
+  printf '%s\n' '{"severity":"low","category":"review-clean","summary":"scoped review clean"}'
+fi
 EOF
 chmod +x "$CASE/bin/codex"
 
@@ -31,7 +35,7 @@ git add . && git commit -qm changed
 run_review() {
   PATH="$CASE/bin:$PATH" PROMPT_CAPTURE="$CASE/prompt" CROSS_REVIEW_MAX_CONTEXT_BYTES="$1" \
     bash "$SCRIPT" docs 1 test --artifacts artifact.md --author-provider claude \
-      --diff-base "$BASE_SHA" "${@:2}" --round 1
+      --diff-base "$BASE_SHA" --round 1 "${@:2}"
 }
 
 if run_review 1000 >"$CASE/out" 2>&1; then
@@ -52,4 +56,29 @@ grep -q 'Omitted from diff ground truth' "$CASE/prompt"
 grep -q 'specs/run/progress.md' "$CASE/prompt"
 ! grep -q '^+00000000000000000000' "$CASE/prompt"
 
-echo 'cross-review diff-scope tests passed'
+run_review 4000 --round 3 >"$CASE/out" 2>&1
+for severity in medium high; do
+  expected=0
+  [ "$severity" != high ] || expected=3
+  rc=0
+  REVIEW_OUTPUT="$(printf '{"severity":"%s","category":"stale-claim","summary":"needs correction"}' "$severity")" \
+    run_review 4000 --round 3 >"$CASE/out" 2>&1 || rc=$?
+  [ "$rc" -eq "$expected" ] || { cat "$CASE/out" >&2; exit 1; }
+  grep -q 'needs correction' "$CASE/out"
+done
+for round in 0 -1 1.5 01 invalid; do
+  rc=0
+  run_review 4000 --round "$round" >"$CASE/out" 2>&1 || rc=$?
+  [ "$rc" -eq 64 ] || { cat "$CASE/out" >&2; exit 1; }
+done
+
+# Manual rounds beyond the automatic limit work before and after state exists.
+run_review 4000 --round 4 >"$CASE/out" 2>&1
+mkdir -p specs/PROJ-1-test
+bash "$ROOT/codex/skills/4b_setup/scripts/state.sh" init 1 test >/dev/null
+for round in 4 100; do
+  run_review 4000 --round "$round" --persist >"$CASE/out" 2>&1
+  [ "$(jq -r '.cross_review[-1].round' specs/PROJ-1-test/state.json)" -eq "$round" ]
+done
+
+echo 'cross-review diff-scope and manual-round tests passed'

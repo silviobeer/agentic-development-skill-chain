@@ -54,7 +54,7 @@ CLAUDE.md pointer); the design-system showcase gets a fixed structure
 and a drift gate)*
 *(v0.21: focused `bugfixing` workflow outside the feature chain;
 opposite-provider review expanded to required Requirements and six-persona
-QA gates plus optional concept/architecture/plan reviews; Codex → Claude
+QA gates plus automatic concept/architecture/plan reviews; Codex → Claude
 hardened with auth preflight, isolated validated structured output, a
 conservative default input cap with explicit diff omissions, and handling of Claude's 10 MB stdin
 ceiling)*
@@ -507,15 +507,17 @@ a core dependency.
 
 | Call site | Artifacts reviewed | Review focus |
 |---|---|---|
-| Concept review (optional, default yes) | approved concept | missing assumptions, contradictions, scope and feasibility risks |
+| Concept review (automatic) | written concept | missing assumptions, contradictions, scope and feasibility risks |
 | Requirements review (required) | complete PRD set + approved concept + compact UI contracts | gaps in stories/ACs/edge cases, contradictions, untestable requirements |
-| P3 pre-mortem (optional, default yes) | architecture-delta + PRDs | wrong/missing decisions, unstated assumptions, contradictions with the baseline |
-| P4 plan review (optional, default yes) | wave plans + wave-gate-config + api-contracts | unsafe ordering, weak AC commands, missing contracts |
+| P3 pre-mortem (automatic) | full architecture + architecture-delta + migration design when present, against PRDs | wrong/missing decisions, unstated assumptions, contradictions with the baseline |
+| P4 plan review (automatic) | wave plans + wave-gate-config + api-contracts | unsafe ordering, weak AC commands, missing contracts |
 | P6 QA review (required) | QA summary/evidence + implementation diff | evidence integrity, release decision, security, architecture, performance, reliability, cross-wave drift, minimalism |
 | P7 docs review (required) | curated docs delta (+ full capped docs) vs. the PROJ diff | factual accuracy ("does ARCHITECTURE.md describe what was actually BUILT?"), stale claims, cap-gaming (shrinking docs by deleting true load-bearing statements) |
 
-Requirements, P6, and P7 are blocking gates; the other three call sites are
-opt-in with a default of yes. P6 runs six isolated discipline reviewers rather
+All six call sites are blocking gates. Concept, architecture, and plan review
+start automatically in the producing turn as soon as their complete outputs
+are saved (and plan validation passes), before user approval or handoff.
+No opt-in prompt is required. P6 runs six isolated discipline reviewers rather
 than asking one process to simulate a panel. The P7 call site is especially
 critical: curated docs are injected into
 every future implementer — a wrong statement there poisons every
@@ -530,9 +532,10 @@ before launch, requests validated structured output, rejects API/auth error
 envelopes even when the CLI exits zero, and reports Claude Code's 10 MB stdin
 ceiling explicitly. For joint artifacts the runner invokes both adapters
 concurrently and deduplicates only after source attribution is preserved. No
-new severity rules: Critical/High block phase completion (fix spawn + ONE
-cross-review re-review round; still red → existing escalation rules §8
-apply), Medium/Low auto-defer as debt.
+new severity rules: Critical/High block phase completion. Reconcile findings
+of any severity and re-review automatically for up to three rounds, stopping
+early when clean. Then escalate remaining blockers per §8 and report or defer
+Medium/Low as debt. Additional manually requested rounds have no limit.
 
 **Degraded mode (Codex unavailable):** provider-opposite is the PREFERRED
 reviewer, but Claude-authored work may fall back to MODEL-opposite within the
@@ -1182,7 +1185,7 @@ response.
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | runs current ACs + declared regressions, archives CodeRabbit evidence, checks cumulative blocking ledger, manages frontend readiness; red evidence → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | non-empty normalized findings JSONL from all sources | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/anchor/category, adding a stable summary fingerprint when no location exists; idempotent with reopen support; empty stdin fails |
-| `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; for Claude-authored work only, unavailable Codex may fall back model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; max 2 rounds |
+| `cross-review.sh` (cross-review) | mode, artifact files, `author_provider` + `author_model`, prompt template | provider-attributed findings JSON lines → `ledger.mjs` | routes to opposite provider; for Claude-authored work only, unavailable Codex may fall back model-opposite via `claude -p --model` (logged + flagged); joint artifacts launch both adapters concurrently; up to 3 automatic rounds while findings remain; manual rounds have no limit |
 | `review-with-claude.sh` (cross-review) | rendered prompt + limits | normalized Claude JSON lines | invokes OAuth-preserving isolated `claude -p` read-only with validated JSON Schema; rejects structured API/auth errors; detects the 10 MB stdin ceiling; timeout/cancel as one process group |
 | `review-with-codex.sh` (cross-review) | rendered prompt + limits | normalized Codex JSON lines | invokes `codex exec` read-only; validates output; timeout/cancel as one process group |
 | `harvest-debt.sh` (quality) | repo tree | `ponytail:` markers as ledger records (status `deferred`) | grep-based; links marker → file/line; idempotent |
@@ -1336,7 +1339,7 @@ agent-browser smoke tests.
    manifest schema following the claude-skills frontmatter taxonomy),
    install + parity-check Ponytail on Claude and Codex (§7), agent.md protocol +
    P7 curation, and the symmetric `cross-review` mechanism. The current
-   producing skills now wire optional concept/architecture/plan reviews and
+   producing skills now wire automatic concept/architecture/plan reviews and
    required Requirements/P6/P7 gates. The optional focused `bugfixing` workflow
    is also built outside the numbered chain.
 3. **Stage 3:** P3 runner rework (baseline/delta) and deeper pre-mortem
@@ -1379,7 +1382,7 @@ agent-browser smoke tests.
 | Morning report | file in `specs/` (canonical) + best-effort notification at run end |
 | Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
-| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and optional-by-default for concept/architecture/plans; conservative default input cap, explicit diff omissions and Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |
+| Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and automatic on saved concept/architecture/plan outputs; conservative default input cap, explicit diff omissions and Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |
 | Focused bug repair | `bugfixing` stays outside the feature chain: reproduce first (real browser for UI), trace code cause + test escape, prove a regression test red before the fix, dispatch a micro-fixer, and stop after at most three Ralph repair attempts; CodeRabbit/Sonar are proportional existing gates, not new dependencies |
 | P6 QA/fix ownership | Skill 6 is a strictly read-only finder. The P6 phase controller deduplicates and verifies findings, dispatches tier-0 fix lanes, and requires fresh provider-opposite QA re-verification; three failed Critical/High repair attempts trigger the stop policy |
 

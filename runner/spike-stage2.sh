@@ -13,7 +13,7 @@
 #   cross-review       — symmetric deterministic routing via PATH-shimmed CLIs
 #                        (opposite provider, six-persona parity, auth preflight,
 #                        structured output, ledger attribution, protocol controls,
-#                        round cap, same-model refusal), process-group timeout,
+#                        manual rounds, same-model refusal), process-group timeout,
 #                        LIVE adapter smoke per available direction (+ degraded
 #                        model-opposite fallback), degraded flag in the morning report
 #   P7 runner gate     — stubbed lanes seal P7:done; failing caps park the run,
@@ -315,7 +315,13 @@ CROSS_REVIEW_MAX_CONTEXT_BYTES=1024 PATH="$STUB:$PATH" \
 [ $? -eq 1 ] && ok "explicit cross-review context cap remains enforceable" \
   || bad "explicit cross-review context cap was ignored"
 PATH="$STUB:$PATH" bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --round 3 >/dev/null 2>&1
-[ $? -eq 64 ] && ok "round 3 refused (max 2 rounds, then §8)" || bad "round 3 not refused"
+RC=$?
+{ [ "$RC" -eq 0 ] || [ "$RC" -eq 3 ]; } && [ "$(jq -r '.cross_review[-1].round' specs/PROJ-96-stage2/state.json)" -eq 3 ] \
+  && ok "round 3 runs and is persisted" || bad "round 3 failed (rc=$RC)"
+PATH="$STUB:$PATH" bash scripts/cross-review.sh docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --round 4 >/dev/null 2>&1
+RC=$?
+{ [ "$RC" -eq 0 ] || [ "$RC" -eq 3 ]; } && [ "$(jq -r '.cross_review[-1].round' specs/PROJ-96-stage2/state.json)" -eq 4 ] \
+  && ok "manual round 4 runs and is persisted" || bad "manual round 4 failed (rc=$RC)"
 
 # Adapter output is a gate protocol, not best-effort parsing: duplicate
 # findings collapse, and a clean marker may never coexist with a finding.

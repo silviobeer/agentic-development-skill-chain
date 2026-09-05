@@ -122,7 +122,7 @@ bash scripts/cross-review.sh qa <X> <theme> \
   --round 1
 ```
 
-The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Claude is the opposite provider here. If it is unavailable, the script fails because no same-provider substitution is permitted for a Codex-authored run. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller.
+The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Claude is the opposite provider here. If it is unavailable, the script fails because no same-provider substitution is permitted for a Codex-authored run. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller: follow `cross-review`'s automatic loop through round 3 while findings of any severity remain, stopping early when clean. QA reports findings; the controller delegates fixes and refreshes evidence before re-review. After round 3, escalate remaining Critical/High findings and report or defer Medium/Low.
 
 ### 0. Start Dev Server
 

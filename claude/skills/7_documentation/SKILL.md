@@ -442,19 +442,20 @@ bash scripts/cross-review.sh docs <X> <theme> \
   --round 1
 ```
 
-- exit 0 → proceed to section 8.
-- exit 3 → open Critical/High cross-review findings are in the ledger:
-  fix each one in the docs, mark it
+- No findings and exit 0 → proceed to section 8.
+- Findings of any severity → fix the docs within approved scope, mark each fix
   (`node scripts/ledger.mjs set-status <X> <theme> <id> fixed <commit>`
   — an unmarked fix keeps blocking; a false "fixed" is reopened on
-  re-report), re-run 7c, then run `--round 2`. If round 2 is clean,
-  proceed. If it still has Critical/High findings, stop and escalate the
-  unresolved IDs; the shared cross-review contract permits no round 3.
+  re-report), re-run 7c, then automatically run `--round 2` and, if findings
+  remain, `--round 3`. Follow `cross-review`'s three-round automatic limit; exit 0 with
+  Medium/Low findings still triggers the next available round.
+- After round 3 → remaining Critical/High findings stop the phase: escalate
+  unresolved IDs. Defer remaining Medium/Low as debt and proceed to section 8
+  only when no blockers remain.
 - exit 1 → infrastructure failure: also a stop condition — the truth
   gate did not run, the phase must not seal without it.
 
-Medium/Low findings auto-defer as debt — do not chase them here. The
-runner independently re-verifies both gates after the seal — including
+The runner independently re-verifies both gates after the seal — including
 that a docs cross-review actually RAN during this P7 (a skipped review
 is not a clean review); sealing past a red gate parks the run.
 

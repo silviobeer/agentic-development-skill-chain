@@ -570,6 +570,30 @@ feat(PROJ-<X>): add concept for <theme>
 
 Git is optional on the discovery track. If the workspace is not a git repository, skip the commit (or suggest an optional `git init` first — a version history is useful for tracking concept and mockup iterations). The concept file itself is the durable artifact, committed or not.
 
+## Automatic Cross-Review
+
+Immediately after saving the concept, invoke `cross-review` in the same turn,
+before user review or transition. Do not ask whether to run it or wait for
+approval. Supply everything that establishes as-is truth for the concept:
+
+```bash
+bash scripts/cross-review.sh concept <X> <theme> \
+  --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+  --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
+    docs/PRODUCT.md specs/product-roadmap.md \
+  --author-provider <current-writer> --round 1
+```
+
+Drop any path that does not exist — the script fails on a missing file, and on
+the discovery track most of these may be absent. The grounding check ("claims
+about the existing product agree with the supplied context") is only as good as
+what you supply: with no ground truth at all, say so to the user rather than
+presenting the result as a grounded review.
+Follow `cross-review`'s automatic reconcile/re-review loop through round 3
+while findings of any severity remain; stop early when clean. Escalate remaining
+Critical/High findings before transition. Ask only for unresolved product
+decisions. Additional manually requested rounds have no limit.
+
 ## Concept Self-Review
 
 Review the written concept before asking the user to review it:
@@ -596,30 +620,9 @@ Fix issues inline. If fixing requires information not already confirmed, ask the
 
 After self-review, ask the user to review the written concept:
 
-> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`. Please review it and, ideally, have a different model review the artifact too (for example GPT reviewing Claude output, or Claude reviewing GPT output) before we continue. Let me know if you want to make any changes."
+> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`. Automatic cross-review is complete. Please review the concept before we continue. Let me know if you want to make any changes."
 
 Wait for the user's response. If they request changes, update the concept and run self-review again. Only proceed after approval.
-
-Before the transition, explicitly ask: "Shall I run the optional
-opposite-provider cross-review of this concept now? Default: yes." Wait for a
-yes/no answer. On yes, run it with everything that establishes as-is truth for
-the concept:
-
-```bash
-bash scripts/cross-review.sh concept <X> <theme> \
-  --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
-  --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
-    docs/PRODUCT.md specs/product-roadmap.md \
-  --author-provider <current-writer> --round 1
-```
-
-Drop any path that does not exist — the script fails on a missing file, and on
-the discovery track most of these may be absent. The grounding check ("claims
-about the existing product agree with the supplied context") is only as good as
-what you supply: with no ground truth at all, say so to the user rather than
-presenting the result as a grounded review.
-Resolve Critical/High findings with the user before transition. On no, record
-that the human declined it.
 
 ## Transition
 

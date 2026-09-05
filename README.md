@@ -143,8 +143,14 @@ producing-skill cross-review handoffs themselves are already wired.
 
 `cross-review` is not a chain step and is never routed to directly: it is
 the symmetric opposite-provider review mechanism, invoked by the producing
-skills. Requirements, P6 QA, and P7 documentation use it as a required gate;
-concept, architecture, and plan reviews are opt-in with a default of yes.
+skills. Concept, architecture, and plan reviews start automatically as soon as
+their outputs are saved (and plan validation passes), before user approval or
+handoff. Requirements, P6 QA, and P7 documentation also require review.
+Findings of any severity trigger reconciliation and another review, up to three
+automatic rounds; clean reviews stop early. Additional manually requested
+rounds have no limit (`--round 4`, `--round 5`, and so on). Remaining
+Critical/High findings block handoff; Medium/Low findings are reported or
+deferred after the automatic rounds.
 P6 uses six isolated discipline reviewers rather than one reviewer playing a
 panel. A Codex-authored QA run fails closed when Claude is unavailable;
 Claude-authored QA may fall back loudly to six Claude reviewers when Codex is

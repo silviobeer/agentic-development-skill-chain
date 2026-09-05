@@ -121,7 +121,7 @@ bash scripts/cross-review.sh qa <X> <theme> \
   --round 1
 ```
 
-The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Codex is preferred. If it is missing or unauthenticated, the script prints a visible degraded-mode notice, records `degraded_fallback: true`, and runs the same six personas with Claude; tell the user that independent-provider review was unavailable. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller.
+The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Codex is preferred. If it is missing or unauthenticated, the script prints a visible degraded-mode notice, records `degraded_fallback: true`, and runs the same six personas with Claude; tell the user that independent-provider review was unavailable. Critical/High findings enter `findings.json` through `ledger.mjs` and block the release decision. Fix/review orchestration stays with the P6 controller: follow `cross-review`'s automatic loop through round 3 while findings of any severity remain, stopping early when clean. QA reports findings; the controller delegates fixes and refreshes evidence before re-review. After round 3, escalate remaining Critical/High findings and report or defer Medium/Low.
 
 ### 0. Start Dev Server
 

@@ -11,7 +11,7 @@
 #     --artifacts <file...> [--ground-truth <file...>]
 #     [--author-provider claude|codex] [--author-model M] [--author-key K]
 #     [--joint] [--personas] [--persist] [--require-provider claude|codex]
-#     [--round 1|2] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]
+#     [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]
 # Exit: 0 clean/no blocking findings; 3 Critical/High findings; 1 infra error;
 #       64 invalid invocation.
 set -euo pipefail
@@ -19,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 usage() {
-  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round 1|2] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
+  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
   exit 64
 }
 [ -n "$MODE" ] && [ -n "$PROJ" ] && [ -n "$THEME" ] || usage
@@ -48,7 +48,7 @@ while [ $# -gt 0 ]; do
 done
 [ ${#ARTIFACTS[@]} -gt 0 ] || { echo "cross-review.sh: --artifacts required" >&2; usage; }
 [ ${#DIFF_PATHS[@]} -eq 0 ] || [ -n "$DIFF_BASE" ] || { echo "cross-review.sh: --diff-paths requires --diff-base" >&2; exit 64; }
-[[ "$ROUND" =~ ^[12]$ ]] || { echo "cross-review.sh: --round must be 1 or 2" >&2; exit 64; }
+[[ "$ROUND" =~ ^[1-9][0-9]*$ ]] || { echo "cross-review.sh: --round must be a positive integer" >&2; exit 64; }
 [[ "$MAX_CONTEXT_BYTES" =~ ^[0-9]+$ ]] || { echo "cross-review.sh: CROSS_REVIEW_MAX_CONTEXT_BYTES must be a non-negative integer" >&2; exit 64; }
 [ "$QA_PERSONAS" -eq 0 ] || { [ "$MODE" = qa ] && [ "$JOINT" -eq 0 ]; } || { echo "cross-review.sh: --personas is only valid for qa without --joint" >&2; exit 64; }
 case "$AUTHOR_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --author-provider must be claude or codex" >&2; exit 64 ;; esac
