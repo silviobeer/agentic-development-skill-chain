@@ -1,6 +1,6 @@
 # Executing Skill
 
-**Last updated:** 2026-08-28
+**Last updated:** 2026-09-07
 
 The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification once per wave and hard gates between waves.
 
@@ -164,7 +164,7 @@ bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
 
 This AC-only pass uses the gate's timeout, auth-budget, pacing, and rate-limit controls and writes its results directly to `ralph-wave-<N>.json`. It collects every ordinary AC failure so disjoint repairs can be batched, while infrastructure and auth-budget exhaustion still fail fast. It exits before regressions, build, CodeRabbit, browser smoke, component registry, progress certification, and next-wave tagging.
 
-Evidence binds the canonical AC ID, task, exact command, test files, positive selected-test count, and committed `HEAD`. Reuse requires the exact AC ID and command at that same `HEAD`; cross-HEAD impact inference is not supported.
+Evidence binds each canonical AC ID, task, exact command, test files, selected-test count, and committed `HEAD`. Successful commands with matching test files, auth context, HEAD and complete gate-config hash share execution across AC IDs, retaining a record for each ID. Failed, empty-selection and timed-out commands share their result only within the current pass; the next recovery pass retries them. Cross-HEAD reuse is not supported; clear Ralph evidence after dependency/runtime/environment changes.
 
 Recovery has exactly four stages:
 
@@ -186,17 +186,17 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 The script is the hard boundary and validates:
 
 - Every structured `ac_commands` entry for the wave exits 0 and selects tests.
-- A cached AC pass matches its ID, command, positive selected count, and committed `verified_head`.
-- Every declared `regression_commands` entry runs before build; selection-aware suites cannot pass empty.
+- A cached AC pass matches its command, test files, auth context, configuration hash, positive selected count, and committed `verified_head`.
+- Every declared `regression_commands` entry passes before build; selection-aware suites cannot pass empty. Only entries with `reuse_passed: true` can reuse deterministic, non-auth local results on unchanged HEAD/configuration; external or auth-dependent tests run live.
 - The configured `build_cmd` exits 0.
 - CodeRabbit archives unique raw and normalized evidence for every attempt,
   ingests validated finding records, and leaves no cumulative open blocking ledger findings.
 - The gate reuses or starts the configured dev server. Anonymous routes retain
   the expected URL and text; redirects fail. Protected routes use auth state or
-  are covered by an authenticated E2E regression.
+  are covered by current-wave authenticated AC or regression evidence. Browser operations have bounded timeouts.
 - `gen-component-registry.mjs --check` passes: `docs/components.md` is current, every component carries its doc block, and every component has its `id="<kebab-name>"` section on the showcase page.
 
-The normal gate reuses exact same-HEAD AC-only evidence, avoiding a second auth-consuming AC run, then runs the declared regression suite and every remaining gate phase. Any committed or non-evidence uncommitted change prevents reuse.
+After ACs and regressions pass, build and CodeRabbit run concurrently on the same committed HEAD. Their logs and results remain separate; both must finish successfully before smoke. Interruption stops their process groups. Database and browser checks remain sequential. Any committed or non-evidence uncommitted change prevents Ralph reuse.
 
 If the script exits non-zero, execution stops at that gate, dispatches any code
 correction to a follow-up worker, and reruns the script. Only a passing script
@@ -216,7 +216,7 @@ the runtime never infers AC identity from an old array index.
 The skill avoids scattered build checks.
 
 - Wave builds run inside `scripts/wave-gate.sh`.
-- The assembled PROJ build runs inside the PROJ quality gate.
+- The PROJ quality gate can reuse the final wave build when declared `build_artifacts`, inputs and command still match; otherwise it runs a fresh build. Code fixes invalidate old proof.
 
 If a build fails, a fix worker gets the verbatim compiler output and the failing gate is rerun.
 
@@ -232,14 +232,28 @@ After all waves pass, the quality gate checks the assembled feature diff from `B
 
 It focuses on assembled cross-wave risks and does not replay wave ACs. It includes:
 
-- Full code review of the feature diff.
-- One PROJ-level build using `build_cmd`.
-- The once-per-PROJ Sonar scan, using the top-level `sonar_cmd`. No wave gate
-  runs Sonar; this is the only run, and it covers every wave's cumulative
-  changes since `sonar_cmd`'s scanner submission analyzes the whole project.
-  Skip is allowed only when `sonar`/`sonar-scanner` are unavailable or the
-  project has no Sonar config — `quality-gate-proof.sh` rejects any other skip.
-- Declared integration/quality-phase tests and lint verification.
+- Cross-wave contracts, shared state, authorization boundaries and unresolved wave findings. The reviewer follows affected interfaces and callers instead of repeating the wave review or QA's six-persona panel.
+- A verified PROJ build using `build_cmd`, with conservative final-wave artifact reuse.
+- Sonar at PROJ end: an initial scan and bounded fix/rescans. If the configured wrapper also generates coverage, split it into `coverage_cmd` plus a scanner-only `sonar_cmd`, retaining the ordinary combined wrapper entry point for other callers. Coverage failures block; uploading partial coverage is not a passing test result.
+- Declared `quality` phase tests and lint. CI/nightly commands are checked for workflow wiring, not replayed locally. Wave ACs are not replayed here.
+
+The integration reviewer can run alongside build and coverage when they do not contend for resources. Sonar starts after coverage completes. Keep shared database/browser checks serialized and retain their lock/auth controls. Collect all stream results before dispatching one batch of confirmed fixes. Verify the combined revision once per recovery round; keep the existing per-issue attempt limits and Sonar carry-forward policy.
+
+`quality-evidence.mjs` runs configured commands with timeouts and records their command, commit, input fingerprint, exit result, log hash, selected-test count and artifact hashes under `5_progress/quality-*`. Build/coverage reuse requires declared `build_artifacts`/`coverage_artifacts` and matching inputs and artifacts. The fingerprint includes tracked code/configuration, local environment files, exported environment, Node runtime and dependency-install markers. Evidence-only commits preserve proof; code/configuration changes invalidate it. Clear build/coverage evidence after manual toolchain/dependency changes or changes to external inputs that cannot be fingerprinted.
+
+Run it from the PROJ root after sourcing `scripts/env-local.sh`:
+
+```bash
+node scripts/quality-evidence.mjs <X> <theme> run build
+node scripts/quality-evidence.mjs <X> <theme> run coverage       # when configured
+node scripts/quality-evidence.mjs <X> <theme> run sonar          # after coverage
+node scripts/quality-evidence.mjs <X> <theme> run 'test:<label>'  # each quality entry
+node scripts/quality-evidence.mjs <X> <theme> run lint
+node scripts/quality-evidence.mjs <X> <theme> review <report-path>
+bash scripts/quality-gate-proof.sh <X> <theme>
+```
+
+Record a review only after its P0/P1 findings are resolved. For an allowed Sonar skip, use `... skip-sonar 'sonar CLI unavailable'` or `... skip-sonar 'project not configured'`. The proof script requires both the human-readable gate statuses and valid evidence for current inputs. Sonar submission requires a fresh task receipt; the Sonar reviewer still checks the server's completed analysis and records its disposition.
 
 Exit criteria:
 
@@ -253,7 +267,7 @@ Exit criteria:
 - Declared integration/quality-phase tests pass.
 - No new lint errors.
 
-The lead must verify findings before fixing them. Automated review output can be wrong, too broad, or outside scope. Confirmed P0/P1 findings are fixed and re-reviewed. Confirmed Sonar BLOCKER/CRITICAL/MAJOR issues go through the 3-round fix loop: fix, rerun `sonar_cmd`, re-fetch issues, repeat; whatever survives round 3 is documented in `progress.md`, not escalated. Lower-severity issues are logged for user decision unless time and scope allow.
+The lead must verify findings before fixing them. Automated review output can be wrong, too broad, or outside scope. Confirmed review and Sonar findings share recovery rounds, with re-review of the combined fix diff. Sonar BLOCKER/CRITICAL/MAJOR issues retain their three-round fix/rescan limit; whatever survives is documented in `progress.md`, not escalated. Lower-severity issues are logged for user decision unless time and scope allow.
 
 ## Handoff to Skill 6
 

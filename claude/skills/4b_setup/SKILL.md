@@ -66,12 +66,9 @@ case "$P0_STATE" in
 esac
 ```
 
-Use the installed absolute `state.sh` path until step 4 has copied the helper
-set into this fresh worktree; `scripts/state.sh` is not assumed to exist at
-CP1. After the copy, the versioned repo helper is canonical for the run.
+Use the installed absolute `state.sh` path until the synchronization below has installed the helper set; `scripts/state.sh` is not assumed to exist at CP1. The synchronized, committed repo helpers are then canonical for the run.
 
-When `P0_ALREADY_DONE=1`, only refresh byte-identical framework copies and run
-their validation; skip all phase transitions and the P0 seal commit.
+When `P0_ALREADY_DONE=1`, synchronize and validate the helpers, then commit any refresh separately; skip all phase transitions and the P0 seal commit.
 
 `prepare` requires a clean control checkout at its committed CP1 `HEAD`,
 creates `proj/PROJ-<X>` at that exact commit, and tags
@@ -99,6 +96,14 @@ scripts/worktree.sh with-shared-lock -- <command...>
 The default lock lives in the Git common directory and therefore serializes
 parallel worktrees of this repository. Set
 `SKILLCHAIN_SHARED_RESOURCE_LOCK` to an explicit shared path to override it.
+
+Before running any repo preflight, synchronize from the installed skill tree:
+
+```bash
+node ~/.claude/skills/4b_setup/scripts/sync-framework.mjs
+```
+
+A non-zero exit blocks setup until the reported helper differences are reconciled. The command plans the whole inventory before copying anything; unrecognized or modified project copies are never overwritten. Compare each conflict with its installed source, merge the needed upstream changes while preserving project adaptations, test the result, then rerun with `--adopt scripts/<reviewed-file>` (repeat the option for multiple files). Do not adopt stale code to bypass an update. No separate user confirmation is required for an already-authorized helper refresh.
 
 ### 2. Permission preflight (Claude host)
 
@@ -166,14 +171,17 @@ migration without blocking.
 
 ### 5. Copy framework scripts + templates into the repo
 
-The repo copy is canonical for the run — versioned, testable outside
-sessions, identical on every machine. Copy from the installed skills
-into `scripts/` and `templates/` at repo root (skip byte-identical
-files; overwrite older copies and note it in the commit):
+The synchronizer in step 1 installs this inventory and records source/project SHA-256 hashes in `.skillchain-helpers.json`. Verify it before sealing P0:
+
+```bash
+node ~/.claude/skills/4b_setup/scripts/sync-framework.mjs --check
+```
+
+Commit the manifest and changed helpers/templates with setup. Do not manually overwrite an older helper. Unmodified managed copies update automatically; reviewed adaptations survive until their installed source or local bytes change, at which point reconciliation is required. Run only at setup/resume boundaries, never during a gate or while workers are editing these files.
 
 | From (installed skill) | To |
 |---|---|
-| `4b_setup/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh` | `scripts/` |
+| `4b_setup/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh`, `sync-framework.mjs` | `scripts/` |
 | `4b_setup/manifests/roles/*.md` | `templates/roles/` |
 | `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
 | `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
@@ -184,7 +192,7 @@ files; overwrite older copies and note it in the commit):
 | `5_executing/templates/agent-md-entry.md.tmpl` | `templates/` |
 | `8_delivery/scripts/conflict-probe.sh`, `render-pr-body.mjs`, `ci-poll.sh` | `scripts/` |
 | `8_delivery/templates/pr-body.md.tmpl` | `templates/` |
-| `5_executing/scripts/wave-gate.sh`, `quality-gate-proof.sh`, `gen-component-registry.mjs` | `scripts/` (as today) |
+| `5_executing/scripts/wave-gate.sh`, `quality-gate-proof.sh`, `quality-evidence.mjs`, `gen-component-registry.mjs` | `scripts/` (as today) |
 
 `chmod +x` the shell scripts.
 

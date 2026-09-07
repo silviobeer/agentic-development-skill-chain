@@ -1,0 +1,68 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), "helper-sync-"));
+try {
+  for (const provider of ["codex", "claude"]) {
+    const skills = path.join(temp, provider, "skills");
+    fs.cpSync(path.join(root, provider, "skills"), skills, { recursive: true });
+    const target = path.join(temp, `${provider}-project`);
+    fs.mkdirSync(target);
+    assert.equal(spawnSync("git", ["init", "-q", target]).status, 0);
+    const script = path.join(skills, "4b_setup/scripts/sync-framework.mjs");
+    const run = (...args) => spawnSync(process.execPath, [script, "--target", target, ...args], { encoding: "utf8" });
+    const ok = (...args) => { const result = run(...args); assert.equal(result.status, 0, result.stderr); return result; };
+    const bad = (pattern, ...args) => { const result = run(...args); assert.equal(result.status, 1); assert.match(result.stderr, pattern); };
+    const manifest = path.join(target, ".skillchain-helpers.json");
+    bad(/refresh required/, "--check");
+    assert.equal(fs.existsSync(manifest), false);
+    ok(); ok("--check");
+    const copied = path.join(target, "scripts/sync-framework.mjs");
+    assert.equal(spawnSync(process.execPath, [copied, "--target", target], { encoding: "utf8" }).status, 1);
+    assert.equal(spawnSync(process.execPath, [copied, "--target", target, "--skills-root", skills], { encoding: "utf8" }).status, 0);
+    const lock = path.join(target, ".git/skillchain-helper-sync.lock");
+    fs.mkdirSync(lock); bad(/already locked/); assert.equal(fs.existsSync(lock), true); fs.rmdirSync(lock);
+    const before = fs.readFileSync(manifest, "utf8");
+    ok(); assert.equal(fs.readFileSync(manifest, "utf8"), before, "idempotent manifest");
+    const source = path.join(skills, "5_executing/scripts/wave-gate.sh");
+    const local = path.join(target, "scripts/wave-gate.sh");
+    fs.appendFileSync(source, "\n# upstream v2\n");
+    bad(/refresh required/, "--check");
+    ok(); assert.equal(fs.readFileSync(local, "utf8"), fs.readFileSync(source, "utf8"));
+    fs.appendFileSync(local, "\n# project adaptation\n");
+    const adapted = fs.readFileSync(local, "utf8");
+    fs.appendFileSync(path.join(skills, "4b_setup/scripts/state.sh"), "\n# new helper\n");
+    const untouched = fs.readFileSync(path.join(target, "scripts/state.sh"), "utf8");
+    bad(/no files changed/);
+    assert.equal(fs.readFileSync(path.join(target, "scripts/state.sh"), "utf8"), untouched, "conflict must prevent partial updates");
+    ok("--adopt", "scripts/wave-gate.sh"); ok("--check");
+    assert.equal(fs.readFileSync(local, "utf8"), adapted);
+    fs.appendFileSync(source, "\n# upstream v3\n");
+    bad(/upstream changed/); assert.equal(fs.readFileSync(local, "utf8"), adapted);
+    fs.writeFileSync(local, fs.readFileSync(source, "utf8") + "\n# project adaptation\n");
+    ok("--adopt", "scripts/wave-gate.sh"); ok("--check");
+    bad(/not a managed path/, "--adopt", "../outside");
+    bad(/cannot adopt/, "--check", "--adopt", "scripts/wave-gate.sh");
+    fs.unlinkSync(manifest);
+    bad(/untracked or modified/); assert.equal(fs.existsSync(manifest), false, "legacy custom helpers need review");
+    ok("--adopt", "scripts/wave-gate.sh");
+    fs.unlinkSync(local); fs.symlinkSync(source, local);
+    bad(/symlink/); fs.unlinkSync(local); ok();
+    fs.chmodSync(local, 0o600); ok();
+    assert.equal(fs.statSync(local).mode & 0o777, fs.statSync(source).mode & 0o777);
+    fs.unlinkSync(manifest); fs.symlinkSync(path.join(temp, "external-manifest"), manifest);
+    bad(/symlink/); fs.unlinkSync(manifest);
+    const templates = path.join(target, "templates");
+    fs.renameSync(templates, templates + "-real"); fs.symlinkSync(templates + "-real", templates);
+    bad(/symlink/); fs.unlinkSync(templates); fs.renameSync(templates + "-real", templates);
+    fs.unlinkSync(path.join(skills, "4b_setup/scripts/state.sh"));
+    bad(/ENOENT/); assert.equal(fs.existsSync(manifest), false);
+    console.log(`${provider}: helper synchronization, upgrades, adaptation conflicts, adoption and path protection passed`);
+  }
+} finally { fs.rmSync(temp, { recursive: true, force: true }); }

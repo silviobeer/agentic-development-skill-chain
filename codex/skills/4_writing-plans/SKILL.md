@@ -304,6 +304,9 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
 
 **Rules:**
 - `build_cmd`: whatever builds the project fully (`npm run build`, `tsc --noEmit`, `cargo build`, etc.)
+- `build_artifacts`: optional output paths (for example `[".next"]`), enabling final-wave build reuse only for deterministic builds with unchanged inputs and intact artifacts.
+- `coverage_cmd` and `coverage_artifacts`: optional separate coverage generation and output paths; required when splitting a Sonar wrapper that otherwise reruns coverage on every scan. Keep `sonar_cmd` scanner-only in that case. Do not duplicate `coverage_cmd` in quality-phase commands.
+- `lint_cmd`: optional PROJ lint command, default `npm run lint`.
 - `sonar_cmd`: required non-empty project command for the once-per-PROJ Sonar
   scan, run only by the PROJ-end Quality Gate (not by any wave gate). Use the
   repository's real entry point (`sonar-scanner`, an `npm` script, or a
@@ -315,7 +318,7 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   - `build_seconds`: full project build
   - `coderabbit_seconds`: per-wave CodeRabbit review
   - `browser_seconds`: per route smoke test
-  - `sonar_seconds`: unused by the wave gate; the PROJ-end Quality Gate's Sonar step is not timed from this config
+  - `sonar_seconds`: unused by the wave gate; the PROJ-end evidence helper uses it to bound scanner submission (fallback `ac_seconds`, then 600)
 - `ac_commands[]`: one structured object per AC built in this wave. `id` is the unique canonical
   AC ID, `task` exactly matches its stable `### Task ...` heading, `command` is
   exactly the command in that task's `Gate commands` block, and `test_files` is
@@ -327,7 +330,10 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   `wave_required_reason`. Each AC maps to exactly one command and one test
   runner; shell-chained commands (`&&`, `||`, or `;`) are rejected. A command must print a recognizable selected-test
   count (`Running N tests`, `Tests N passed`, TAP `# tests N`, or `N passed`);
-  zero or unparseable selection blocks even when rc is 0.
+  zero or unparseable selection blocks even when rc is 0. A full-file command may
+  be shared by several AC entries when its suite proves every mapped AC. Keep
+  every AC ID and its task mapping; identical command, `test_files`, and
+  `auth_consuming` values allow one execution with separate per-AC evidence.
 - `regression_commands[]`: required, non-empty targeted regression coverage for
   every wave, run after its current AC commands. Each entry has `label`,
   `command`, `test_files`, explicit `auth_consuming`, and optional
@@ -339,7 +345,13 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   regression needs the same `wave_required_reason` as an AC. Deterministic minimum: a regression
   entry is invalid when its whitespace-normalized `command` and its normalized
   `test_files` set both exactly equal an AC entry. Reusing the same test file is
-  allowed when a different command genuinely selects a broader suite.
+  allowed when a different command genuinely selects a broader suite. Do not
+  repeat full-file AC coverage inside a larger regression command. Optional
+  `reuse_passed: true` reuses successful deterministic local regressions at the
+  same committed HEAD and complete gate-config fingerprint; never enable it
+  for auth, browser, or external database checks. Clear cached Ralph evidence
+  after dependency, runtime, or environment changes. Full browser suites belong
+  in `phase_commands`, not every wave.
 - `auth_budget`: mandatory whenever any AC or regression command has
   `auth_consuming: true`. `preflight_cmd` is a provider-neutral project hook;
   set `exhausted_exit_code` to `75` by default. A rate-limited hosted-auth project may
@@ -369,8 +381,10 @@ Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-confi
   whether it is `protected`. Protected routes require either `auth_state` for
   the smoke or
   `authenticated_e2e_test_files`; every listed E2E file must also occur in the
-  same wave's regression `test_files`. An anonymous redirect to login is not
-  successful smoke evidence.
+  same wave's AC or regression `test_files`, and that successful browser scenario
+  must actually verify this route. Omit `auth_state` when using this coverage
+  shortcut; retain smoke for other routes. An anonymous redirect to login is
+  not successful smoke evidence.
 - `advisory_severities`: required list of CodeRabbit severities that do **not** block the wave. Any finding whose normalized severity is not listed blocks.
   - Use `["medium", "low"]` for normal or risky waves. Critical/High/Error/Blocker findings block.
   - Use `["high", "medium", "low"]` only for low-risk polish/doc/test-only waves where High findings can be deferred to the PROJ-end Quality Gate.

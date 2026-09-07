@@ -47,12 +47,13 @@ Before doing implementation work:
      **setup** (4b). The former inline preflights — `.coderabbit.yaml`,
      Supabase/browser/CLI + auth checks — now run in 4b's `preflight.sh`;
      do NOT re-run them here.
-   - Then mark the phase if needed: if state shows `P0:done`, run
-     `bash scripts/state.sh transition <X> <theme> P5 running`.
    - Verify the current directory is `.worktree.path` from state. P0 owns the
      persistent PROJ worktree and the runner re-executes there; do not implement
      from the control checkout. Dependencies are isolated, while `.env.local`,
      development data, and hosted-auth limits are deliberately shared.
+   - **On every implementation start or resume**, after verifying the worktree path and before launching workers, run `node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs`. Use the installed command, not a potentially stale project copy. A non-zero result blocks implementation: reconcile reported differences against installed sources, test adaptations, and rerun with `--adopt <reviewed-path>` for each resolved file. Never overwrite or blindly adopt project customizations.
+   - Commit `.skillchain-helpers.json` and changed managed helpers/templates before implementation. If a refresh changes context tooling or role templates, recompile the context bundles and record them via `state.sh`. This new commit invalidates old gate evidence; never refresh during workers or a gate.
+   - Then mark the phase if needed: if state shows `P0:done`, run `bash scripts/state.sh transition <X> <theme> P5 running`.
 2. **Standalone fallback (no state.json — manual run without the framework):**
    run the legacy preflights inline before wave 1: (a) `.coderabbit.yaml` at
    repo root (copy `~/.codex/skills/5_executing/references/coderabbit-template.yaml`,
@@ -88,7 +89,7 @@ For a provider signature only (`over_request_rate_limit`, `Request rate limit re
 Before P0 seals an auth-budget project, `bash scripts/wave-gate.sh --auth-budget-negative-control 1 <PROJ-X> <theme>` must return the configured exhausted exit code and persist `infrastructure_failed`. It exercises the configured hooks with `SKILLCHAIN_AUTH_BUDGET_NEGATIVE_CONTROL=1` and never drains a real hosted bucket.
 
 The script validates:
-1. **Current wave ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass is reusable only for the same AC ID, command, positive selection, and committed `verified_head`; changed or uncommitted code cannot be certified.
+1. **Current wave ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass requires the same command, test files, auth classification, gate-config fingerprint, positive selection, and committed `verified_head`; equivalent commands may share execution across AC IDs, with evidence recorded for each ID. Changed or uncommitted code cannot be certified.
 2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before build; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
 3. **Build** — `build_cmd` from config exits 0.
 4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
@@ -103,7 +104,7 @@ On success the script appends a `### Wave N Gate — PASSED` block with timestam
 
 **Framework runs (state.json exists):** after every green gate, update the machine state too — `bash scripts/state.sh set <X> <theme> .waves '{"current": <N>, "total": <M>, "stories": {…per-US status…}}'` (merge with the existing block). The gate pipes its normalized CodeRabbit findings into the ledger when `scripts/ledger.mjs` is present; Sonar evidence remains in the configured system — never re-enter either by hand.
 
-**If the wave-gate.sh script is missing from the project:** copy the template from `~/.codex/skills/5_executing/scripts/wave-gate.sh` to `scripts/wave-gate.sh`, `chmod +x` it, commit it before running the first wave.
+**If a framework helper is missing:** run `node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs` to restore the managed inventory, resolve any reported conflicts, and commit before running the gate. Standalone runs use the same synchronization before their first wave.
 
 **If jq, coderabbit, or agent-browser are missing:** the script prints a clear error and exits non-zero. Install them, do not work around the gate.
 
@@ -428,21 +429,22 @@ if failures still remain: use the existing blocked-run evidence path
 
 **Rules for wave-scoped Ralph:**
 - Checks must be **deterministic** — run actual test commands, read actual output. No subjective judgment ("this looks like it works").
+- Tests inside the shared-resource lock must not acquire that lock again. Node `--test` workers do not preserve arbitrary inherited file descriptors; when a `node:test` entry point detects ownership through a descriptor, execute it directly with `node path/to/test.mjs` and verify the selected-test count.
 - A test that depends on state outside itself — provider rate budget, file order, or clock — must establish that state itself or explicitly assert it. Never accept a green result merely because neighbouring tests primed the bucket or fixture.
 - Treat “nothing happened” as weak evidence: add a positive control that proves the valid session/input/path would have worked, and do not let polling matchers pass on their first attempt without proving the observed transition.
 - Failure output is passed **verbatim** to correction and diagnostic workers — not summarized or interpreted.
-- The cache is deliberately conservative: only an exact AC ID + command match at the same committed `HEAD` is reused. Every correction commit changes `HEAD`, so `--ac-only` reruns all ACs; no cross-HEAD impact inference is supported.
+- Reuse requires the same committed `HEAD` and complete gate-config fingerprint. Identical AC commands with matching `test_files` and `auth_consuming` share successful execution across AC IDs, with separate evidence for every ID. Identical failed/empty/timed-out commands also share their result within one AC-only invocation, but failures are retried on the next invocation; infrastructure and auth exhaustion still stop immediately. Every correction commit invalidates reuse; no cross-HEAD impact inference is supported. Remove cached Ralph evidence after dependency, runtime, or environment changes.
 - Recovery has exactly four stages: normal fix round 1, normal fix round 2 with fresh workers, fresh diagnosis, then a different diagnosis-driven implementer. Do not add retries or silently weaken an AC.
 - If diagnosis finds an invalid or contradictory AC, record the evidence and use the existing blocked/escalation path.
-- The normal wave gate remains the hard boundary and reuses exact same-HEAD AC-only passes, then still runs the declared regression suite and every remaining gate phase. Any committed or non-evidence uncommitted change prevents reuse.
+- The normal wave gate reuses matching AC-only passes. Regression reuse requires explicit `reuse_passed: true` and is limited to deterministic, non-auth local commands independent of external state. Other regressions and remaining gate phases still run. Any committed or non-evidence uncommitted change prevents reuse.
 
 Update `progress.md` after the initial pass, each recovery stage, each reuse or invalidation decision, and the final result.
 
 ### 5. No standalone build check
 
 Do not run an extra build between Ralph and the wave gate. Build is intentionally centralized:
-- **Wave-end build:** `wave-gate.sh` runs `build_cmd` once per wave.
-- **PROJ-end build:** the Quality Gate verifies the assembled PROJ before QA.
+- **Wave-end build:** `wave-gate.sh` runs `build_cmd` once per wave. After ACs and regressions pass, build and CodeRabbit run concurrently on the same committed HEAD. The coordinator retains separate logs, waits for both results, then checks findings before smoke; either failure blocks. Interruption stops both command groups. Database and browser tests remain sequential.
+- **PROJ-end build:** the Quality Gate verifies the assembled PROJ before QA, reusing matching final-wave build evidence only when declared artifacts and inputs remain valid.
 
 If the wave gate finds a build failure, dispatch a fix worker with the verbatim compiler output, then rerun the gate.
 
@@ -461,11 +463,7 @@ CodeRabbit is MANDATORY, but it is run by `wave-gate.sh`, not as a separate pre-
 If CodeRabbit fails to execute (e.g., not installed, auth error), the gate exits non-zero. Fix the tool/auth problem and rerun the gate.
 </HARD-GATE>
 
-The wave gate runs CodeRabbit on the wave's changes. This catches cross-cutting issues early — not only at the end during the full Quality Gate.
-
-```bash
-bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
-```
+The single wave-gate invocation in Step 8 runs CodeRabbit on the wave's changes. This section describes its review requirements; do not invoke the gate here.
 
 The base commit must be either `WAVE_BASE_SHA` or tag `wave-${WAVE}-start-PROJ-${PROJ}`. Missing base = hard fail. No fallback is allowed.
 
@@ -500,7 +498,7 @@ agent-browser errors
 
 For multiple pages affected by the wave, run one `agent-browser` call per route.
 
-**Pass criteria:** Anonymous routes keep the expected URL and characteristic text. Protected routes supply `auth_state`, or the declared regression suite provides authenticated E2E coverage.
+**Pass criteria:** Anonymous routes keep the expected URL and characteristic text. Protected routes supply `auth_state`, or current-wave AC/regression commands provide equivalent authenticated E2E coverage through `authenticated_e2e_test_files`. Omit `auth_state` for a covered route to avoid repeating its smoke; retain smoke for routes the scenario does not exercise.
 **Fail:** Stop and fix before the next wave — broken UI compounds fast.
 
 Log the result in `progress.md` under the wave section:
@@ -523,7 +521,7 @@ Do not invoke Ken from Skill 5. Do not create Ken wave BUG IDs or Ken wave backl
 
 ### 8. Mark wave complete, auto-continue to next wave
 
-Run the Wave Gate script (see Wave Completion Gate above):
+Run the Wave Gate script once (including the Step 7 review and browser smoke):
 
 ```bash
 bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
@@ -542,9 +540,9 @@ After all waves for this PROJ-X are complete and their gates passed, run the Qua
 
 See `references/quality-gate.md` for full instructions.
 
-**Run Gate 1, the PROJ-end build, and Sonar in parallel where safe:**
+**Run the integration reviewer alongside build and coverage where safe; start Sonar after coverage is ready.** Use the command/evidence sequence in `references/quality-gate.md`; keep DB/browser work serialized. Collect every stream before dispatching a combined fix round.
 
-Sonar runs exactly once per PROJ, here — no wave gate runs it. Skip is allowed
+Sonar runs here at PROJ end, with bounded fix/rescans — no wave gate runs it. Skip is allowed
 only when the tooling genuinely is not available; `scripts/quality-gate-proof.sh`
 rejects a skip when both CLIs and `sonar-project.properties` are present, so
 treat this as required whenever the project is Sonar-configured.
@@ -563,12 +561,12 @@ Create an agent team for Quality Gate of PROJ-X.
 
 Spawn teammates:
 - "reviewer" using the code-reviewer-gate agent type with prompt:
-  "Review the feature diff from BASE_SHA=$BASE_SHA. Check references/code-reviewer.md for the full checklist."
+  "Review the feature diff from BASE_SHA=$BASE_SHA. Focus on cross-wave contracts, shared state, authorization boundaries and unresolved wave findings; use references/code-reviewer.md only for relevant integration risks. Return findings without starting fixes."
 - "sonar" only if `sonar` and `sonar-scanner` are installed, using the sonar-cli skill with prompt:
-  "Run the once-per-PROJ Sonar scan: execute the top-level sonar_cmd from wave-gate-config.json from the persistent PROJ worktree, then use sonar CLI/API for quality gate, issue, coverage, and duplication data. Verify a fresh .scannerwork/report-task.txt after sonar_cmd exits 0 so a silent no-op doesn't read as green. If project Sonar config is absent, log SonarCloud as skipped rather than blocking."
+  "Wait for successful current-revision coverage, then run the PROJ Sonar scan through quality-evidence.mjs run sonar, which executes the top-level sonar_cmd from wave-gate-config.json from the persistent PROJ worktree, then use sonar CLI/API for quality gate, issue, coverage, and duplication data. Verify a fresh .scannerwork/report-task.txt after sonar_cmd exits 0 so a silent no-op doesn't read as green. If project Sonar config is absent, record an allowed skip. Return findings to the lead; do not start an independent fix loop."
 ```
 
-The lead also runs `build_cmd` and every `phase_commands` entry marked
+The lead uses `quality-evidence.mjs` to verify build (reusing valid final-wave artifacts), coverage, lint and every `phase_commands` entry marked
 `quality` from `wave-gate-config.json` once for the assembled PROJ. CI/nightly
 entries are verified as wired to their named workflows, not replayed locally. The lead
 consolidates reviewer, build, integration/quality-phase, and Sonar results. Do not rerun `ac_commands`; their canonical proof belongs to wave-scoped Ralph and `wave-gate.sh`.
@@ -582,7 +580,7 @@ Do NOT blindly implement every finding. Apply this discipline:
 3. **EVALUATE** — Is this a real problem or a false positive?
    - **Push back when:** The finding breaks existing functionality, violates YAGNI (suggests "proper" patterns for unused scenarios), is technically incorrect, or conflicts with the user's explicit decisions
    - **YAGNI check:** If a reviewer suggests adding error handling for a scenario that can't happen, or abstracting code that's used once — grep the codebase for actual usage before implementing
-4. **FIX** what's real — spawn fix teammates for confirmed P0/P1; for Sonar BLOCKER/CRITICAL/MAJOR, run the bounded 3-round fix-and-rescan loop from `references/quality-gate.md` Gate 3 step 6 (dispatch disjoint fixes concurrently, overlapping fixes serially)
+4. **FIX** what's real — combine confirmed review P0/P1 and Sonar BLOCKER/CRITICAL/MAJOR into the coordinated recovery rounds in `references/quality-gate.md`. Batch disjoint fixes concurrently, overlapping fixes serially; verify the combined revision once per round. Preserve the existing per-issue limits and Sonar carry-forward policy.
 5. **LOG** P2/P3, Sonar MINOR/INFO, and any Sonar BLOCKER/CRITICAL/MAJOR still open after 3 rounds to `progress.md` as carried-forward — these never block or escalate
 6. Clean up the team
 

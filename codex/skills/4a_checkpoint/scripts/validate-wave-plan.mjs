@@ -279,6 +279,12 @@ for (const [wave, plan] of plans) {
           fail(`${label}: wave_required_reason must explain why hosted auth is needed before CI`);
         }
       }
+      if (Object.hasOwn(entry, "reuse_passed") && typeof entry.reuse_passed !== "boolean") {
+        fail(`${label}: reuse_passed must be boolean when present`);
+      }
+      if (entry.reuse_passed === true && entry.auth_consuming === true) {
+        fail(`${label}: reuse_passed cannot cache auth-consuming commands`);
+      }
       if (
         Object.hasOwn(entry, "require_non_empty_selection") &&
         typeof entry.require_non_empty_selection !== "boolean"
@@ -287,6 +293,21 @@ for (const [wave, plan] of plans) {
       }
     });
   }
+}
+
+for (const key of ["coverage_cmd", "lint_cmd"]) {
+  if (config[key] !== undefined && !isText(config[key])) fail(`${key} must be a non-empty string`);
+}
+for (const key of ["build_artifacts", "coverage_artifacts"]) {
+  if (config[key] !== undefined && (!Array.isArray(config[key]) || !config[key].length || !config[key].every(isText))) fail(`${key} must be a non-empty string array`);
+}
+if (config.coverage_cmd && !config.coverage_artifacts?.length) fail("coverage_cmd requires coverage_artifacts");
+const qualityLabels = new Set();
+for (const entry of Array.isArray(config.phase_commands) ? config.phase_commands : []) {
+  if (entry?.phase !== "quality") continue;
+  if (qualityLabels.has(entry.label)) fail(`duplicate quality command label: ${entry.label}`);
+  qualityLabels.add(entry.label);
+  if (config.coverage_cmd && entry.command === config.coverage_cmd) fail("coverage_cmd must not also run as a quality phase command");
 }
 
 const phaseCommands = config.phase_commands;
@@ -406,8 +427,8 @@ if (frontend !== undefined) {
         }
         if (Array.isArray(e2eFiles) && e2eFiles.every(isText) && plans.has(wave)) {
           for (const file of e2eFiles.map(clean)) {
-            if (!regressionFilesByWave.get(wave)?.has(file)) {
-              fail(`${label}: authenticated E2E file ${file} is absent from wave ${wave} regression test_files`);
+            if (!regressionFilesByWave.get(wave)?.has(file) && !waves[wave]?.ac_commands?.some((ac) => Array.isArray(ac.test_files) && ac.test_files.map(clean).includes(file))) {
+              fail(`${label}: authenticated E2E file ${file} is absent from wave ${wave} AC/regression test_files`);
             }
           }
         }

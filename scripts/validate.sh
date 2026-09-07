@@ -122,7 +122,7 @@ while IFS= read -r bugfix_file; do
 done < <(find "$ROOT/codex/skills/bugfixing" -type f | sort)
 check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
-for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl \
+for f in 4b_setup/scripts/preflight.sh 4b_setup/scripts/sync-framework.mjs 4a_checkpoint/templates/decisions.md.tmpl \
          4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
          4b_setup/scripts/context-injector.mjs 4b_setup/scripts/migration-drift-check.sh \
          4b_setup/manifests/roles/micro-fixer.md 4b_setup/manifests/roles/implementer.md \
@@ -132,7 +132,7 @@ for f in 4b_setup/scripts/preflight.sh 4a_checkpoint/templates/decisions.md.tmpl
          cross-review/scripts/cross-review.sh cross-review/scripts/review-with-claude.sh \
          cross-review/scripts/review-with-codex.sh cross-review/templates/cross-review-prompt.md.tmpl \
          5_executing/templates/agent-md-entry.md.tmpl \
-         5_executing/scripts/gen-component-registry.mjs 5_executing/scripts/quality-gate-proof.sh \
+         5_executing/scripts/gen-component-registry.mjs 5_executing/scripts/quality-gate-proof.sh 5_executing/scripts/quality-evidence.mjs \
          6_qa/scripts/ledger.mjs 6_qa/scripts/harvest-debt.sh \
          8_delivery/scripts/conflict-probe.sh 8_delivery/scripts/render-pr-body.mjs \
          8_delivery/scripts/ci-poll.sh 8_delivery/templates/pr-body.md.tmpl; do
@@ -158,11 +158,13 @@ fi
 # Syntax-only checks cannot prove gate behavior. These deterministic harnesses
 # use temporary repositories/fixtures and never contact external services.
 bash "$ROOT/scripts/test-wave-plan-validator.sh"
+node "$ROOT/scripts/test-sync-framework.mjs"
 bash "$ROOT/scripts/test-ledger.sh"
 bash "$ROOT/scripts/test-preflight-biome.sh"
 bash "$ROOT/scripts/test-migration-drift-check.sh"
 bash "$ROOT/scripts/test-worktree.sh"
 bash "$ROOT/scripts/test-wave-gate.sh"
+node "$ROOT/scripts/test-quality-evidence.mjs"
 bash "$ROOT/scripts/test-cross-review.sh"
 bash "$ROOT/scripts/test-review-with-claude.sh"
 node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest

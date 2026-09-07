@@ -31,7 +31,7 @@ run_preflight() {
     bash "$PREFLIGHT" 1 biome >/dev/null)
 }
 
-ignored='[".claude/settings.json","scripts/compile-context-bundles.mjs","scripts/context-injector.mjs","scripts/gen-component-registry.mjs","scripts/ledger.mjs","scripts/render-pr-body.mjs"]'
+ignored='[".claude/settings.json","scripts/compile-context-bundles.mjs","scripts/context-injector.mjs","scripts/gen-component-registry.mjs","scripts/ledger.mjs","scripts/render-pr-body.mjs", "scripts/sync-framework.mjs", "scripts/quality-evidence.mjs", ".skillchain-helpers.json"]'
 
 biome1="$TMP/biome1"
 mkdir -p "$biome1"

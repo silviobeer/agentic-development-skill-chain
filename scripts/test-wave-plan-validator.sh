@@ -31,6 +31,13 @@ expect_failure() {
   fi
 }
 
+for expression in '.coverage_cmd="npm run coverage"' '.build_artifacts=[]' '.lint_cmd=42'; do
+  prepare_case plan-valid.md config-valid.json
+  jq "$expression" "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+  mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+  if run_validator >"$CASE/output" 2>&1; then echo "invalid quality config accepted: $expression" >&2; exit 1; fi
+done
+
 prepare_case plan-valid.md config-valid.json
 run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
 
@@ -92,7 +99,23 @@ prepare_case plan-valid.md config-protected-e2e-valid.json
 run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
 
 prepare_case plan-valid.md config-protected-e2e-unmapped.json
-expect_failure "is absent from wave 1 regression test_files"
+expect_failure "is absent from wave 1 AC/regression test_files"
+
+prepare_case plan-valid.md config-protected-e2e-valid.json
+jq '.frontend.routes[0].authenticated_e2e_test_files=["tests/validator.test.ts"]' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
+
+prepare_case plan-valid.md config-valid.json
+jq '.waves["1"].regression_commands[0].reuse_passed=true' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
+jq '.waves["1"].regression_commands[0].reuse_passed="true"' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+expect_failure "reuse_passed must be boolean when present"
+jq '.waves["1"].regression_commands[0] |= (.reuse_passed=true | .auth_consuming=true)' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+expect_failure "reuse_passed cannot cache auth-consuming commands"
 
 prepare_case plan-valid.md config-readiness-float.json
 expect_failure "readiness.timeout_seconds must be a positive integer"

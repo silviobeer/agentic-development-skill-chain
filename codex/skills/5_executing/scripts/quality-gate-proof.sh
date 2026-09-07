@@ -3,6 +3,7 @@
 # that the PROJ-end Quality Gate ran, including Sonar or a valid skip reason.
 # Usage: quality-gate-proof.sh <proj-x> <theme>
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/env-local.sh"
 
 PROJ="${1:-}"; THEME="${2:-}"
 [ -n "$PROJ" ] && [ -n "$THEME" ] || { echo "Usage: $0 <proj-x> <theme>" >&2; exit 64; }
@@ -30,4 +31,5 @@ elif grep -qE 'Status: skipped \((sonar CLI unavailable|project not configured)\
 else
   fail "SonarCloud needs Status: ran or an explicit allowed skip reason"
 fi
+node "$(dirname "${BASH_SOURCE[0]}")/quality-evidence.mjs" "$PROJ" "$THEME" check
 echo "✓ Quality Gate proof present (code review, build, Sonar disposition)"

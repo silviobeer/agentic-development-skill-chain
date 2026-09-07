@@ -23,35 +23,25 @@ assembled-PROJ coverage, not another run of every wave AC.
 
 ## Gate 1: Code Review Expert
 
-Full review of the entire feature diff — catches cross-wave integration issues that story-scoped implementation tests may miss. Do not replay wave ACs here.
+Review cross-wave integration across the feature diff: contracts between waves, shared state, authorization boundaries, and unresolved earlier findings. Consult wave review evidence first; do not repeat its generic checklist or the six-persona QA panel. Do not replay wave ACs here.
 
 ### Steps
 
 1. Get the feature diff:
    ```bash
    git diff BASE_SHA..HEAD --stat    # scope overview
-   git diff BASE_SHA..HEAD           # full diff
+   git diff BASE_SHA..HEAD -- <affected-paths>  # follow cross-wave interfaces
    ```
 
-2. Review using the full checklist from `references/code-reviewer.md`:
-   - Architecture & SOLID
-   - Security & Reliability
-   - Error Handling
-   - Performance
-   - Boundary Conditions
-   - Testing
-   - Holistic "What Would I Do Better?"
+2. Use `references/code-reviewer.md` only for checks relevant to an identified integration risk. Start with the diff stat, then read affected interfaces and their callers. Expand to the full diff when the dependency trace requires it. Do not create speculative SOLID, memoization, or redesign work without an observed defect.
 
 3. Classify findings by severity:
    - **P0 Critical** — Security vulnerability, data loss risk, correctness bug → must fix
-   - **P1 High** — Logic error, significant SOLID violation, performance regression → must fix
+   - **P1 High** — Logic error, broken cross-wave contract, performance regression → must fix
    - **P2 Medium** — Code smell, maintainability concern → log for user decision
    - **P3 Low** — Style, naming, minor suggestion → log only
 
-4. Fix all P0/P1:
-   - Spawn a fix subagent per issue (or batch related issues); run disjoint fixes concurrently and overlapping fixes serially
-   - Re-run declared integration/quality-phase tests after fixes
-   - Re-review the fix diff to ensure no regressions
+4. Return confirmed P0/P1 to the coordinator. Wait for build, quality tests and Sonar results before the combined recovery round below; reviewers do not start an independent fix loop. Re-review the combined fix diff afterward.
 
 5. Log P2/P3 to `5_progress/PROJ-<X>-progress.md` under the Quality Gate section.
 
@@ -59,15 +49,13 @@ Full review of the entire feature diff — catches cross-wave integration issues
 
 ## Gate 2: PROJ-End Build
 
-Run `build_cmd` from `wave-gate-config.json` once for the assembled PROJ. If it fails, dispatch a fix worker with the verbatim compiler output and rerun the build. Do not add builds between individual implementation tasks.
+Run `node scripts/quality-evidence.mjs <X> <theme> run build`. The helper reuses the final wave build only when configured `build_artifacts` still match and code, configuration, environment, Node runtime and dependency-install fingerprints are unchanged. Without declared artifacts it builds normally. Declare artifacts only for builds independent of external state; remove build/coverage evidence after manual toolchain/dependency changes or untracked external input changes. Fixes invalidate old proof; verify the combined revision after recovery.
 
 ---
 
 ## Gate 3: Sonar Scan (once per PROJ)
 
-This is the only Sonar run in the whole PROJ — no wave gate runs Sonar.
-`sonar_cmd`'s scanner submission already covers the full project, so by
-definition this single run analyzes every wave's cumulative changes.
+Sonar runs at PROJ end, with an initial scan and at most three fix/rescan rounds; no wave gate runs Sonar. Each scan analyzes all waves together.
 
 ### Preflight
 
@@ -86,7 +74,7 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
    command used to describe the scan in the plan) from the persistent PROJ
    worktree:
    ```bash
-   bash -c "$SONAR_CMD"
+   node scripts/quality-evidence.mjs <X> <theme> run sonar
    ```
    Do not substitute an ad hoc `sonar-scanner` invocation — reuse the
    configured command so there is one source of truth for how this project is
@@ -114,20 +102,28 @@ command -v sonar >/dev/null && command -v sonar-scanner >/dev/null
    - **MINOR** → log for user decision
    - **INFO** → log only
 
-6. Fix BLOCKER/CRITICAL/MAJOR in a bounded loop, up to 3 rounds:
-   ```
-   for fix_round in 1..3:
-     if no BLOCKER/CRITICAL/MAJOR remain: break
-     spawn fix subagent(s) with the sonar issue details (file, line, message, rule);
-       cluster disjoint files concurrently, serialize overlapping files
-     re-run declared integration/quality-phase tests after fixes
-     re-run sonar_cmd (step 1) and re-fetch + re-classify issues (steps 2-5)
-   ```
+6. Return BLOCKER/CRITICAL/MAJOR findings to the coordinator's combined recovery round below, up to three Sonar fix/rescan rounds. Do not independently rerun tests or dispatch fixes from the Sonar stream.
    - Each round's scan must independently satisfy step 2's no-silent-no-op check — a round that produces no fresh `.scannerwork/report-task.txt` did not run and cannot count toward the 3.
    - Update `scripts/sonar-tracker.md` if it exists (mark fixed items `[x]`) after every round.
    - **If BLOCKER/CRITICAL/MAJOR issues remain after round 3:** document each one in `5_progress/PROJ-<X>-progress.md` (file, line, rule, severity, what the last fix attempt changed and why the issue persisted). Do **not** escalate, do **not** stop the run, and do **not** block this gate on it — record it as carried-forward and continue to QA handoff. This differs from every other Quality Gate item: a code-review or build failure that survives 3 iterations escalates to the user; a Sonar finding that survives 3 rounds is documented and carried forward instead.
 
 7. Log MINOR/INFO, and any BLOCKER/CRITICAL/MAJOR still open after round 3, to `5_progress/PROJ-<X>-progress.md`.
+
+---
+
+## Execution and evidence
+
+Use the existing lead to coordinate these commands; no additional scheduler is needed.
+
+1. Source `scripts/env-local.sh`. Freeze a committed revision; allow no code edits while verification runs. Run the integration reviewer alongside build and coverage where resources permit. Keep shared DB/browser commands sequential and under their existing lock/auth controls.
+2. Inspect `sonar_cmd` before starting. If its wrapper generates coverage, split it into a `coverage_cmd` and scanner-only `sonar_cmd`; keep the wrapper's ordinary combined entry point for other callers. Declare `coverage_artifacts` (for example `coverage/lcov.info`). Do not also declare the same coverage command as a quality-phase test. Coverage test failures block; never treat a successful upload of partial coverage as passing tests.
+3. Run `node scripts/quality-evidence.mjs <X> <theme> run coverage` when configured. Only unchanged, successful coverage with intact artifacts is reusable. Then run Sonar; never run a scanner against coverage still being written. If no separate coverage command exists, execute the configured Sonar wrapper as-is without claiming coverage reuse.
+4. Run each declared quality command with `node scripts/quality-evidence.mjs <X> <theme> run 'test:<label>'`, and lint with `... run lint` (`lint_cmd`, default `npm run lint`). These commands run live, require successful exits, and tests require positive selection. Auth-consuming quality entries execute their preflight and command under `worktree.sh with-shared-lock`. Retain CI/nightly workflow-wiring checks.
+5. Collect reviewer, build, tests, lint and Sonar reports before editing. Batch confirmed findings into one recovery round; dispatch disjoint fixes concurrently, overlapping files serially. After integration/commit, run quality tests, lint, build and coverage once on that revision, re-review the fix diff, then submit one fresh Sonar scan. If no code changed, do not repeat successful commands merely because another stream reported later. Keep per-issue attempt history: non-Sonar blockers escalate after three fixes; Sonar retains its three-round carry-forward policy. An unrelated later review fix does not reset Sonar's budget; refresh analysis on the final revision without starting more Sonar fix rounds.
+6. Save the completed review report in `5_progress/` and bind it with `node scripts/quality-evidence.mjs <X> <theme> review <report-path>` only after confirmed P0/P1 issues are resolved. For an allowed Sonar skip use `... skip-sonar 'sonar CLI unavailable'` or `... skip-sonar 'project not configured'`.
+7. Update the human-readable statuses below, then run `bash scripts/quality-gate-proof.sh <X> <theme>`. It now requires command evidence as well as statuses: current inputs, exact configured command, exit result, unchanged log, positive test selection and output artifact hashes. Scanner submission also requires a fresh task receipt; the Sonar stream still fetches the completed task's server results and records its disposition before marking `Status: ran`.
+
+Evidence is generated in `5_progress/quality-*.json` and logs. Each record retains the verified commit. Evidence-only commits do not invalidate the code proof; code/configuration changes do. Build and coverage reuse is opt-in through artifact lists, not a general cache for external services. Never hand-edit a proof record. Commands are bounded by their configured `<kind>_seconds` timeout (quality tests use `ac_seconds`, fallback 600 seconds).
 
 ---
 

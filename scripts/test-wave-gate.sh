@@ -20,6 +20,7 @@ case_dir() {
     '[[ -z "${BROWSER_CALL_LOG:-}" ]] || printf "called\n" >>"$BROWSER_CALL_LOG"' \
     'while [[ "${1:-}" == --* ]]; do case "$1" in --session) SESSION="$2"; shift 2;; --state) [[ -f "$2" ]] || exit 9; shift 2;; *) shift;; esac; done' \
     'STATE="${BROWSER_STATE_DIR:?}/${SESSION:-default}"; cmd="${1:-}"; shift || true' \
+    '[[ "$cmd" != "${BROWSER_STALL_COMMAND:-}" ]] || sleep 3' \
     'case "$cmd" in open) printf "%s\n" "${BROWSER_FINAL_URL:-$1}" >"$STATE";; get) [[ "${1:-}" == url ]] && command cat "$STATE";; snapshot) printf "%s\n" "${BROWSER_TEXT:-Welcome}";; errors) exit 0;; close) rm -f "$STATE";; *) exit 2;; esac' >"$CASE/bin/agent-browser"
   printf '%s\n' '#!/usr/bin/env bash' '[[ "${CURL_ALWAYS_READY:-1}" == 1 || -f "${READY_FILE:-/nonexistent}" ]]' >"$CASE/bin/curl"
   printf '%s\n' '#!/usr/bin/env bash' \
@@ -49,6 +50,87 @@ auth_control_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --auth-
 run_suite() {
   GATE="$1"; PLATFORM="$2"
 
+  case_dir parallel-build-review
+  PARALLEL_DIR="$TMP/$PLATFORM-parallel-markers"; export PARALLEL_DIR
+  mkdir -p "$PARALLEL_DIR"
+  cat >"$CASE/build.sh" <<'EOF'
+#!/usr/bin/env bash
+touch "$PARALLEL_DIR/build-started"
+for ((i=0; i<100; i++)); do
+  if [[ -f "$PARALLEL_DIR/review-started" ]]; then echo build-output; exit 0; fi
+  sleep .02
+done
+echo 'review did not overlap build' >&2
+exit 9
+EOF
+  cat >"$CASE/bin/coderabbit" <<'EOF'
+#!/usr/bin/env bash
+touch "$PARALLEL_DIR/review-started"
+[[ -f "$PARALLEL_DIR/build-started" ]] || sleep .1
+[[ -f "$PARALLEL_DIR/build-started" ]] || exit 9
+echo review-diagnostic >&2
+EOF
+  write_config "$(default_config | jq '.build_cmd="bash build.sh"')"; commit_case
+  run_gate >"$GATE_OUT" 2>&1 || { cat "$GATE_OUT"; fail "$LABEL: build/review did not overlap"; }
+  grep -q build-output "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" || fail "$LABEL: build output not retained"
+  grep -q review-diagnostic "$CASE/specs/PROJ-1-test/5_progress/coderabbit-wave-1-attempt-1.stderr.log" || fail "$LABEL: review stderr not separate"
+  unset PARALLEL_DIR
+
+  case_dir final-wave-build-reuse
+  printf 'out/\n' >>"$CASE/.gitignore"
+  config=$(default_config | jq '.build_cmd="mkdir -p out; echo output > out/build" | .build_artifacts=["out"]')
+  write_config "$config"; commit_case; run_gate >"$GATE_OUT" 2>&1
+  (cd "$CASE" && PATH="$CASE/bin:$PATH" node "$ROOT/$PLATFORM/skills/5_executing/scripts/quality-evidence.mjs" 1 test run build) >"$GATE_OUT" 2>&1
+  grep -q 'reused build' "$GATE_OUT" || fail "$LABEL: PROJ gate did not reuse valid wave build"
+
+  for failure in build-failure review-failure build-timeout review-timeout; do
+    case_dir "parallel-$failure"
+    PARALLEL_DIR="$TMP/$PLATFORM-$failure-markers"; export PARALLEL_DIR
+    BROWSER_CALL_LOG="$PARALLEL_DIR/browser"; export BROWSER_CALL_LOG
+    mkdir -p "$PARALLEL_DIR"
+    build='sleep .1; touch "$PARALLEL_DIR/build-done"'
+    review='sleep .1; touch "$PARALLEL_DIR/review-done"'
+    case "$failure" in
+      build-failure) build='exit 7' ;;
+      review-failure) review='exit 8' ;;
+      build-timeout) build='sleep 20' ;;
+      review-timeout) review='sleep 20' ;;
+    esac
+    printf '#!/usr/bin/env bash\n%s\n' "$review" >"$CASE/bin/coderabbit"
+    config=$(default_config | jq --arg build "$build" '.build_cmd=$build | .timeouts.build_seconds=1 | .timeouts.coderabbit_seconds=1 | .waves["1"].frontend_routes=["/"]')
+    write_config "$config"; commit_case; expect_fail run_gate
+    [[ ! -e "$BROWSER_CALL_LOG" ]] || fail "$LABEL: smoke ran after parallel failure"
+    case "$failure" in
+      build-*) [[ -f "$PARALLEL_DIR/review-done" ]] || fail "$LABEL: review was not collected"; grep -q 'build .*\(exit 7\|timed out\)' "$GATE_OUT" || fail "$LABEL: build failure lost" ;;
+      review-*) [[ -f "$PARALLEL_DIR/build-done" ]] || fail "$LABEL: build was not collected"; grep -q 'CodeRabbit .*\(rc=8\|timed out\)' "$GATE_OUT" || fail "$LABEL: review failure lost" ;;
+    esac
+    unset PARALLEL_DIR BROWSER_CALL_LOG
+  done
+
+  case_dir parallel-interrupt
+  PARALLEL_DIR="$TMP/$PLATFORM-interrupt-markers"; export PARALLEL_DIR
+  mkdir -p "$PARALLEL_DIR"
+  cat >"$CASE/bin/coderabbit" <<'EOF'
+#!/usr/bin/env bash
+sleep 30 & echo $! >"$PARALLEL_DIR/review-child"
+wait
+EOF
+  write_config "$(default_config | jq '.build_cmd="sleep 30 & echo $! >\"$PARALLEL_DIR/build-child\"; wait"')"; commit_case
+  (cd "$CASE" && exec env PATH="$CASE/bin:$PATH" bash "$GATE" 1 1 test) >"$GATE_OUT" 2>&1 & gate_pid=$!
+  for ((i=0; i<100; i++)); do
+    [[ ! -s "$PARALLEL_DIR/build-child" || ! -s "$PARALLEL_DIR/review-child" ]] || break
+    sleep .05
+  done
+  kill -TERM "$gate_pid" 2>/dev/null || true
+  interrupt_rc=0; wait "$gate_pid" || interrupt_rc=$?
+  [[ "$interrupt_rc" -eq 143 ]] || fail "$LABEL: interruption exit status lost ($interrupt_rc)"
+  for child in build-child review-child; do
+    [[ -s "$PARALLEL_DIR/$child" ]] || fail "$LABEL: both commands did not start"
+    child_pid=$(cat "$PARALLEL_DIR/$child")
+    if ps -p "$child_pid" -o stat= | grep -q '^[[:space:]]*[^Z[:space:]]'; then fail "$LABEL: command descendant $child_pid survived interruption"; fi
+  done
+  unset PARALLEL_DIR
+
   case_dir ac-only-cache-handoff
   REST_LOG="$TMP/$PLATFORM-ac-only-rest" CR_CALL_LOG="$TMP/$PLATFORM-ac-only-coderabbit" BROWSER_CALL_LOG="$TMP/$PLATFORM-ac-only-browser"
   export REST_LOG CR_CALL_LOG BROWSER_CALL_LOG
@@ -69,6 +151,47 @@ run_suite() {
   [[ $(cat "$REST_LOG") == RB ]] || fail "$LABEL: full gate did not execute regression and build after AC-only"
   [[ -s "$CR_CALL_LOG" && -s "$BROWSER_CALL_LOG" ]] || fail "$LABEL: full gate did not execute CodeRabbit and browser after AC-only"
   unset REST_LOG CR_CALL_LOG BROWSER_CALL_LOG
+
+  case_dir identical-ac-command
+  config=$(default_config | jq '.waves["1"].ac_commands += [(.waves["1"].ac_commands[0] | .id="AC-2" | .task="T-2")]')
+  write_config "$config"; commit_case; ac_only_gate >/dev/null
+  [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: identical AC command executed twice"
+  jq -e '(.commands | length)==2 and all(.commands[]; .status=="passed" and .selected==1) and .commands[0].log==.commands[1].log' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: reused command lost per-AC evidence"
+
+  for failure in 'exit 2' 'true' 'sleep 10'; do
+    case_dir "shared-failure-${failure// /-}"
+    config=$(default_config | jq --arg failure "$failure" '.timeouts.ac_seconds=1 | .waves["1"].ac_commands[0].command=("printf x >> \"$CASE_LOG\"; " + $failure) | .waves["1"].ac_commands += [(.waves["1"].ac_commands[0] | .id="AC-2")]')
+    write_config "$config"; commit_case
+    expect_fail ac_only_gate
+    [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: shared failing command repeated in one pass"
+    jq -e '(.commands|length)==2 and .commands[0].log==.commands[1].log' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: missing per-AC failure evidence"
+    expect_fail ac_only_gate
+    [[ $(wc -c <"$CASE_LOG") -eq 2 ]] || fail "$LABEL: failure incorrectly reused across passes"
+  done
+
+  case_dir regression-reuse
+  REST_LOG="$TMP/$PLATFORM-regression-reuse-rest"; export REST_LOG
+  config=$(default_config | jq '.waves["1"].regression_commands[0] += {reuse_passed:true,command:"printf R >> \"$REST_LOG\"; printf \"Running 2 tests\\n2 passed\\n\""}')
+  write_config "$config"; commit_case; run_gate >/dev/null; run_gate >/dev/null
+  [[ $(cat "$REST_LOG") == R ]] || fail "$LABEL: deterministic regression repeated"
+  jq '.regressions[0].config_hash="stale"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >"$CASE/ralph.tmp"
+  mv "$CASE/ralph.tmp" "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json"
+  run_gate >/dev/null
+  [[ $(cat "$REST_LOG") == RR ]] || fail "$LABEL: stale configuration reused regression evidence"
+  git -C "$CASE" commit --allow-empty -qm changed-head
+  run_gate >/dev/null
+  [[ $(cat "$REST_LOG") == RRR ]] || fail "$LABEL: new HEAD reused regression evidence"
+  unset REST_LOG
+
+  case_dir ac-context-mismatch
+  config=$(default_config | jq '.auth_budget={preflight_cmd:"true"} | .waves["1"].ac_commands += [(.waves["1"].ac_commands[0] | .id="AC-2" | .test_files=["tests/other.ts"]), (.waves["1"].ac_commands[0] | .id="AC-3" | .auth_consuming=true)]')
+  write_config "$config"; commit_case; ac_only_gate >/dev/null
+  [[ $(wc -c <"$CASE_LOG") -eq 3 ]] || fail "$LABEL: AC command reused across different files/auth context"
+
+  case_dir regression-reuse-auth-rejected
+  config=$(default_config | jq '.waves["1"].regression_commands[0] += {reuse_passed:true,auth_consuming:true}')
+  write_config "$config"; commit_case; expect_fail run_gate
+  grep -q 'reuse_passed requires a non-auth deterministic command' "$GATE_OUT" || fail "$LABEL: auth regression reuse was accepted"
 
   case_dir ac-only-collects-failures
   config=$(default_config | jq '.waves["1"].ac_commands=[
@@ -304,6 +427,20 @@ run_suite() {
   config=$(default_config | jq '.waves["1"].regression_commands[0].test_files=["tests/e2e/account.spec.ts"] | .frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/account","expected_url":"/account","expected_text":"Account","protected":true,"authenticated_e2e_test_files":["tests/e2e/account.spec.ts"]}]}')
   write_config "$config"; commit_case; BROWSER_FINAL_URL='http://app.test/login'; export BROWSER_FINAL_URL
   run_gate >/dev/null; unset BROWSER_FINAL_URL
+
+  case_dir authenticated-ac-e2e
+  config=$(default_config | jq '.waves["1"].ac_commands[0].test_files=["tests/e2e/account.spec.ts"] | .frontend={"dev_url":"http://app.test","routes":[{"wave":1,"path":"/account","expected_url":"/account","expected_text":"Account","protected":true,"authenticated_e2e_test_files":["tests/e2e/account.spec.ts"]}]}')
+  write_config "$config"; commit_case; BROWSER_CALL_LOG="$TMP/$PLATFORM-ac-coverage-browser"; export BROWSER_CALL_LOG
+  run_gate >/dev/null
+  [[ ! -e "$BROWSER_CALL_LOG" ]] || fail "$LABEL: equivalent authenticated AC evidence still ran smoke"
+  unset BROWSER_CALL_LOG
+
+  case_dir browser-snapshot-timeout
+  config=$(default_config | jq '.timeouts.browser_seconds=1 | .frontend={"dev_url":"http://app.test","routes":[{"wave":1,"path":"/","expected_text":"Welcome","protected":false}]}')
+  write_config "$config"; commit_case; BROWSER_STALL_COMMAND=snapshot; export BROWSER_STALL_COMMAND
+  expect_fail run_gate
+  grep -q 'snapshot failed or timed out' "$GATE_OUT" || fail "$LABEL: stalled snapshot was not bounded"
+  unset BROWSER_STALL_COMMAND
 
   case_dir protected-without-auth-coverage
   config=$(default_config | jq '.frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/account","expected_url":"/account","expected_text":"Account","protected":true}]}')

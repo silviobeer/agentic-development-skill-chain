@@ -93,17 +93,24 @@ What makes an overnight run trustworthy:
   the shared local DB's applied migrations still match this worktree's own
   `supabase/migrations/`, hard-failing with the drifted version(s) and the fix
   otherwise.
-- **Evidence-based wave gates.** Step 4 runs `wave-gate.sh --ac-only` to put
-  current-HEAD AC results directly into the gate cache; the full gate reuses
-  exact ID + command + HEAD matches, then runs the declared broad regression
-  suite and every remaining phase. CodeRabbit attempts retain raw
-  and normalized evidence and are judged against cumulative open ledger debt.
-  No wave gate runs Sonar; the required project `sonar_cmd` runs once per PROJ
-  in the PROJ-end Quality Gate, from that same PROJ worktree, never skipped
-  based on a hard-coded CLI name.
+- **Evidence-based wave gates.** Step 4 runs `wave-gate.sh --ac-only` to
+  record current-HEAD AC results. Equivalent commands share execution across
+  AC IDs; failed commands share results only within that pass. The full gate
+  reuses matching passes, runs targeted regressions, then runs build and
+  CodeRabbit concurrently. External/auth regressions remain live; only explicitly
+  opted-in deterministic local regressions can reuse evidence.
+- **Integration-focused PROJ gate.** Cross-wave review, build and coverage can
+  overlap where resources permit; Sonar waits for coverage. Review and Sonar
+  findings enter combined, bounded recovery rounds. Build and coverage reuse
+  requires matching inputs and intact declared artifacts. Final handoff checks
+  command evidence as well as written statuses. See [execution details](docs/executing-skill.md#proj-quality-gate).
+- **Refreshable project helpers.** P0 and implementation start/resume sync from
+  the installed skills. A hash manifest identifies untouched copies and protects
+  project adaptations. See [installation and refresh](docs/installation.md).
 - **Bounded evidence retention.** CodeRabbit raw output is kept because the
-  local gate parses it. CI and Sonar evidence remains in their source systems,
-  while cross-review persists validated normalized findings instead of full
+  local gate parses it. CI and Sonar reports remain in their source systems;
+  the PROJ gate retains command logs and task-receipt hashes. Cross-review
+  persists validated normalized findings instead of full
   model responses that may contain sensitive context.
 - **Cross-model review.** Review routes to the provider OPPOSITE the
   artifact's author; a review gate is never satisfied by the model that

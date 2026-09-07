@@ -238,7 +238,7 @@ const { execFileSync } = require("child_process");
 const path = "biome.json";
 const raw = fs.readFileSync(path, "utf8");
 const config = JSON.parse(raw);
-const ignored = [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs"];
+const ignored = [".claude/settings.json", "scripts/compile-context-bundles.mjs", "scripts/context-injector.mjs", "scripts/gen-component-registry.mjs", "scripts/ledger.mjs", "scripts/render-pr-body.mjs", "scripts/sync-framework.mjs", "scripts/quality-evidence.mjs", ".skillchain-helpers.json"];
 config.files ??= {};
 // Biome 2 removed `files.ignore` in favour of negated patterns in
 // `files.includes`, and rejects the old key outright — writing it makes

@@ -27,6 +27,8 @@ RALPH_PID="${BASE}/5_progress/ralph-wave-${WAVE}.pid"
 RALPH_HEARTBEAT="${BASE}/5_progress/ralph-wave-${WAVE}.heartbeat"
 WAVE_KEY=".waves[\"${WAVE}\"]"
 DEV_PID=""
+BUILD_PID=""
+CR_PID=""
 DEV_PROCESS_GROUP=false
 OWNS_RALPH=false
 
@@ -53,6 +55,13 @@ heartbeat() { date +%s > "$RALPH_HEARTBEAT"; }
 source "$SCRIPT_DIR/env-local.sh"
 
 cleanup() {
+  local pid
+  for pid in "$BUILD_PID" "$CR_PID"; do
+    [[ -n "$pid" ]] || continue
+    # Background timeout commands own separate process groups, including children.
+    kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  done
   [[ "$OWNS_RALPH" == false ]] || rm -f "$RALPH_PID"
   if [[ -n "$DEV_PID" ]] && kill -0 "$DEV_PID" 2>/dev/null; then
     if [[ "$DEV_PROCESS_GROUP" == true ]]; then kill -- "-$DEV_PID" 2>/dev/null || true; else kill "$DEV_PID" 2>/dev/null || true; fi
@@ -60,6 +69,8 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 run_with_timeout() {
   local secs="$1" label="$2"; shift 2
@@ -123,9 +134,9 @@ record_ac() {
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
   jq --argjson index "$index" --arg id "$id" --arg task "$task" --arg command "$command" --argjson tests "$tests" \
     --argjson attempts "$attempts" --argjson rc "$rc" --argjson selected "$selected" --arg status "$status" \
-    --arg log "$log" --arg head "$verified_head" --arg updated "$(date -Iseconds)" '
+    --arg pass "${PASS_ID:-}" --arg log "$log" --arg head "$verified_head" --arg config "$CONFIG_HASH" --argjson auth "$auth" --arg updated "$(date -Iseconds)" '
       .updated_at=$updated |
-      .commands=((.commands // []) | map(select(.index != $index)) + [{index:$index,id:$id,task:($task | if .=="" then null else . end),command:$command,test_files:$tests,attempts:$attempts,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
+      .commands=((.commands // []) | map(select(.index != $index)) + [{pass_id:$pass,index:$index,id:$id,task:($task | if .=="" then null else . end),command:$command,test_files:$tests,config_hash:$config,auth_consuming:$auth,attempts:$attempts,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
     ' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 }
 
@@ -133,9 +144,9 @@ record_regression() {
   local label="$1" command="$2" tests="$3" rc="$4" selected="$5" status="$6" log="$7" head="$8" tmp
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
   jq --arg label "$label" --arg command "$command" --argjson tests "$tests" --argjson rc "$rc" --argjson selected "$selected" \
-    --arg status "$status" --arg log "$log" --arg head "$head" --arg updated "$(date -Iseconds)" '
+    --arg status "$status" --arg log "$log" --arg head "$head" --arg config "$CONFIG_HASH" --argjson auth "$auth" --arg updated "$(date -Iseconds)" '
       .updated_at=$updated |
-      .regressions=((.regressions // []) | map(select(.label != $label)) + [{label:$label,command:$command,test_files:$tests,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
+      .regressions=((.regressions // []) | map(select(.label != $label)) + [{label:$label,command:$command,test_files:$tests,config_hash:$config,auth_consuming:$auth,rc:$rc,selected:$selected,failed_empty_selection:($status=="failed_empty_selection"),status:$status,log:$log,verified_head:$head,updated_at:$updated}])
     ' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 }
 
@@ -158,7 +169,7 @@ provider_rate_limited() {
 
 is_evidence_path() {
   case "$1" in
-    "$PROGRESS"|"$BASE/findings.json"|"$BASE/.findings.lock"|"$BASE/5_progress/ralph-wave-${WAVE}"*|"$BASE/5_progress/coderabbit-wave-${WAVE}-attempt-"*|"$BASE/5_progress/dev-server-wave-${WAVE}.log") return 0 ;;
+    "$BASE/5_progress/quality-"*|"$PROGRESS"|"$BASE/findings.json"|"$BASE/.findings.lock"|"$BASE/5_progress/ralph-wave-${WAVE}"*|"$BASE/5_progress/coderabbit-wave-${WAVE}-attempt-"*|"$BASE/5_progress/build-wave-${WAVE}-attempt-"*|"$BASE/5_progress/dev-server-wave-${WAVE}.log") return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -259,6 +270,7 @@ jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null ||
 ADVISORY_JSON=$(jq -c "${WAVE_KEY}.advisory_severities | map(ascii_downcase)" "$CFG")
 ADVISORY_LABEL=$(jq -r "${WAVE_KEY}.advisory_severities | if length==0 then \"none\" else join(\",\") end" "$CFG")
 VERIFIED_HEAD=$(git rev-parse --verify HEAD)
+CONFIG_HASH=$(git hash-object "$CFG")
 assert_clean_worktree
 echo "=== Wave ${WAVE} Completion Gate — current ACs + declared regressions (PROJ-${PROJ}-${THEME}) ==="
 
@@ -289,6 +301,8 @@ if [[ -f "$RALPH_PID" ]]; then
 fi
 printf '%s\n' "$$" >"$RALPH_PID"; OWNS_RALPH=true; heartbeat
 LAST_AUTH="${BASE}/5_progress/ralph-wave-${WAVE}.auth-last"
+# Failed results live only for this invocation; never suppress a recovery retry.
+PASS_ID="$(date +%s%N)-$$"
 
 for ((index=0; index<AC_COUNT; index++)); do
   entry=$(jq -c "${WAVE_KEY}.ac_commands[$index]" "$CFG")
@@ -300,10 +314,21 @@ for ((index=0; index<AC_COUNT; index++)); do
   fi
   [[ -n "$command" && -n "$id" ]] || fail "AC $((index+1)) has empty id/command"
   [[ "$auth" == true || "$auth" == false ]] || fail "AC ${id} auth_consuming must be boolean"
-  if jq -e --arg id "$id" --arg command "$command" --arg head "$VERIFIED_HEAD" \
-    '.commands[]? | select(.id==$id and .command==$command and .verified_head==$head and .status=="passed" and .rc==0 and ((.selected|type)=="number") and .selected>0)' "$RALPH_STATE" >/dev/null; then
+  cached=$(jq -c --arg command "$command" --arg head "$VERIFIED_HEAD" --arg config "$CONFIG_HASH" --argjson tests "$tests" --argjson auth "$auth" '
+    [.commands[]? | select(.command==$command and .test_files==$tests and .auth_consuming==$auth and .config_hash==$config and .verified_head==$head and .status=="passed" and .rc==0 and ((.selected|type)=="number") and .selected>0)][0] // empty' "$RALPH_STATE")
+  if [[ -n "$cached" && -f $(jq -r '.log // empty' <<<"$cached") ]]; then
     assert_verified_head
-    echo "   ✓ AC ${id} already green at ${VERIFIED_HEAD}; skipped"
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$(jq -r '.attempts' <<<"$cached")" 0 "$(jq -r '.selected' <<<"$cached")" passed "$(jq -r '.log' <<<"$cached")" "$VERIFIED_HEAD"
+    echo "   ✓ AC ${id} command already green at ${VERIFIED_HEAD}; reused"
+    continue
+  fi
+  failed=$(jq -c --arg pass "$PASS_ID" --arg command "$command" --argjson tests "$tests" --argjson auth "$auth" '
+    [.commands[]? | select(.pass_id==$pass and .command==$command and .test_files==$tests and .auth_consuming==$auth and (.status=="failed" or .status=="failed_empty_selection" or .status=="stalled"))][0] // empty' "$RALPH_STATE")
+  if [[ "$AC_ONLY" == true && -n "$failed" ]]; then
+    assert_verified_head; assert_clean_worktree
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$(jq -r '.attempts' <<<"$failed")" "$(jq -r '.rc' <<<"$failed")" "$(jq -r '.selected' <<<"$failed")" "$(jq -r '.status' <<<"$failed")" "$(jq -r '.log' <<<"$failed")" "$VERIFIED_HEAD"
+    AC_ONLY_FAILED=true
+    echo "   ✗ AC ${id} shares a failed command from this pass (log: $(jq -r '.log' <<<"$failed"))"
     continue
   fi
   if [[ "$auth" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
@@ -366,6 +391,18 @@ for ((index=0; index<REG_COUNT; index++)); do
   label=$(jq -r ".label // \"regression-$((index+1))\"" <<<"$entry"); command=$(jq -r '.command // empty' <<<"$entry")
   tests=$(jq -c '.test_files // []' <<<"$entry"); auth=$(jq -r '.auth_consuming // false' <<<"$entry"); require_selection=$(jq -r '.require_non_empty_selection // false' <<<"$entry")
   [[ -n "$command" ]] || fail "regression ${label} command is empty"
+  reuse=$(jq -r '.reuse_passed // false' <<<"$entry")
+  [[ "$reuse" == true || "$reuse" == false ]] || fail "regression ${label} reuse_passed must be boolean"
+  [[ "$reuse" != true || "$auth" == false ]] || fail "regression ${label}: reuse_passed requires a non-auth deterministic command"
+  if [[ "$reuse" == true ]]; then
+    cached=$(jq -c --arg label "$label" --arg command "$command" --arg head "$VERIFIED_HEAD" --arg config "$CONFIG_HASH" --argjson tests "$tests" --argjson required "$require_selection" '
+      [.regressions[]? | select(.label==$label and .command==$command and .test_files==$tests and .auth_consuming==false and .config_hash==$config and .verified_head==$head and .status=="passed" and .rc==0 and ((.selected|type)=="number") and ($required==false or .selected>0))][0] // empty' "$RALPH_STATE")
+    if [[ -n "$cached" && -f $(jq -r '.log // empty' <<<"$cached") ]]; then
+      echo "   ✓ ${label}: reused deterministic regression at ${VERIFIED_HEAD}"
+      assert_verified_head; assert_clean_worktree
+      continue
+    fi
+  fi
   log="${BASE}/5_progress/ralph-wave-${WAVE}-regression-$((index+1)).log"; hook_log="${log%.log}-auth-preflight.log"
   set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log")
   [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for regression ${label}" 73
@@ -385,11 +422,8 @@ done
 rm -f "$RALPH_PID"; OWNS_RALPH=false
 tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg updated "$(date -Iseconds)" '.ralph_status="complete"|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 
-step "3/6 Build"
+step "3–4/6 Build and CodeRabbit wave review (parallel)"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
-run_with_timeout "$BUILD_TIMEOUT" build bash -c "$BUILD_CMD"; assert_verified_head; assert_clean_worktree
-
-step "4/6 CodeRabbit wave review"
 command -v coderabbit >/dev/null || fail "coderabbit not installed"
 WAVE_BASE="${WAVE_BASE_SHA:-}"
 if [[ -n "$WAVE_BASE" ]]; then git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 || fail "invalid WAVE_BASE_SHA"; else WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true); fi
@@ -399,7 +433,22 @@ attempt=1
 while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
 CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
 CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
-  set +e; timeout --foreground "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW"; CR_RC=$?; set -e
+BUILD_LOG="${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log"
+CR_STDERR="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.stderr.log"
+# Only the commands overlap; the coordinator checks results and writes the ledger.
+# Without --foreground, timeout contains each command's children in its own group.
+BUILD_INPUTS=$(node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" snapshot)
+started=$(date +%s)
+timeout --kill-after=5s "$BUILD_TIMEOUT" bash -c "$BUILD_CMD" >"$BUILD_LOG" 2>&1 & BUILD_PID=$!
+timeout --kill-after=5s "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW" 2>"$CR_STDERR" & CR_PID=$!
+BUILD_RC=0; wait "$BUILD_PID" || BUILD_RC=$?; BUILD_PID=""
+CR_RC=0; wait "$CR_PID" || CR_RC=$?; CR_PID=""
+echo "   Build exit ${BUILD_RC}; CodeRabbit exit ${CR_RC}; parallel phase $(( $(date +%s) - started ))s"
+[[ ! -s "$CR_STDERR" ]] || cat "$CR_STDERR" >&2
+assert_verified_head; assert_clean_worktree
+[[ "$BUILD_RC" -ne 124 ]] || fail "build timed out (log: $BUILD_LOG)"
+[[ "$BUILD_RC" -eq 0 ]] || { cat "$BUILD_LOG" >&2; fail "build failed with exit ${BUILD_RC} (log: $BUILD_LOG)"; }
+node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" record-build "$BUILD_LOG" "$VERIFIED_HEAD" "$BUILD_INPUTS"
 : >"$CR_NORMALIZED"
 if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
 if [[ "$CR_RC" -eq 124 ]]; then
@@ -446,14 +495,16 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
     if [[ "$protected" == true && -z "$auth_state" ]]; then
       coverage=$(jq -c '.authenticated_e2e_test_files // []' <<<"$route")
       [[ $(jq 'length' <<<"$coverage") -gt 0 ]] || fail "protected route ${path} lacks auth_state or authenticated E2E coverage"
-      jq -e --argjson coverage "$coverage" "${WAVE_KEY}.regression_commands as \$reg | ([\$reg[].test_files[]?] | unique) as \$files | (\$coverage - \$files | length)==0" "$CFG" >/dev/null || fail "protected route ${path} lacks auth_state or successful authenticated E2E coverage"
-      echo "   ✓ protected ${path}: covered by authenticated regression"
+      jq -e --argjson coverage "$coverage" --arg head "$VERIFIED_HEAD" --arg config "$CONFIG_HASH" '
+        ([.commands[]?, .regressions[]?] | map(select(.verified_head==$head and .config_hash==$config and .status=="passed" and .rc==0 and ((.selected|type)=="number") and .selected>0)) | [.[].test_files[]?] | unique) as $files
+        | ($coverage - $files | length)==0' "$RALPH_STATE" >/dev/null || fail "protected route ${path} lacks auth_state or successful authenticated E2E coverage"
+      echo "   ✓ protected ${path}: covered by current-wave authenticated AC/regression"
     fi
   done
   SMOKE_ROUTES_JSON=$(jq -c '[.[] | select((.protected // false)==false or ((.auth_state // "")|length)>0)]' <<<"$ROUTES_JSON")
   SMOKE_COUNT=$(jq 'length' <<<"$SMOKE_ROUTES_JSON")
   if [[ "$SMOKE_COUNT" -eq 0 ]]; then
-    echo "   (all protected routes covered by authenticated regression — browser smoke skipped)"
+    echo "   (all protected routes covered by authenticated AC/regression — browser smoke skipped)"
   else
     command -v agent-browser >/dev/null || fail "agent-browser not installed but smoke routes are configured"
     command -v curl >/dev/null || fail "curl not installed but smoke routes are configured"
@@ -476,10 +527,10 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
       expected_text=$(jq -r '.expected_text // empty' <<<"$route"); session="skillchain-wave-${WAVE}-route-${index}"
       browser=(agent-browser --session "$session"); [[ -z "$auth_state" ]] || browser+=(--state "$auth_state")
       run_with_timeout "$BROWSER_TIMEOUT" "smoke ${path}" "${browser[@]}" open "$target"
-      actual=$("${browser[@]}" get url); [[ "$actual" == "$expected" ]] || fail "smoke ${path} redirected/resolved to '${actual}', expected '${expected}'"
-      text_out=$("${browser[@]}" snapshot); [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
-      "${browser[@]}" errors >/dev/null || fail "browser errors on ${path}"
-      "${browser[@]}" close >/dev/null 2>&1 || true
+      actual=$(timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" get url) || fail "smoke ${path}: get url failed or timed out"; [[ "$actual" == "$expected" ]] || fail "smoke ${path} redirected/resolved to '${actual}', expected '${expected}'"
+      text_out=$(timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" snapshot) || fail "smoke ${path}: snapshot failed or timed out"; [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
+      timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" errors >/dev/null || fail "browser errors or timeout on ${path}"
+      timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" close >/dev/null 2>&1 || true
     done
   fi
 fi
