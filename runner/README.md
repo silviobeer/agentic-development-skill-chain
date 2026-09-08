@@ -18,6 +18,15 @@ files on disk. No conversation history crosses a phase boundary.
 | `templates/morning-report.md.tmpl`, `templates/stop-report.md.tmpl` | report frames — reports are rendered, never hand-written |
 | `schemas/state.schema.json`, `schemas/findings.schema.json` | documented contracts for the two machine files (validation is embedded in `state.sh` / `ledger.mjs`) |
 
+Report inputs include state, findings where used, and the PROJ's
+`3-4_plan/wave-gate-config.json` (falling back to legacy `6_plan/`).
+Stop/morning reports and the P8 PR renderer list declared external prerequisites
+with AC ID, wave, reason, decision author/date, readiness command and evidence
+path. These are declarations, not passing or current-readiness evidence; rendering
+does not execute the checks. `blocked_external` / exit 76 at a wave gate does
+not seal P5 or unlock the next wave. See the
+[execution guide](../docs/executing-skill.md#wave-scoped-outer-ralph).
+
 ## Typical overnight run
 
 ```bash

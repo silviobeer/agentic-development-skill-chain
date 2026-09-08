@@ -2,11 +2,11 @@
 // render-pr-body.mjs — P8 step 3: render the PR description from data.
 //
 // Pure render, no side effects (CONCEPT.md §7 script specs): reads
-// state.json + findings.json + the template and prints the PR body to
-// stdout. The LLM never freehands the PR body — free text enters only
-// through structured state fields (.summary, .docs_changed) that this
-// renderer places inside the fixed frame. Same data in → byte-identical
-// structure out.
+// state.json, findings.json, optional wave-gate-config.json and the template,
+// then prints the PR body to stdout with a rendering timestamp. The LLM never
+// freehands the PR body: state summaries, finding summaries and declared
+// prerequisites enter through structured inputs within the fixed frame.
+// Prerequisite declarations are not acceptance evidence; no checks are run.
 //
 // Usage: render-pr-body.mjs <proj-x> <theme> [template-path]
 //        template-path defaults to templates/pr-body.md.tmpl, falling

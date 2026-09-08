@@ -86,7 +86,7 @@ After decomposition:
 | 5 | executing | Delegate code/test/fix edits to workers, run TDD plus one wave-scoped Ralph pass and hard wave gates, then an integration-focused PROJ gate and direct Skill 6 handoff |
 | 6 | qa | Run E2E QA, security, required six-persona opposite-provider evidence review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
-| 8 | delivery | Conflict probe against main, PR with a body rendered from state.json + findings.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
+| 8 | delivery | Conflict probe against main, PR body rendered from state.json + findings.json and declared external prerequisites in wave-gate-config.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 
 ## Framework Runs (Agent Workflow, Stage 1 + Stage 2)
 
@@ -116,15 +116,19 @@ removes the worktree only after green final CI, an identical pushed upstream
 commit, and a clean tree; otherwise reports retain its path, cleanup reason,
 and the safe P8 resume command that reseals before retrying cleanup.
 
-`worktree.sh`'s shared lock only serializes concurrent migrations — it does
-nothing about one worktree advancing the shared database's schema while a
-sibling worktree keeps trusting its own, older `supabase/migrations/`. For a
+`worktree.sh with-shared-lock` is exclusive by default across worktrees for
+commands that acquire it, including auth-consuming gate commands. Proven
+independent fixture lifecycles may opt into `--shared` on the same lock file;
+migrations, resets and overlapping mutable fixtures remain exclusive. This
+preserves migration exclusion without automatically parallelizing the gate or
+isolating test data/auth budgets. Neither mode prevents a worktree advancing
+the schema before a sibling next uses its older `supabase/migrations/`. For a
 project on Supabase, `preflight.sh` (P0) and `wave-gate.sh` (every wave) both
 run `migration-drift-check.sh`, hard-failing with the exact drifted migration
 version(s) and the `supabase db reset` fix. See the `supabase-local-dev`
 skill for the same check outside the chain's P0/wave-gate flow.
 
-Wave plans carry structured AC/test-file mappings, a broad regression suite,
+Wave plans carry structured AC/test-file mappings, targeted regressions,
 auth-budget metadata, and deterministic frontend route expectations. Planning,
 Checkpoint 1, and P0 run the same consistency validator. A green wave gate
 reuses exact same-HEAD evidence produced by its `--ac-only` pass, then certifies
@@ -132,6 +136,18 @@ current ACs plus declared regressions—not every earlier AC command.
 Legacy string AC entries are rejected by the current wave gate. Upgrade them to
 structured AC metadata in Writing Plans and reapprove before execution; the
 runtime does not infer AC identity from an old array position.
+
+Browser scenarios have a named owner and files per wave or cohesive feature;
+the execution closure checklist covers every story's smoke behavior in both
+sequential and parallel modes. Optional `selection_check_cmd` hooks prove a
+positive scenario count in Phase 0 before AC execution; test files over 800
+lines produce an advisory warning. An authorized `external_dependency` retains
+the AC and test while recording `blocked_external` when its prerequisite is
+absent. Exit 76 grants no wave certificate or next-wave permission; rendered
+PR, stop and morning reports include the declared prerequisites. See
+[Executing Skill](executing-skill.md) for these contracts and worker handover
+rules, and [Installation](installation.md) before enabling new fields or shared
+mode in an existing project copy.
 
 Stage 2 adds the bootstrap and the full context system:
 

@@ -109,3 +109,38 @@ Generate current evidence through `quality-evidence.mjs`; do not fabricate or
 copy success records from an earlier run. The [execution guide](executing-skill.md#proj-quality-gate)
 describes the commands and invalidation rules. An already-running agent is not
 updated mid-gate; resume with the refreshed skill instructions and helper set.
+
+### External prerequisites, browser selection and lock modes
+
+Install the updated skills first, then refresh and commit the project helpers
+as described above before introducing new config fields. Older gates may ignore
+unknown fields. Installing skills does not rewrite a running project's config,
+test harness or copied helpers.
+
+- Keep each AC's original test, command and plan mapping when adding
+  `external_dependency`. Its `reason`, `decided_by`, `decided_at` and
+  `check_command` describe a real authorized decision and readiness check.
+  An absent prerequisite produces `blocked_external` / exit 76 without
+  certifying the wave. Refresh the plan validator and PR renderer too; update
+  the framework checkout used to run `runner/render-report.mjs` for matching
+  stop/morning reports.
+- Browser regressions with filtered selection can add `selection_check_cmd`:
+  a read-only discovery command using the real selector and printing a positive
+  supported test count. It runs before AC verification. Existing suites need
+  no automatic file split; files above 800 lines receive an advisory warning.
+- `worktree.sh with-shared-lock` remains exclusive. Opt into `--shared` only
+  after proving fixture/actor isolation, using the same lock path in all
+  worktrees. Migrations, resets and global changes remain exclusive.
+  Auth-consuming gate commands still hold an exclusive outer lock over the
+  command; switching an inner helper to shared mode does not shorten that hold.
+- Give lock acquisition an explicit `--timeout` that fits inside the enclosing
+  process timeout together with the command's execution budget. Preserve exit
+  73 and stderr through project wrappers. The gate also recognizes the helper's
+  `SKILLCHAIN_LOCK_TIMEOUT` marker when a wrapper changes the failure exit code.
+
+Any helper/config/test commit changes HEAD and invalidates AC cache reuse;
+config changes also change the complete gate-config fingerprint. Preserve
+historical certificates as historical evidence. A deliberate test split updates
+plan, command and route mappings together and requires fresh affected checks.
+For fixture isolation, browser lifecycle and incremental parallelism, follow the
+[execution reference](../claude/skills/5_executing/references/worker-lifecycle.md#reduce-verification-cost-before-increasing-concurrency).

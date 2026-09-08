@@ -87,7 +87,9 @@ What makes an overnight run trustworthy:
   sibling worktree. Dependencies are installed inside it; `.env.local`, the
   development database, and hosted-auth limits remain deliberately shared and
   are surfaced in state and reports. Migrations and auth-consuming gates use a
-  common repository lock — which only serializes concurrent migrations. On a
+  common repository lock, exclusive by default. Independent test fixtures may
+  opt into shared mode on that same lock; migrations remain exclusive. This
+  prevents concurrent collisions, not schema drift between runs. On a
   Supabase project, `migration-drift-check.sh` additionally guards the
   sequential case: preflight (once, at P0) and every wave gate re-verify that
   the shared local DB's applied migrations still match this worktree's own
@@ -99,6 +101,9 @@ What makes an overnight run trustworthy:
   reuses matching passes, runs targeted regressions, then runs build and
   CodeRabbit concurrently. External/auth regressions remain live; only explicitly
   opted-in deterministic local regressions can reuse evidence.
+  Missing declared external prerequisites produce `blocked_external` (exit 76),
+  not a green AC or a next-wave unlock. Scenario-selection checks run in Phase 0.
+  See [gate behavior](docs/executing-skill.md#wave-gate).
 - **Integration-focused PROJ gate.** Cross-wave review, build and coverage can
   overlap where resources permit; Sonar waits for coverage. Review and Sonar
   findings enter combined, bounded recovery rounds. Build and coverage reuse

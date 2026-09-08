@@ -1,6 +1,6 @@
 # Executing Skill
 
-**Last updated:** 2026-09-07
+**Last updated:** 2026-09-08
 
 The executing skill is Step 5 in the 0-to-8 chain. It turns the wave plans from Step 4 into working code, one PROJ at a time, with deterministic verification once per wave and hard gates between waves.
 
@@ -66,9 +66,9 @@ Required setup includes:
 - Supabase CLI or equivalent Supabase tooling when the project uses Supabase.
   On a Supabase project, every wave gate also re-checks that the shared local
   DB's applied migrations still match this worktree's own
-  `supabase/migrations/` (`migration-drift-check.sh`) — the common lock above
-  only serializes concurrent migrations, not one worktree silently advancing
-  the schema a sibling worktree still trusts.
+  `supabase/migrations/` (`migration-drift-check.sh`) — the common lock excludes
+  concurrent conflicting operations but does not prevent one worktree advancing
+  the schema before a sibling worktree next uses it.
 - Playwright MCP when planned frontend routes require full QA later.
 - `agent-browser`, `coderabbit`, and `jq` CLIs for wave gates.
 - `BASE_SHA`, recorded with `git rev-parse HEAD`.
@@ -128,6 +128,12 @@ For implementation, the skill chooses the implementer type by scope:
 
 Parallel waves can run multiple independent user stories at once. In those cases, an integration guard monitors file ownership and overlap. Single-story waves do not need team overhead.
 
+The lead asks an active worker for status before considering cancellation; quiet files or a single process snapshot do not establish a hang. Replacement requires a confirmed stop, released child commands/resources, and an explicit transfer of files and partial work. Never message a retired worker or send its replacement to negotiate ownership: messages can resume stopped Claude teammates. The lead owns the handover.
+
+`worktree.sh with-shared-lock -- <command>` is exclusive by default across worktrees. Independently verified fixture lifecycles may opt into `--shared --timeout 30` on the same lock file; migrations, resets, global writes and overlapping fixtures remain exclusive. Shared mode provides a schema barrier, not data or auth-budget isolation. Existing auth-consuming gate commands keep their exclusive outer lock; the gate does not automatically parallelize DB/browser checks. Trace nested acquisitions before wrapping a test runner, since forked workers may drop inherited fd 8 and wait on their own parent.
+
+Lock timeout is infrastructure failure (exit 73), with `SKILLCHAIN_LOCK_WAIT` and `SKILLCHAIN_LOCK_TIMEOUT` diagnostics. Keep its wait budget below an outer wrapper's timeout and preserve the failure classification. PID snapshots and process age do not prove lock age or abandonment. Every browser probe must close its owned session on error as well as success. See the [worker lifecycle and resource guide](../claude/skills/5_executing/references/worker-lifecycle.md) for scheduling, fixture isolation, diagnostics and incremental migration.
+
 ## TDD Task Loop
 
 Each user-story implementation follows a task-level TDD loop:
@@ -156,7 +162,13 @@ The implementer does not verify acceptance criteria. That is reserved for the le
 
 ## Wave-Scoped Outer Ralph
 
-After every worker in a wave returns and the lead integrates and commits their changes, the lead starts the canonical wave acceptance checks with:
+Before the AC pass, complete the same closure checklist in parallel and sequential modes:
+
+1. Match every story's `Smoke Test` route and behavior to gate smoke or current-wave authenticated scenario coverage.
+2. Assign missing scenarios to the named browser owner after conflicting DB work releases resources; an existing story worker can own them.
+3. Integrate and commit scenario files, command/route mappings and any selection-only hook. Prefer files per wave or cohesive feature; a route load alone does not prove an interaction.
+
+After every worker returns and this coverage is committed, the lead starts the canonical wave acceptance checks with:
 
 ```bash
 bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
@@ -165,6 +177,8 @@ bash scripts/wave-gate.sh --ac-only <N> <X> <theme>
 This AC-only pass uses the gate's timeout, auth-budget, pacing, and rate-limit controls and writes its results directly to `ralph-wave-<N>.json`. It collects every ordinary AC failure so disjoint repairs can be batched, while infrastructure and auth-budget exhaustion still fail fast. It exits before regressions, build, CodeRabbit, browser smoke, component registry, progress certification, and next-wave tagging.
 
 Evidence binds each canonical AC ID, task, exact command, test files, selected-test count, and committed `HEAD`. Successful commands with matching test files, auth context, HEAD and complete gate-config hash share execution across AC IDs, retaining a record for each ID. Failed, empty-selection and timed-out commands share their result only within the current pass; the next recovery pass retries them. Cross-HEAD reuse is not supported; clear Ralph evidence after dependency/runtime/environment changes.
+
+An AC awaiting an authorized external prerequisite retains its original command and test files and declares `external_dependency` with `reason`, `decided_by`, `decided_at` and `check_command`. The read-only readiness check runs before cache lookup: exit 0 runs the original AC fresh, exit 76 records `blocked_external` and continues checking other ACs, and any other nonzero result is infrastructure failure (gate exit 74). With no ordinary failure, an externally blocked pass exits 76 without certifying the wave or unlocking the next wave; ordinary failures still fail the pass. This is neither acceptance nor a Sonar-style waiver. Keep the authorized decision in `decisions.md`; PR, stop and morning report renderers surface the declared prerequisites. Continuing independent work requires explicit dependency replanning. See [planning contracts and migration](../claude/skills/4_writing-plans/SKILL.md#5-write-wave-gate-configjson).
 
 Recovery has exactly four stages:
 
@@ -185,6 +199,7 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 
 The script is the hard boundary and validates:
 
+- Phase 0 runs each declared regression `selection_check_cmd` before AC verification. It must select the same scenarios without browser/DB/auth effects and emit a supported positive count, such as `Running 3 tests`. Declared test files above 800 lines produce an advisory warning, not a failure or automatic split.
 - Every structured `ac_commands` entry for the wave exits 0 and selects tests.
 - A cached AC pass matches its command, test files, auth context, configuration hash, positive selected count, and committed `verified_head`.
 - Every declared `regression_commands` entry passes before build; selection-aware suites cannot pass empty. Only entries with `reuse_passed: true` can reuse deterministic, non-auth local results on unchanged HEAD/configuration; external or auth-dependent tests run live.
@@ -198,12 +213,16 @@ The script is the hard boundary and validates:
 
 After ACs and regressions pass, build and CodeRabbit run concurrently on the same committed HEAD. Their logs and results remain separate; both must finish successfully before smoke. Interruption stops their process groups. Database and browser checks remain sequential. Any committed or non-evidence uncommitted change prevents Ralph reuse.
 
-If the script exits non-zero, execution stops at that gate, dispatches any code
-correction to a follow-up worker, and reruns the script. Only a passing script
-allows the next wave to start.
+Plan regressions around shared behavior affected by the wave. Broad hosted-auth/browser suites belong in the declared quality/CI/nightly phase; do not mechanically replay the entire growing suite at every wave.
+
+If the script exits non-zero, execution stops at that gate. A missing external
+prerequisite (exit 76) waits for readiness; lock contention (exit 73) requires
+resource diagnosis, not assertion changes. Actual code corrections go to a
+follow-up worker before rerunning the gate. Only a passing script allows the
+next wave to start.
 
 On success, the script appends the canonical passed block to `progress.md`.
-That proof means current ACs plus the declared broad regression suite passed;
+That proof means current ACs plus the declared regression suite passed;
 it does not imply that all earlier waves' AC commands were rerun.
 
 The current wave gate rejects legacy string AC entries because they lack stable

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // render-report.mjs — deterministic report rendering (CONCEPT.md §8).
 //
-// Two modes, both pure renders from state.json + findings.json:
+// Two modes render state, findings where used, gate-config prerequisites,
+// templates, timestamps, filesystem checks and optional captured error output.
+// Prerequisite declarations are not acceptance evidence; no checks are run.
 //
 //   morning [specs-dir]
 //     Scans <specs-dir>/PROJ-*/state.json, renders the morning report to
