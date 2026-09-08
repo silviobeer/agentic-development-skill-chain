@@ -50,6 +50,59 @@ auth_control_gate() { (cd "$CASE" && PATH="$CASE/bin:$PATH" bash "$GATE" --auth-
 run_suite() {
   GATE="$1"; PLATFORM="$2"
 
+  case_dir wrapped-lock-timeout
+  write_config "$(default_config | jq '.waves["1"].ac_commands[0].command="echo SKILLCHAIN_LOCK_TIMEOUT pid=123 waited_seconds=1 path=/test-lock >&2; exit 1"')"; commit_case
+  expect_rc 73 ac_only_gate
+  jq -e '.ralph_status=="infrastructure_failed"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: lock contention counted as failed AC"
+  case_dir lock-wait-is-not-timeout
+  write_config "$(default_config | jq '.waves["1"].ac_commands[0].command="echo SKILLCHAIN_LOCK_WAIT pid=123 >&2; echo SKILLCHAIN_LOCK_ACQUIRED pid=123 >&2; exit 1"')"; commit_case
+  expect_rc 1 ac_only_gate
+  jq -e '.commands[0].status=="failed"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: earlier contention concealed a test failure"
+
+  case_dir external-dependency
+  mkdir -p "$CASE/tests"
+  printf '// retained acceptance test\n' >"$CASE/tests/ac.test.ts"
+  config=$(default_config | jq '.waves["1"].ac_commands[0].external_dependency={reason:"specialist sign-off of revision abc",decided_by:"product owner",decided_at:"2026-09-08T10:00:00Z",check_command:"exit 76"} | .waves["1"].ac_commands += [(.waves["1"].ac_commands[0] | .id="AC-2" | del(.external_dependency))]')
+  write_config "$config"; commit_case
+  expect_rc 76 ac_only_gate
+  jq -e '.ralph_status=="blocked_external" and .commands[0].status=="blocked_external" and .commands[1].status=="passed"' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: missing blocked/independent evidence"
+  [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: blocked test ran or independent AC was skipped"
+  expect_rc 76 run_gate
+  ! grep -q 'Gate — PASSED' "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: blocked wave certified"
+  (cd "$CASE" && bash "$ROOT/$PLATFORM/skills/4b_setup/scripts/state.sh" init 1 test >/dev/null)
+  (cd "$CASE" && node "$ROOT/$PLATFORM/skills/8_delivery/scripts/render-pr-body.mjs" 1 test) >"$TMP/$PLATFORM-pr-body"
+  (cd "$CASE" && node "$ROOT/runner/render-report.mjs" stop 1 test --reason "external prerequisite") >/dev/null
+  (cd "$CASE" && node "$ROOT/runner/render-report.mjs" morning) >/dev/null
+  for report in "$TMP/$PLATFORM-pr-body" "$CASE/specs/PROJ-1-test/5_progress/stop-report.md" "$CASE"/specs/morning-report-*.md; do
+    grep -q 'specialist sign-off of revision abc' "$report" || fail "$LABEL: prerequisite missing from $report"
+    grep -q 'product owner at 2026-09-08T10:00:00Z' "$report" || fail "$LABEL: decision metadata missing from $report"
+  done
+  write_config "$(printf '%s' "$config" | jq '.waves["1"].ac_commands[0].external_dependency.check_command="true"')"; commit_case
+  ac_only_gate >"$GATE_OUT" 2>&1 || fail "$LABEL: readiness did not restore original test"
+  jq -e 'all(.commands[]; .status=="passed")' "$CASE/specs/PROJ-1-test/5_progress/ralph-wave-1.json" >/dev/null || fail "$LABEL: stale blocked status"
+  write_config "$(printf '%s' "$config" | jq '.waves["1"].ac_commands[0].external_dependency.check_command="exit 2"')"; commit_case
+  expect_rc 74 ac_only_gate
+
+  case_dir selection-preflight
+  config=$(default_config | jq '.waves["1"].regression_commands[0].selection_check_cmd="printf '\''Running 0 tests\\n'\''"')
+  write_config "$config"; commit_case
+  expect_fail ac_only_gate
+  [[ ! -e "$CASE_LOG" ]] || fail "$LABEL: expensive AC ran before empty selection detected"
+  grep -q '0/6' "$GATE_OUT" || fail "$LABEL: missing early diagnostic"
+  write_config "$(printf '%s' "$config" | jq '.waves["1"].regression_commands[0].selection_check_cmd="exit 2"')"; commit_case
+  expect_fail ac_only_gate
+  grep -q 'scenario selection preflight failed for broad rc=2 (log:' "$GATE_OUT" || fail "$LABEL: checker failure diagnostic lost"
+  [[ ! -e "$CASE_LOG" ]] || fail "$LABEL: AC ran after discovery error"
+  write_config "$(printf '%s' "$config" | jq '.waves["1"].regression_commands[0].selection_check_cmd="printf '\''Running 2 tests\\n'\''"')"; commit_case
+  ac_only_gate >"$GATE_OUT" 2>&1 || fail "$LABEL: positive selection rejected"
+
+  case_dir test-size-warning
+  mkdir -p "$CASE/tests"
+  awk 'BEGIN {for (i=0; i<801; i++) print "// test fixture"}' >"$CASE/tests/ac.test.ts"
+  write_config "$(default_config)"; commit_case
+  ac_only_gate >"$GATE_OUT" 2>&1 || fail "$LABEL: size warning blocked gate"
+  grep -q '801 lines (>800)' "$GATE_OUT" || fail "$LABEL: oversized file was silent"
+
   case_dir parallel-build-review
   PARALLEL_DIR="$TMP/$PLATFORM-parallel-markers"; export PARALLEL_DIR
   mkdir -p "$PARALLEL_DIR"
@@ -416,6 +469,7 @@ EOF
   config=$(default_config | jq '.frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/account","expected_url":"/account","expected_text":"Account","protected":false}]}')
   write_config "$config"; commit_case; BROWSER_FINAL_URL='http://app.test/login'; BROWSER_TEXT=Account; export BROWSER_FINAL_URL BROWSER_TEXT
   expect_fail run_gate; grep -q 'redirected/resolved' "$GATE_OUT" || fail "$LABEL: login redirect passed smoke"
+  [[ ! -e "$BROWSER_STATE_DIR/skillchain-wave-1-route-0" ]] || fail "$LABEL: browser session leaked after failed smoke"
   unset BROWSER_FINAL_URL BROWSER_TEXT
 
   case_dir auth-state
@@ -440,6 +494,7 @@ EOF
   write_config "$config"; commit_case; BROWSER_STALL_COMMAND=snapshot; export BROWSER_STALL_COMMAND
   expect_fail run_gate
   grep -q 'snapshot failed or timed out' "$GATE_OUT" || fail "$LABEL: stalled snapshot was not bounded"
+  [[ ! -e "$BROWSER_STATE_DIR/skillchain-wave-1-route-0" ]] || fail "$LABEL: browser session leaked after timeout"
   unset BROWSER_STALL_COMMAND
 
   case_dir protected-without-auth-coverage

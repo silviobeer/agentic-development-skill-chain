@@ -6,7 +6,7 @@
 #   worktree.sh locate <proj-x>
 #   worktree.sh retain <proj-x> <theme> <reason>
 #   worktree.sh cleanup <proj-x> <theme> --ci-verified-head <sha>
-#   worktree.sh with-shared-lock [--timeout <seconds>] -- <command...>
+#   worktree.sh with-shared-lock [--shared] [--timeout <seconds>] -- <command...>
 #
 # `prepare` must run from the clean control checkout at the committed CP1
 # HEAD. It creates or resumes the persistent sibling worktree, links only an
@@ -24,7 +24,8 @@ Usage:
   worktree.sh locate <proj-x>
   worktree.sh retain <proj-x> <theme> <reason>
   worktree.sh cleanup <proj-x> <theme> --ci-verified-head <sha>
-  worktree.sh with-shared-lock [--timeout <seconds>] -- <command...>
+  worktree.sh with-shared-lock [--shared] [--timeout <seconds>] -- <command...>
+  Default: exclusive. --shared: only for proven independent test data/readers.
 Environment:
   SKILLCHAIN_WORKTREE_ROOT          parent directory for persistent worktrees
   SKILLCHAIN_SHARED_RESOURCE_LOCK  shared database/auth lock file override
@@ -446,11 +447,30 @@ cleanup() {
   echo "worktree removed: $worktree (ignored dependencies and managed env symlink were discarded; branch $branch remains)" >&2
 }
 
-with_shared_lock() {
-  local timeout=600 lock common
-  if [ "${1:-}" = "--timeout" ]; then
-    timeout="${2:-}"; shift 2
+lock_snapshot() {
+  local lock="$1" holders pid mode age
+  # Kernel snapshot only; no stale owner sidecar or command-line/secret output.
+  if command -v lslocks >/dev/null 2>&1; then
+    holders=$(lslocks --json --output PID,MODE,PATH 2>/dev/null \
+      | jq -r --arg lock "$lock" '.locks[]? | select(.path==$lock and (.mode | endswith("*") | not)) | [.pid,.mode] | @tsv' 2>/dev/null) || holders=""
+    while read -r pid mode; do
+      [ -n "$pid" ] || continue
+      age=$(ps -p "$pid" -o etimes= 2>/dev/null | tr -d ' ') || age=""
+      echo "SKILLCHAIN_LOCK_HOLDER pid=$pid mode=$mode process_age_seconds=${age:-unknown} (process age is not lock age)" >&2
+    done <<<"$holders"
   fi
+  echo "worktree.sh: inspect lslocks and fuser -v for $lock; absent holder data does not prove the lock is free" >&2
+}
+
+with_shared_lock() {
+  local timeout=600 lock common mode=exclusive started=$SECONDS
+  while [ "${1:-}" != "--" ]; do
+    case "${1:-}" in
+      --shared) mode=shared; shift ;;
+      --timeout) [ $# -ge 2 ] || usage; timeout="$2"; shift 2 ;;
+      *) usage ;;
+    esac
+  done
   [ "${1:-}" = "--" ] || usage
   shift
   [ $# -gt 0 ] || usage
@@ -466,10 +486,15 @@ with_shared_lock() {
     lock="$common/skillchain-shared-resources.lock"
   fi
   mkdir -p "$(dirname "$lock")"
-  exec 8>"$lock" || die "cannot open shared-resource lock $lock"
-  if ! flock -w "$timeout" 8; then
-    echo "worktree.sh: shared-resource lock timed out after ${timeout}s: $lock" >&2
-    exit 73
+  exec 8>>"$lock" || die "cannot open shared-resource lock $lock"
+  if ! flock "--$mode" -n 8; then
+    echo "SKILLCHAIN_LOCK_WAIT pid=$$ mode=$mode timeout_seconds=$timeout path=$lock" >&2
+    lock_snapshot "$lock"
+    if ! flock "--$mode" -w "$timeout" 8; then
+      echo "SKILLCHAIN_LOCK_TIMEOUT pid=$$ waited_seconds=$((SECONDS-started)) path=$lock" >&2
+      exit 73
+    fi
+    echo "SKILLCHAIN_LOCK_ACQUIRED pid=$$ waited_seconds=$((SECONDS-started)) path=$lock" >&2
   fi
   "$@"
 }

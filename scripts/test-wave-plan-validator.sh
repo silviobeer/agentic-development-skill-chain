@@ -39,6 +39,20 @@ for expression in '.coverage_cmd="npm run coverage"' '.build_artifacts=[]' '.lin
 done
 
 prepare_case plan-valid.md config-valid.json
+jq '.waves["1"].ac_commands[0].external_dependency={reason:"review of seed revision abc",decided_by:"owner",decided_at:"2026-09-08T10:00:00Z",check_command:"node check-signoff.mjs"} | .waves["1"].regression_commands[0].selection_check_cmd="node scenarios.mjs --list"' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+run_validator >/dev/null
+cp "$CASE/plan/wave-gate-config.json" "$CASE/dependency-valid.json"
+for expression in 'del(.waves["1"].ac_commands[0].external_dependency.reason)' '.waves["1"].ac_commands[0].external_dependency.decided_by=""' '.waves["1"].ac_commands[0].external_dependency.decided_at="yesterday"' '.waves["1"].ac_commands[0].external_dependency=null' '.waves["1"].ac_commands[0].external_dependency.check_command=""'; do
+  jq "$expression" "$CASE/dependency-valid.json" >"$CASE/plan/wave-gate-config.json"
+  expect_failure external_dependency
+done
+jq '.waves["1"].regression_commands[0].selection_check_cmd=false' "$CASE/dependency-valid.json" >"$CASE/plan/wave-gate-config.json"
+expect_failure selection_check_cmd
+jq 'del(.waves["1"].ac_commands[0].command)' "$CASE/dependency-valid.json" >"$CASE/plan/wave-gate-config.json"
+expect_failure "command must be a non-empty string"
+
+prepare_case plan-valid.md config-valid.json
 run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
 
 prepare_case plan-valid.md config-valid.json

@@ -113,6 +113,23 @@ The default lock lives in the Git common directory and therefore serializes
 parallel worktrees of this repository. Set
 `SKILLCHAIN_SHARED_RESOURCE_LOCK` to an explicit shared path to override it.
 
+The helper defaults to **exclusive** for compatibility. Optional
+`with-shared-lock --shared --timeout <seconds> -- <command>` allows independent
+test lifecycles to overlap on that same file while still excluding migrations.
+Use it only after proving fixture/actor isolation; it is not an automatic
+read-only SQL classifier. Migrations, resets and global fixture changes retain
+the default exclusive mode across every worktree. Do not split migration and
+test locks: that would allow schema changes during tests. The lock does not
+establish schema-version compatibility or FIFO migration order.
+
+Record the lock's actual path, acquisition layer, wait budget and DB/browser
+owner in the runtime constraints. Preserve exit 73 through project wrappers;
+an outer command timeout must not obscure the lock wait. Browser probes close
+their named session on every exit, inside the owned resource window; their
+daemon can retain fd 8 after the opening command returns. Keep DB-backed tests
+and browser runs serialized when they share fixtures. Execution's
+`references/worker-lifecycle.md` describes diagnosis and handover.
+
 Before running any repo preflight, synchronize from the installed skill tree:
 
 ```bash

@@ -123,6 +123,18 @@ hosted database or other mutable external service, browser profile, cache, or
 shared test harness. File contact still belongs in the cross-US file-contact
 note; runtime constraints are a separate decision and must name the owner.
 
+For DB/browser work, state the actual fixture namespace and lock acquisition
+layer, not just the tool name. Do not default all scenarios to one mutable
+fixture project. Prefer run/scenario/retry-scoped application projects and row
+IDs where RLS, global state and teardown permit it; remote browser fixtures must
+be committed and later cleaned up, not hidden in an outer rollback transaction.
+Plan a small isolation proof before parallelizing an existing shared harness.
+Independent lifecycles may opt into `worktree.sh with-shared-lock --shared`;
+migrations/resets and overlapping fixtures stay exclusive on the same lock file.
+Budget lock wait separately from test execution and measure browser startup
+before proposing session reuse. See executing's
+`references/worker-lifecycle.md` for isolation checks and the migration path.
+
 **Complexity column — classification rule (the planner sets this, Skill 5 reads it to choose the Agent model):**
 - **`sonnet`** (default): standard feature US — CRUD, form handling, a straightforward component, a well-defined route or service, test-only refactor, copy/UI polish.
 - **`opus`**: architecture-sensitive — state machines, concurrency, cross-feature contracts, DB migrations, auth/session logic, money/billing, cryptography, anything where getting the shape wrong is expensive to undo.
@@ -202,6 +214,48 @@ The `Post-Wave Notes` block is a **placeholder the planner reserves** for Skill 
 **Commit format per task:** `feat(PROJ-<X>-PRD-<Y>): implement [task name]` — use the PRD-Y of the US the task belongs to.
 
 ### 5. Write `wave-gate-config.json`
+
+**Browser test ownership and layout:** Plan a separate scenario file per wave
+or cohesive feature (for example `tests/e2e/wave-<N>.test.mjs`), with one named
+owner. Do not funnel every wave into one PROJ-wide suite or introduce a wave
+environment selector solely to partition that file. Extract shared helpers only
+when reused; keep wave-specific fixture cleanup with its scenarios. Use the
+project's existing runner. `node --test` is appropriate only when the harness
+does not rely on inherited lock descriptors (see executing Step 4).
+Reference the exact scenario files in commands and authenticated route coverage;
+list shared helper inputs in task `Test:` / `test_files` consistently when
+they affect the proof. Keep targeted regressions targeted.
+
+For browser suites with filtered scenario selection, declare a read-only
+`selection_check_cmd` on their regression entry. It must use the same selector
+as the real run, list tests without opening a browser or touching DB/auth, and
+print a supported positive test count (e.g. `Running 3 tests`). The gate runs
+this in Phase 0, before ACs; it does not infer project-specific selectors.
+The runtime warns above 800 lines per declared test file; this is a review
+signal, not a cap or a reason to invalidate a running suite.
+
+**External prerequisites:** Keep every AC, original command and test mapping.
+An AC awaiting a named external approval may add `external_dependency`:
+`{"reason":"specialist approval of seed revision abc","decided_by":"product owner","decided_at":"2026-09-08T10:00:00Z","check_command":"node scripts/check-reference-signoff.mjs"}`.
+Record the actual authorized decision in `decisions.md`; never invent the
+person, date or approval. The read-only checker returns 0 only for a valid,
+scope/revision-matching approval, 76 when it is absent, and another nonzero code
+on checker failure. Keep the AC test unchanged and runnable once ready.
+This is not an expected-failure waiver: the gate records `blocked_external`,
+checks other ACs, then returns 76 without certifying the wave or unlocking
+dependent waves. Implementation completeness needs separate passing evidence.
+Sonar carry-forward does not establish acceptance or specialist approval.
+To continue independent work across a blocked wave, explicitly replan its
+dependencies; do not descope an AC or mark the predecessor green.
+
+**Existing runs:** No automatic E2E split or command conversion. Prefer new
+files for future waves and retain existing paths. A deliberate split requires
+updating task/config/route mappings together and rerunning affected suites.
+The cache binds to the whole config and committed HEAD, not just file paths:
+any such commit invalidates reuse for old evidence. Preserve historical
+certificates as historical proof; never rewrite them as proof of the new HEAD.
+Refresh helpers only at a quiet setup/resume boundary before using new fields;
+old gates ignore unknown fields and cannot enforce these contracts.
 
 Alongside the wave plans, write `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`. This config feeds the `wave-gate.sh` script (Skill 5) — machine-readable source of truth for each wave's completion checks.
 

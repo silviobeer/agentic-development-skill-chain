@@ -48,6 +48,16 @@ const fill = (template, values) => {
 const findingsFor = (base) =>
   existsSync(join(base, "findings.json")) ? readJson(join(base, "findings.json")).findings : [];
 
+const externalPrerequisites = (base) => {
+  const configPath = ["3-4_plan", "6_plan"].map((dir) => join(base, dir, "wave-gate-config.json")).find(existsSync);
+  if (!configPath) return [];
+  return Object.entries(readJson(configPath).waves ?? {}).flatMap(([wave, value]) =>
+    (value.ac_commands ?? []).filter((ac) => ac.external_dependency).map((ac) => {
+      const d = ac.external_dependency;
+      return `- External prerequisite (declaration, not a pass): ${ac.id} / wave ${wave} — ${d.reason}; decided by ${d.decided_by} at ${d.decided_at}. Readiness: \`${d.check_command}\`; evidence: 5_progress/ralph-wave-${wave}.json.`;
+    }));
+};
+
 const [mode, ...rest] = process.argv.slice(2);
 
 if (mode === "morning") {
@@ -83,6 +93,7 @@ if (mode === "morning") {
       "- **Wave-gate scope:** current ACs plus each wave's declared broad regressions; earlier AC commands are not implicitly rerun",
       `- **Findings:** ${f.length} total · ${openBlocking.length} open blocking · ${deferred.length} deferred debt`,
       `- **Known gaps:** ${gaps.length ? gaps.map(([us]) => us).join(", ") : "none"}`,
+      ...externalPrerequisites(base),
       wt
         ? `- **Worktree:** \`${wt.path}\` (${cleanupDisplay}${wt.cleanup_reason ? ` — ${wt.cleanup_reason}` : ""})`
         : "- **Worktree:** not recorded",
@@ -158,6 +169,7 @@ if (mode === "morning") {
       Object.entries(s.waves?.stories ?? {}).map(([us, st]) => `${us}=${st}`).join(", ") || "—"
     }`,
     ...lanes,
+    ...externalPrerequisites(base),
   ].filter(Boolean).join("\n");
 
   const cleanup = [

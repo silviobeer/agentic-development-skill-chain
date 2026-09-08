@@ -83,7 +83,10 @@ Doc-input collection is owned by Skill 7. Do not fill documentation summaries or
 bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
-Exit code ≠ 0 → STOP. Fix the failing check, re-run the script until green. Only then spawn the next wave's teammates.
+Exit code ≠ 0 → STOP. For `blocked_external` / exit 76, retain the AC and
+wait for its declared prerequisite (see Step 4); do not dispatch a code repair.
+For other failures, fix the failing check and rerun until green. Only then
+spawn the next wave's teammates.
 
 For a provider signature only (`over_request_rate_limit`, `Request rate limit reached`, or HTTP/status 429), the gate pauses and retries that AC once. For auth-consuming browser commands, `auth_budget.rate_limit_evidence_cmd` may establish the same fact from server/provider evidence outside the Playwright stream; its output is retained. A second occurrence is red infrastructure, not a reason to widen limits. Other failures — including a test name containing “rate limit” — are ordinary red ACs.
 
@@ -328,6 +331,14 @@ One tag per (wave, PROJ) pair. Tags are local-only; do not push. If neither `WAV
 
 ### 3. Create team and spawn teammates for the wave
 
+Before dispatch, read [references/worker-lifecycle.md](references/worker-lifecycle.md)
+for worker status/stop/replacement and shared DB/browser scheduling. Assign both
+file ownership and resource windows, including the wave's browser scenarios.
+Use its verification-cost procedure when browser/DB waits dominate: measure
+selection and wait time, establish fixture isolation, then opt independent
+lifecycles into shared mode. Existing auth-consuming gate commands remain
+exclusively locked; a helper refresh alone does not parallelize those suites.
+
 All implementation work is worker-owned when delegation is available. The lead decomposes the wave, assigns explicit disjoint ownership, dispatches workers, integrates their commits, runs deterministic verification and gates, and maintains operational records. **For waves with 2+ independent user stories:** create an agent team and dispatch them concurrently. Serialize dependent stories or overlapping ownership.
 
 **Honor the plan's `## Execution` block before spawning.** `sequential` means
@@ -403,6 +414,17 @@ Wait for all teammates in the wave to complete before running Outer Ralph. If in
 
 ### 4. Wave-scoped Outer Ralph (AC verification)
 
+**Wave closure checklist — parallel and sequential modes alike:**
+1. Collect all story `Smoke Test` blocks and match each route/behavior to gate
+   smoke or the current wave's authenticated scenario coverage.
+2. If scenarios are missing, dispatch their implementation to the named browser
+   owner after DB workers release the shared resource. Reuse an existing story
+   worker when appropriate; a separate browser worker is not mandatory.
+3. Integrate and commit scenario files, exact command/route mappings and any
+   selection-only hook. Do not append unrelated waves to a growing shared suite.
+4. Only then run AC-only Ralph below; Phase 0 checks declared selection hooks.
+   A successful route load alone does not prove the story's interaction.
+
 <HARD-GATE>
 After ALL workers in the wave report back and their changes are integrated, run one wave-scoped Outer Ralph pass. Run no story-scoped Outer Ralph pass. Do not proceed to the wave gate until the bounded recovery below passes or reaches the existing blocked path.
 </HARD-GATE>
@@ -437,6 +459,13 @@ if failures still remain: use the existing blocked-run evidence path
 - Reuse requires the same committed `HEAD` and complete gate-config fingerprint. Identical AC commands with matching `test_files` and `auth_consuming` share successful execution across AC IDs, with separate evidence for every ID. Identical failed/empty/timed-out commands also share their result within one AC-only invocation, but failures are retried on the next invocation; infrastructure and auth exhaustion still stop immediately. Every correction commit invalidates reuse; no cross-HEAD impact inference is supported. Remove cached Ralph evidence after dependency, runtime, or environment changes.
 - Recovery has exactly four stages: normal fix round 1, normal fix round 2 with fresh workers, fresh diagnosis, then a different diagnosis-driven implementer. Do not add retries or silently weaken an AC.
 - If diagnosis finds an invalid or contradictory AC, record the evidence and use the existing blocked/escalation path.
+- Exit 76 with `blocked_external` is a missing declared prerequisite, not a
+  code defect and not a green AC. Keep the test and plan scope; no repair rounds,
+  invented approval, PASSED block or next-wave unlock. Use `state.sh` for the
+  blocked phase/stop reason and render the stop report. Rerun the unchanged gate
+  when the prerequisite arrives: readiness is rechecked and its AC is not cached.
+  PR, stop and morning renderers include declared prerequisites; final summaries
+  must name each unresolved AC, reason, decision author/date and evidence path.
 - The normal wave gate reuses matching AC-only passes. Regression reuse requires explicit `reuse_passed: true` and is limited to deterministic, non-auth local commands independent of external state. Other regressions and remaining gate phases still run. Any committed or non-evidence uncommitted change prevents reuse.
 
 Update `progress.md` after the initial pass, each recovery stage, each reuse or invalidation decision, and the final result.
@@ -486,6 +515,9 @@ Update `$WAVE_BASE_SHA` to the current commit after the wave review passes.
 
 ### 7b. Browser smoke test (if wave touched frontend)
 
+Scenario authoring must already be complete via the Step 4 closure checklist.
+This step verifies coverage; it does not create missing scenarios.
+
 **Skip this step if the wave only contained backend-implementer teammates.**
 
 Browser smoke testing is owned by `wave-gate.sh`. It reuses a matching reachable server or starts `frontend.dev_cmd`, waits for readiness, logs its output, and stops only the process it started. It then runs `agent-browser` to verify URL and characteristic content. Redirects are failures; protected routes require `auth_state` or authenticated E2E coverage.
@@ -529,7 +561,9 @@ bash scripts/wave-gate.sh <N> <PROJ-X> <theme>
 ```
 
 - Exit 0 → script appended `### Wave N Gate — PASSED` block to `progress.md`. Commit the wave. **Immediately proceed to next wave — do NOT pause, do NOT ask the user, do NOT announce "ready for next wave".** The gate already proved the wave is done; the next wave's Step 1 (read dependency map) is the next action.
-- Non-zero → read the script's error, fix the failing check (spawn fix teammate if code problem, install missing tool if env problem), re-run. Only a red gate blocks progression — green means keep rolling.
+- Exit 76 / `blocked_external` → retain scope and report the missing external
+  prerequisite; resume after it is available. No next-wave certification.
+- Other non-zero → read the script's error, fix the failing check (spawn fix teammate if code problem, install missing tool if env problem), re-run.
 
 **No stop between waves.** A PROJ with 5 waves should execute as one continuous run: wave 1 → gate ✓ → wave 2 → gate ✓ → … → wave 5 → gate ✓ → Step 9 Quality Gate. Pausing for user confirmation between waves defeats the wave-gate design — the gate IS the signal.
 

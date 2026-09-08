@@ -78,6 +78,14 @@ const gateSummary = [
 ].join("\n");
 
 const gaps = stories.filter(([, metadata]) => storyStatus(metadata) === "gap").map(([us]) => `- ${us}: Ralph cap hit — shipped as known gap`);
+const configPath = ["3-4_plan", "6_plan"].map((dir) => join(base, dir, "wave-gate-config.json")).find(existsSync);
+if (configPath) {
+  const config = JSON.parse(readFileSync(configPath, "utf8"));
+  for (const [wave, entry] of Object.entries(config.waves ?? {}).flatMap(([wave, value]) => (value.ac_commands ?? []).filter((ac) => ac.external_dependency).map((ac) => [wave, ac]))) {
+    const d = entry.external_dependency;
+    gaps.push(`- External prerequisite (declaration, not a pass): ${entry.id} / wave ${wave} — ${d.reason}; decided by ${d.decided_by} at ${d.decided_at}. Readiness: \`${d.check_command}\`; evidence: 5_progress/ralph-wave-${wave}.json.`);
+  }
+}
 const knownGaps = gaps.length ? gaps.join("\n") : "none";
 
 const debt = findings.filter((f) => f.status === "deferred");

@@ -8,6 +8,7 @@ STATUS_ONLY=false
 AUTH_BUDGET_NEGATIVE_CONTROL=false
 AC_ONLY=false
 AC_ONLY_FAILED=false
+EXTERNAL_BLOCKED=false
 case "${1:-}" in
   --status) STATUS_ONLY=true; shift ;;
   --auth-budget-negative-control) AUTH_BUDGET_NEGATIVE_CONTROL=true; shift ;;
@@ -29,6 +30,7 @@ WAVE_KEY=".waves[\"${WAVE}\"]"
 DEV_PID=""
 BUILD_PID=""
 CR_PID=""
+BROWSER_SESSION=""
 DEV_PROCESS_GROUP=false
 OWNS_RALPH=false
 
@@ -56,6 +58,9 @@ source "$SCRIPT_DIR/env-local.sh"
 
 cleanup() {
   local pid
+  if [[ -n "$BROWSER_SESSION" ]]; then
+    timeout --foreground "$BROWSER_TIMEOUT" agent-browser --session "$BROWSER_SESSION" close >/dev/null 2>&1 || true
+  fi
   for pid in "$BUILD_PID" "$CR_PID"; do
     [[ -n "$pid" ]] || continue
     # Background timeout commands own separate process groups, including children.
@@ -274,6 +279,24 @@ CONFIG_HASH=$(git hash-object "$CFG")
 assert_clean_worktree
 echo "=== Wave ${WAVE} Completion Gate — current ACs + declared regressions (PROJ-${PROJ}-${THEME}) ==="
 
+step "0/6 Scenario selection preflight"
+while IFS= read -r entry; do
+  label=$(jq -r '.label' <<<"$entry")
+  check=$(jq -r '.selection_check_cmd' <<<"$entry")
+  [[ -n "$check" && "$check" != null ]] || fail "regression ${label}: selection_check_cmd must be non-empty"
+  log="${BASE}/5_progress/ralph-wave-${WAVE}-selection-$(jq -r '.index' <<<"$entry").log"
+  selection_rc=0
+  timeout --foreground "$BROWSER_TIMEOUT" bash -c "$check" >"$log" 2>&1 || selection_rc=$?
+  [[ "$selection_rc" -eq 0 ]] || fail "scenario selection preflight failed for ${label} rc=${selection_rc} (log: $log)"
+  [[ $(selected_count "$log") -gt 0 ]] || fail "scenario selection preflight: ${label} selected no tests (log: $log)"
+done < <(jq -c "${WAVE_KEY}.regression_commands | to_entries[] | select(.value | has(\"selection_check_cmd\")) | .value + {index:.key}" "$CFG")
+# Advisory only: existing runs keep their paths and evidence history.
+while IFS= read -r file; do
+  [[ -f "$file" ]] || continue
+  lines=$(awk 'END {print NR}' "$file")
+  [[ "$lines" -le 800 ]] || echo "⚠ test file ${file}: ${lines} lines (>800); consider splitting at a planned boundary"
+done < <(jq -r "[${WAVE_KEY}.ac_commands[]?.test_files[]?, ${WAVE_KEY}.regression_commands[]?.test_files[]?] | unique[]" "$CFG")
+
 # Every wave re-trusts the ONE shared local Supabase DB; another worktree of
 # this repo may have advanced its schema since this worktree last checked
 # (with-shared-lock only serializes concurrent migrations, not this
@@ -314,8 +337,35 @@ for ((index=0; index<AC_COUNT; index++)); do
   fi
   [[ -n "$command" && -n "$id" ]] || fail "AC $((index+1)) has empty id/command"
   [[ "$auth" == true || "$auth" == false ]] || fail "AC ${id} auth_consuming must be boolean"
+  if jq -e 'has("external_dependency")' <<<"$entry" >/dev/null; then
+    jq -e '.external_dependency | type=="object" and all(.reason,.decided_by,.decided_at,.check_command; type=="string" and test("\\S"))' <<<"$entry" >/dev/null \
+      || fail "AC ${id}: external_dependency requires reason, decided_by, decided_at, check_command"
+    jq -e '.test_files | type=="array" and length>0 and all(.[]; type=="string" and test("\\S"))' <<<"$entry" >/dev/null \
+      || fail "AC ${id}: external dependency requires retained test_files"
+    while IFS= read -r file; do
+      [[ -f "$file" ]] || fail "AC ${id}: external dependency must retain test file $file"
+    done < <(jq -r '.test_files[]' <<<"$entry")
+    log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-dependency.log"
+    check=$(jq -r '.external_dependency.check_command' <<<"$entry")
+    set +e
+    timeout --foreground "$AC_TIMEOUT" bash -c "$check" >"$log" 2>&1
+    dependency_rc=$?
+    set -e
+    assert_verified_head; assert_clean_worktree
+    case "$dependency_rc" in
+      0) ;; # Check readiness before cache lookup; external state may have changed.
+      76)
+        record_ac "$index" "$id" "$task" "$command" "$tests" 0 76 0 blocked_external "$log" "$VERIFIED_HEAD"
+        EXTERNAL_BLOCKED=true
+        echo "   ⏸ AC ${id}: $(jq -r '.external_dependency.reason' <<<"$entry")"
+        continue ;;
+      *) infra_fail "external dependency check for AC ${id} failed rc=${dependency_rc} (log: $log)" 74 ;;
+    esac
+  fi
   cached=$(jq -c --arg command "$command" --arg head "$VERIFIED_HEAD" --arg config "$CONFIG_HASH" --argjson tests "$tests" --argjson auth "$auth" '
     [.commands[]? | select(.command==$command and .test_files==$tests and .auth_consuming==$auth and .config_hash==$config and .verified_head==$head and .status=="passed" and .rc==0 and ((.selected|type)=="number") and .selected>0)][0] // empty' "$RALPH_STATE")
+  # An external prerequisite can change without a commit; always rerun its AC.
+  if jq -e 'has("external_dependency")' <<<"$entry" >/dev/null; then cached=""; fi
   if [[ -n "$cached" && -f $(jq -r '.log // empty' <<<"$cached") ]]; then
     assert_verified_head
     record_ac "$index" "$id" "$task" "$command" "$tests" "$(jq -r '.attempts' <<<"$cached")" 0 "$(jq -r '.selected' <<<"$cached")" passed "$(jq -r '.log' <<<"$cached")" "$VERIFIED_HEAD"
@@ -340,7 +390,9 @@ for ((index=0; index<AC_COUNT; index++)); do
     attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"; rate_limit_log="${log%.log}-rate-limit-evidence.log"
     [[ "$auth" == true ]] && date +%s >"$LAST_AUTH"
     heartbeat; set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log"); heartbeat
-    [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for AC ${id}" 73
+    if [[ "$rc" -eq 73 ]] || { [[ "$rc" -ne 0 ]] && grep -q '^SKILLCHAIN_LOCK_TIMEOUT ' "$log" "$hook_log" 2>/dev/null; }; then
+      infra_fail "shared-resource lock unavailable for AC ${id} (log: $log; preflight: $hook_log)" 73
+    fi
     [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for AC ${id} (log: $hook_log)" 74
     if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during AC ${id}" "$AUTH_EXHAUSTED_RC"; fi
     if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
@@ -375,9 +427,13 @@ for ((index=0; index<AC_COUNT; index++)); do
   assert_clean_worktree
 done
 
-if [[ "$AC_ONLY" == true ]]; then
+if [[ "$AC_ONLY" == true || "$EXTERNAL_BLOCKED" == true ]]; then
   rm -f "$RALPH_PID"; OWNS_RALPH=false
   status=complete; rc=0
+  if [[ "$EXTERNAL_BLOCKED" == true ]]; then
+    status=blocked_external; rc=76
+    echo "⏸ Wave ${WAVE} BLOCKED EXTERNAL — retained ACs await prerequisites; no completion certificate"
+  fi
   if [[ "$AC_ONLY_FAILED" == true ]]; then status=failed; rc=1; fi
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg status "$status" --arg updated "$(date -Iseconds)" '.ralph_status=$status|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
   exit "$rc"
@@ -405,7 +461,9 @@ for ((index=0; index<REG_COUNT; index++)); do
   fi
   log="${BASE}/5_progress/ralph-wave-${WAVE}-regression-$((index+1)).log"; hook_log="${log%.log}-auth-preflight.log"
   set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log")
-  [[ "$rc" -eq 73 ]] && infra_fail "shared-resource lock unavailable for regression ${label}" 73
+  if [[ "$rc" -eq 73 ]] || { [[ "$rc" -ne 0 ]] && grep -q '^SKILLCHAIN_LOCK_TIMEOUT ' "$log" "$hook_log" 2>/dev/null; }; then
+    infra_fail "shared-resource lock unavailable for regression ${label} (log: $log; preflight: $hook_log)" 73
+  fi
   [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for regression ${label}" 74
   if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during regression ${label}" "$AUTH_EXHAUSTED_RC"; fi
   [[ "$rc" -eq 0 ]] || { record_regression "$label" "$command" "$tests" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "regression ${label} failed rc=${rc}"; }
@@ -526,11 +584,13 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
       target="${DEV_URL%/}/${path#/}"; expected=$(jq -r '.expected_url // .path' <<<"$route"); [[ "$expected" =~ ^https?:// ]] || expected="${DEV_URL%/}/${expected#/}"
       expected_text=$(jq -r '.expected_text // empty' <<<"$route"); session="skillchain-wave-${WAVE}-route-${index}"
       browser=(agent-browser --session "$session"); [[ -z "$auth_state" ]] || browser+=(--state "$auth_state")
+      BROWSER_SESSION="$session"
       run_with_timeout "$BROWSER_TIMEOUT" "smoke ${path}" "${browser[@]}" open "$target"
       actual=$(timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" get url) || fail "smoke ${path}: get url failed or timed out"; [[ "$actual" == "$expected" ]] || fail "smoke ${path} redirected/resolved to '${actual}', expected '${expected}'"
       text_out=$(timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" snapshot) || fail "smoke ${path}: snapshot failed or timed out"; [[ -z "$expected_text" ]] || grep -Fq "$expected_text" <<<"$text_out" || fail "smoke ${path} missing expected_text '${expected_text}'"
       timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" errors >/dev/null || fail "browser errors or timeout on ${path}"
       timeout --foreground "$BROWSER_TIMEOUT" "${browser[@]}" close >/dev/null 2>&1 || true
+      BROWSER_SESSION=""
     done
   fi
 fi

@@ -193,6 +193,19 @@ for (const [wave, plan] of plans) {
       for (const key of ["id", "task", "command"]) {
         if (!isText(entry[key])) fail(`${label}: ${key} must be a non-empty string`);
       }
+      if (Object.hasOwn(entry, "external_dependency")) {
+        const dependency = entry.external_dependency;
+        if (!dependency || typeof dependency !== "object" || Array.isArray(dependency)) {
+          fail(`${label}: external_dependency must be an object`);
+        } else {
+          for (const key of ["reason", "decided_by", "decided_at", "check_command"]) {
+            if (!isText(dependency[key])) fail(`${label}: external_dependency.${key} must be non-empty`);
+          }
+          if (!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(dependency.decided_at ?? "") || !Number.isFinite(Date.parse(dependency.decided_at))) {
+            fail(`${label}: external_dependency.decided_at must be an ISO timestamp with timezone`);
+          }
+        }
+      }
       if (isText(entry.command) && /&&|\|\||;/.test(entry.command)) {
         fail(`${label}: must invoke exactly one test runner; split shell-chained commands`);
       }
@@ -253,6 +266,9 @@ for (const [wave, plan] of plans) {
       }
       for (const key of ["label", "command"]) {
         if (!isText(entry[key])) fail(`${label}: ${key} must be a non-empty string`);
+      }
+      if (Object.hasOwn(entry, "selection_check_cmd") && !isText(entry.selection_check_cmd)) {
+        fail(`${label}: selection_check_cmd must be a non-empty string`);
       }
       if (isText(entry.command) && /&&|\|\||;/.test(entry.command)) {
         fail(`${label}: must invoke exactly one test runner; split shell-chained commands`);
