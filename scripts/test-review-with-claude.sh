@@ -5,6 +5,7 @@
 # review off as error_max_turns before any finding forms. Confirmed via a
 # live claude -p run during the fix — this check guards the code shape only.
 set -euo pipefail
+export SKILLCHAIN_POLL_SECONDS=0.1 # stubs return instantly; production default stays
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$ROOT/codex/skills/cross-review/scripts/review-with-claude.sh"

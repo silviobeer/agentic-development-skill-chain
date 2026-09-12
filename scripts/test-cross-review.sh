@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export SKILLCHAIN_POLL_SECONDS=0.1 # stubs return instantly; production default stays
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$ROOT/codex/skills/cross-review/scripts/cross-review.sh"

@@ -160,17 +160,30 @@ fi
 
 # Syntax-only checks cannot prove gate behavior. These deterministic harnesses
 # use temporary repositories/fixtures and never contact external services.
-bash "$ROOT/scripts/test-wave-plan-validator.sh"
-node "$ROOT/scripts/test-sync-framework.mjs"
-bash "$ROOT/scripts/test-ledger.sh"
-bash "$ROOT/scripts/test-preflight-biome.sh"
-bash "$ROOT/scripts/test-migration-drift-check.sh"
-bash "$ROOT/scripts/test-worktree.sh"
-bash "$ROOT/scripts/test-shared-lock.sh"
-bash "$ROOT/scripts/test-wave-gate.sh"
-node "$ROOT/scripts/test-quality-evidence.mjs"
-bash "$ROOT/scripts/test-cross-review.sh"
-bash "$ROOT/scripts/test-review-with-claude.sh"
-node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest
+# Each harness owns its own mktemp fixtures, so they run concurrently; the
+# slowest one (wave-gate) is the wall clock. Output is replayed in order.
+HARNESS_LOGS=$(mktemp -d); trap 'rm -rf "$HARNESS_LOGS"' EXIT
+HARNESS_NAMES=(); HARNESS_PIDS=()
+harness() { local name="$1"; shift; "$@" >"$HARNESS_LOGS/$name.log" 2>&1 & HARNESS_NAMES+=("$name"); HARNESS_PIDS+=($!); }
+harness wave-plan-validator bash "$ROOT/scripts/test-wave-plan-validator.sh"
+harness sync-framework      node "$ROOT/scripts/test-sync-framework.mjs"
+harness ledger              bash "$ROOT/scripts/test-ledger.sh"
+harness preflight-biome     bash "$ROOT/scripts/test-preflight-biome.sh"
+harness migration-drift     bash "$ROOT/scripts/test-migration-drift-check.sh"
+harness worktree            bash "$ROOT/scripts/test-worktree.sh"
+harness shared-lock         bash "$ROOT/scripts/test-shared-lock.sh"
+harness wave-gate           bash "$ROOT/scripts/test-wave-gate.sh"
+harness quality-evidence    node "$ROOT/scripts/test-quality-evidence.mjs"
+harness cross-review        bash "$ROOT/scripts/test-cross-review.sh"
+harness review-with-claude  bash "$ROOT/scripts/test-review-with-claude.sh"
+harness component-registry  node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest
+for i in "${!HARNESS_PIDS[@]}"; do
+  if ! wait "${HARNESS_PIDS[$i]}"; then
+    kill "${HARNESS_PIDS[@]}" 2>/dev/null || true
+    cat "$HARNESS_LOGS/${HARNESS_NAMES[$i]}.log" >&2
+    fail "harness failed: ${HARNESS_NAMES[$i]}"
+  fi
+done
+for name in "${HARNESS_NAMES[@]}"; do cat "$HARNESS_LOGS/$name.log"; done
 
 echo "validate: ok"

@@ -382,13 +382,14 @@ for ((index=0; index<AC_COUNT; index++)); do
     continue
   fi
   if [[ "$auth" == true && "$AUTH_PACING_SECONDS" -gt 0 && -f "$LAST_AUTH" ]]; then
-    last=$(tr -cd '0-9' <"$LAST_AUTH"); wait_for=$((AUTH_PACING_SECONDS - ($(date +%s) - last)))
+    last=$(tr -cd '0-9' <"$LAST_AUTH"); [[ ${#last} -ge 13 ]] || last=$((last * 1000))
+    wait_for=$(( (AUTH_PACING_SECONDS * 1000 - ($(date +%s%3N) - last) + 999) / 1000 ))
     [[ "$wait_for" -le 0 ]] || sleep_with_heartbeat "$wait_for"
   fi
   attempts=$(jq -r --arg id "$id" '[.commands[]? | select(.id==$id)][0].attempts // 0' "$RALPH_STATE")
   for retry in 1 2; do
     attempts=$((attempts+1)); log="${BASE}/5_progress/ralph-wave-${WAVE}-ac-$((index+1))-attempt-${attempts}.log"; hook_log="${log%.log}-auth-preflight.log"; rate_limit_log="${log%.log}-rate-limit-evidence.log"
-    [[ "$auth" == true ]] && date +%s >"$LAST_AUTH"
+    [[ "$auth" == true ]] && date +%s%3N >"$LAST_AUTH"
     heartbeat; set +e; run_test_command "$auth" "$command" "$AC_TIMEOUT" "$log" "$hook_log"; rc=$?; set -e; selected=$(selected_count "$log"); heartbeat
     if [[ "$rc" -eq 73 ]] || { [[ "$rc" -ne 0 ]] && grep -q '^SKILLCHAIN_LOCK_TIMEOUT ' "$log" "$hook_log" 2>/dev/null; }; then
       infra_fail "shared-resource lock unavailable for AC ${id} (log: $log; preflight: $hook_log)" 73

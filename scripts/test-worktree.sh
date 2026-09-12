@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic behavior tests for the persistent PROJ worktree helper.
 set -euo pipefail
+export SKILLCHAIN_POLL_SECONDS=0.1 # stubs return instantly; production default stays
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HELPER="$ROOT/codex/skills/4b_setup/scripts/worktree.sh"

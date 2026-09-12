@@ -52,7 +52,7 @@ while kill -0 "$PID" 2>/dev/null; do
     echo "review-with-codex.sh: timed out after ${TIMEOUT}s (process group killed)" >&2
     exit 1
   fi
-  sleep 2
+  sleep "${SKILLCHAIN_POLL_SECONDS:-2}"
 done
 set +e; wait "$PID" 2>/dev/null; RC=$?; set -e
 trap 'rm -f "$RAW"' EXIT

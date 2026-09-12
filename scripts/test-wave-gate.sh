@@ -33,7 +33,7 @@ case_dir() {
   git -C "$CASE" init -q
   git -C "$CASE" config user.email test@example.invalid
   git -C "$CASE" config user.name test
-  mkdir -p "$TMP/browser"; BROWSER_STATE_DIR="$TMP/browser"; export BROWSER_STATE_DIR CASE_LOG
+  mkdir -p "$TMP/$PLATFORM-browser"; BROWSER_STATE_DIR="$TMP/$PLATFORM-browser"; export BROWSER_STATE_DIR CASE_LOG
 }
 
 default_config() {
@@ -511,7 +511,10 @@ EOF
   unset DEV_PID_FILE READY_FILE CURL_ALWAYS_READY
 }
 
-run_suite "$ROOT/codex/skills/5_executing/scripts/wave-gate.sh" codex
-run_suite "$ROOT/claude/skills/5_executing/scripts/wave-gate.sh" claude
+# Both platform suites use platform-prefixed paths under $TMP, so they run concurrently.
+run_suite "$ROOT/codex/skills/5_executing/scripts/wave-gate.sh" codex & codex_pid=$!
+run_suite "$ROOT/claude/skills/5_executing/scripts/wave-gate.sh" claude & claude_pid=$!
+rc=0; wait "$codex_pid" || rc=1; wait "$claude_pid" || rc=1
+[[ "$rc" -eq 0 ]] || exit 1
 
 echo 'wave-gate behavior tests (codex + claude): PASS'

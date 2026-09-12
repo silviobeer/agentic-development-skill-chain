@@ -265,7 +265,7 @@ wait_lanes() { # writer_pid [peer_pid]
       [ -n "$ppid" ] && kill_group "$ppid"
       break
     fi
-    sleep 5
+    sleep "${SKILLCHAIN_POLL_SECONDS:-5}"
   done
   set +e; wait "$wpid" 2>/dev/null; WRITER_RC=$?; set -e
   if [ -n "$ppid" ]; then
@@ -279,7 +279,7 @@ wait_lanes() { # writer_pid [peer_pid]
           kill_group "$ppid"
           break
         fi
-        sleep 5
+        sleep "${SKILLCHAIN_POLL_SECONDS:-5}"
       done
     fi
     set +e; wait "$ppid" 2>/dev/null; PEER_RC=$?; set -e
