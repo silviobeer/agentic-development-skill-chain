@@ -96,7 +96,8 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
   fallbacks. Version and mode parity remain gated in `ponytail-check.sh`.
 
 Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `CLAUDE_MODEL_RANK`, `PEER_GRACE`
-(seconds a peer may outlive the writer, default 300),
+(seconds a peer may outlive the writer, default 300), `SKILLCHAIN_POLL_SECONDS`
+(lane poll interval, default 5; the test harnesses set 0.1),
 `PONYTAIL_ENFORCE` (0 = loud escape hatch for the P0 ponytail gate),
 `CONTEXT_BUNDLE_BUDGET` (token budget override for the compiler).
 `SKILLCHAIN_WORKTREE_ROOT` overrides the default sibling-worktree base;

@@ -115,9 +115,10 @@ reviews Codex-authored artifacts and Codex reviews Claude-authored
 artifacts. Joint artifacts receive independent reviews from both lanes
 before reconciliation, so an authoring model never grades its own work
 alone. If the degradable Codex lane is unavailable, the run continues with
-Claude and a model-opposite reviewer (for example Sonnet reviewing
-Fable-authored artifacts); the degradation is flagged in the morning report
-and PR body. Claude remains the hard host dependency, and Codex-authored gates
+Claude and a model-opposite reviewer: the strongest Claude model that is not
+the author model (rank `fable opus sonnet`, so Opus reviews Fable-authored
+artifacts and Fable reviews Opus-authored ones); the degradation is flagged in
+the morning report and PR body. Claude remains the hard host dependency, and Codex-authored gates
 that require Claude fail closed when Claude review is unavailable.
 
 **Why it stays cheap:** Context is the most expensive resource. Hence:

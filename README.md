@@ -270,8 +270,9 @@ runner/spike-stage2.sh         # Stage 2 release gate: bundles, injector, caps, 
 The validation script checks that the expected skill folders exist in both
 trees, every skill has `SKILL.md` frontmatter, the byte-identical helper
 set stays in sync, the schemas parse, every script passes a syntax check,
-and the Wave Gate, ledger, worktree, plan-consistency, preflight/Biome, and
-registry behavior harnesses pass. The spikes are the release gates for the framework: they exercise
+and the Wave Gate, ledger, worktree, plan-consistency, preflight/Biome,
+cross-review, and registry behavior harnesses pass. The harnesses run
+concurrently on their own fixtures; a full run takes about 40 seconds. The spikes are the release gates for the framework: they exercise
 live provider lanes, the ledger's concurrency and reopen guarantees, and
 every runner gate against stubbed failure fixtures.
 

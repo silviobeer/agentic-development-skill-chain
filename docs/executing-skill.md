@@ -106,7 +106,9 @@ Use it sparingly. Good entries describe project-wide behavior that future implem
 
 ## Wave Execution
 
-Each PROJ is split into numbered waves by Step 4. Each wave contains one or more user stories.
+Each PROJ is split into numbered waves by Step 4. Each wave contains one or more user stories. One story is one worker; the lead splits a story only when its plan header declares `Split: contract` (backend and frontend workers against `api-contracts.md`) or `Split: fan-out` (same-shaped units over disjoint files). An oversized story without such a marker is a planning defect for Step 4, not a runtime decision.
+
+On frontier models, `5b_executing-large-model` replaces this skill with the same inputs, outputs, and gates and less procedure; see [skill-chain.md](skill-chain.md#optional-skills).
 
 Before a wave starts:
 
@@ -211,7 +213,7 @@ The script is the hard boundary and validates:
   are covered by current-wave authenticated AC or regression evidence. Browser operations have bounded timeouts.
 - `gen-component-registry.mjs --check` passes: `docs/components.md` is current, every component carries its doc block, and every component has its `id="<kebab-name>"` section on the showcase page.
 
-After ACs and regressions pass, build and CodeRabbit run concurrently on the same committed HEAD. Their logs and results remain separate; both must finish successfully before smoke. Interruption stops their process groups. Database and browser checks remain sequential. Any committed or non-evidence uncommitted change prevents Ralph reuse.
+After ACs, regressions, browser smoke and the component registry check pass, build and CodeRabbit run concurrently on the same committed HEAD as the last gate phase, so an environmental smoke failure costs no review. Their logs and results remain separate; both must finish successfully before certification. Interruption stops their process groups. Database and browser checks remain sequential. Any committed or non-evidence uncommitted change prevents Ralph reuse.
 
 Plan regressions around shared behavior affected by the wave. Broad hosted-auth/browser suites belong in the declared quality/CI/nightly phase; do not mechanically replay the entire growing suite at every wave.
 
