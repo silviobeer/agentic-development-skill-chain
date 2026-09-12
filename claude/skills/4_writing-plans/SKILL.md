@@ -145,6 +145,7 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 ## PROJ-<X>-PRD-1-US-1: [Text verbatim from PRD]
 **Scope:** backend → backend-implementer
+**Split:** `none` | `contract` | `fan-out` (optional; default `none`. `contract` = full-stack story the lead may hand to a backend and a frontend worker against the wave's section in `api-contracts.md`; `fan-out` = several same-shaped units over disjoint files the lead may parallelize after the first unit exists. Name the disjoint file sets when not `none`.)
 
 **Acceptance Criteria:**
 - [ ] PROJ-<X>-PRD-1-US-1-AC-1: [verbatim from PRD]
@@ -460,6 +461,7 @@ After writing all wave files, review them with fresh eyes:
 1. **Placeholder scan:** Any "TBD", "TODO", incomplete descriptions, vague behaviour?
 2. **AC coverage:** Every AC from every PRD is covered by at least one task across the waves?
 3. **Task decomposition:** Each task completable in under an hour? A task whose "What to build" needs more than a short paragraph, or that quotes literal SQL/DDL/trigger bodies instead of describing the resulting behaviour, is over-specified — split it or move the detail to `migration-design.md` and cite it ("per migration-design.md Decision 3") instead of restating it.
+3a. **Story size:** One story is one worker, and its tasks may share files, so they never run in parallel — by design. A story that would dominate its wave (roughly twice the work of its siblings, or more than about six tasks) is a planning defect, not an execution problem: cut it into two stories with an explicit dependency so the wave mechanism parallelizes them with ownership and gates intact. Runtime splitting is allowed only where the story header says `Split: contract` (full-stack, contract in `api-contracts.md`) or `Split: fan-out` (same-shaped units over disjoint files); everything else stays one worker.
 4. **Type consistency:** File paths match the project structure?
 5. **Dependency check:** Can each wave actually run after its predecessors?
 6. **No vague instructions:** Every "What to build" has concrete inputs/outputs?
@@ -542,6 +544,7 @@ Present the automatic cross-review result with the wave plans. Re-run the determ
 - Every frontend or full-stack US must include a **Smoke Test** section with route + verification. Backend-only US omit this.
 - ACs must be deterministically verifiable — Ralph loop checks each AC with actual test commands.
 - Every task must map to at least one AC.
+- One story, one worker. Split oversized stories in the plan, not at runtime; the only runtime splits are those declared via `Split: contract` / `Split: fan-out` in the story header.
 - Waves must respect the dependency graph: no US in wave N+1 depends on a US in wave N that hasn't completed.
 - Cross-PROJ prerequisites must be satisfied before scheduling dependent current-PROJ stories.
 - Frontend/full-stack tasks must not rely on raw HTML mockup interpretation alone; they must include the explicit UI handoff constraints.

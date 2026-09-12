@@ -103,6 +103,14 @@ expected to choose the concrete steps.
   design-system baseline (`docs/DESIGN-SYSTEM.md`, `docs/components.md`) when
   no context bundle injects it. Do not paste framework skill files
   (Tailwind, Next.js) or generic checklists; the model knows the stack.
+- **Story granularity.** One story is one worker. The lead does not split a
+  story unless its header declares it: `Split: contract` → one backend and one
+  frontend worker, both bound to the wave's section of `api-contracts.md`, the
+  frontend working against the contract or a stub until the backend lands;
+  `Split: fan-out` → one worker builds the first unit, then further workers
+  copy its shape over the declared disjoint file sets. A story that turns out
+  too large without such a marker is finished by its single worker and noted in
+  `Variant Notes` as a planning defect for `4_writing-plans`, not split ad hoc.
 - **UI shape.** Registered components and tokens beat mockup CSS; the chosen
   layout direction and interaction contract are preserved. A missing component
   is escalated to the lead and added through the `1c_frontend-design` extension
