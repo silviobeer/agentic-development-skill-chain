@@ -29,7 +29,8 @@
 #       morning report + best-effort notification
 #
 # Env:  CLAUDE_WRITER_MODEL  claude writer model (default: opus)
-#       CLAUDE_REVIEW_MODEL  model-opposite reviewer in degraded mode (default: sonnet)
+#       CLAUDE_REVIEW_MODEL  model-opposite reviewer in degraded mode (default: strongest of
+#                            CLAUDE_MODEL_RANK "fable opus sonnet" that is not the writer model)
 #       PEER_GRACE           seconds a peer may keep running after the writer finished (default: 300)
 # Exit: 0 phase(s) done · 1 stop condition (run parked) · 64 usage
 set -euo pipefail
@@ -58,7 +59,11 @@ done
 BASE="specs/PROJ-${PROJ}-${THEME}"
 LANE_DIR="$BASE/5_progress/lanes"
 WRITER_MODEL="${CLAUDE_WRITER_MODEL:-opus}"
-REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"
+pick_review_model() { # strongest Claude model that is not the writer's (alias or full id), best first — same rule as cross-review.sh
+  local m; for m in ${CLAUDE_MODEL_RANK:-fable opus sonnet}; do case "$1" in *"$m"*) ;; *) echo "$m"; return 0 ;; esac; done
+  echo "run-phase.sh: no Claude model left after excluding writer model '$1'" >&2; return 1
+}
+REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-$(pick_review_model "$WRITER_MODEL")}"
 PEER_GRACE="${PEER_GRACE:-300}"
 PHASES=(CP1 P0 P5 P6 P7 P8 done)
 

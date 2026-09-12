@@ -77,7 +77,9 @@ or `claude` makes an unavailable/opposite fallback fail rather than silently
 replacing the required reviewer. For Claude-authored QA, use `qa --personas`:
 it launches six separate Codex reviews in parallel. If Codex is unavailable,
 the script prints a degraded-mode warning, records `degraded_fallback: true`,
-and runs the same six personas with Claude; the QA caller must tell the user
+and runs the same six personas on the strongest Claude model that is not the
+author model (`CLAUDE_MODEL_RANK`, default `fable opus sonnet`; override with
+`CLAUDE_REVIEW_MODEL`); the QA caller must tell the user
 that independent-provider review was unavailable. Codex-authored QA launches
 six separate Claude reviews and fails closed when `claude auth status` is not
 green; it never substitutes Codex for its own work. Keep `--require-provider`
@@ -125,8 +127,9 @@ its own history.
 ## Routing and output integrity
 
 - Claude-authored artifacts go to Codex; Codex-authored artifacts go to Claude.
-  `--joint` runs both independently. If Codex is unavailable, a different
-  Claude model may be used only when it is not the author model; that is marked
+  `--joint` runs both independently. If Codex is unavailable, the strongest
+  Claude model that is not the author model is chosen automatically (rank
+  `fable opus sonnet`, alias or full id compared by substring); that is marked
   as a degraded persistent review. Any route that selects Claude verifies CLI
   availability and authentication before launching the review.
 - `qa --personas` starts six independent workers (security, principal

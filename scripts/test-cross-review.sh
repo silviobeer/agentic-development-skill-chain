@@ -81,4 +81,27 @@ for round in 4 100; do
   [ "$(jq -r '.cross_review[-1].round' specs/PROJ-1-test/state.json)" -eq "$round" ]
 done
 
-echo 'cross-review diff-scope and manual-round tests passed'
+# Degraded fallback: Codex unavailable → strongest Claude model that is not the author model.
+mkdir -p "$CASE/nocodex"
+printf '#!/usr/bin/env bash\nexit 1\n' >"$CASE/nocodex/codex"
+cat >"$CASE/nocodex/claude" <<'EOF2'
+#!/usr/bin/env bash
+if [[ "${1:-} ${2:-}" == "auth status" ]]; then exit 0; fi
+while [ $# -gt 0 ]; do [ "$1" = --model ] && printf '%s\n' "$2" >>"$MODEL_CAPTURE"; shift; done
+cat >/dev/null
+printf '%s\n' '{"is_error":false,"structured_output":{"findings":[{"severity":"low","category":"review-clean","summary":"clean"}]}}'
+EOF2
+chmod +x "$CASE/nocodex/codex" "$CASE/nocodex/claude"
+run_degraded() { # author_model
+  : >"$CASE/models"
+  PATH="$CASE/nocodex:$PATH" MODEL_CAPTURE="$CASE/models" \
+    bash "$SCRIPT" docs 1 test --artifacts artifact.md --author-provider claude --author-model "$1" \
+      --diff-base "$BASE_SHA" --diff-paths src --round 1 >"$CASE/out" 2>&1
+  sort -u "$CASE/models"
+}
+[ "$(run_degraded claude-fable-5-1)" = opus ] || { cat "$CASE/out" >&2; exit 1; }
+[ "$(run_degraded opus)" = fable ] || { cat "$CASE/out" >&2; exit 1; }
+[ "$(CLAUDE_REVIEW_MODEL=sonnet run_degraded fable)" = sonnet ] || { cat "$CASE/out" >&2; exit 1; }
+
+echo 'cross-review diff-scope, manual-round and degraded-model tests passed'
+

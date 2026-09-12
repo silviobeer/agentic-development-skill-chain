@@ -83,7 +83,11 @@ fi
 
 codex_available() { command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1; }
 claude_available() { command -v claude >/dev/null 2>&1 && claude auth status >/dev/null 2>&1; }
-REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-sonnet}"; REVIEWERS=(); DEGRADED_FALLBACK=false
+pick_review_model() { # strongest Claude model that is not the author's (alias or full id), best first
+  local m; for m in ${CLAUDE_MODEL_RANK:-fable opus sonnet}; do case "${1:-}" in *"$m"*) ;; *) echo "$m"; return 0 ;; esac; done
+  echo "cross-review.sh: no Claude model left after excluding author model '${1:-}'" >&2; return 1
+}
+REVIEW_MODEL="${CLAUDE_REVIEW_MODEL:-$(pick_review_model "$AUTHOR_MODEL")}"; REVIEWERS=(); DEGRADED_FALLBACK=false
 if [ "$REQUIRED_PROVIDER" = codex ] && ! codex_available; then
   echo "cross-review.sh: Codex is required for this review but is unavailable or unauthenticated" >&2
   exit 1
@@ -103,7 +107,7 @@ done
 if [ "$DEGRADED_FALLBACK" = true ] && [ -n "$AUTHOR_MODEL" ] && [ "$REVIEW_MODEL" = "$AUTHOR_MODEL" ]; then
   echo "cross-review.sh: fallback reviewer equals author model" >&2; exit 1
 fi
-[ "$QA_PERSONAS" -eq 0 ] || [ "$DEGRADED_FALLBACK" = false ] || echo "cross-review (qa): Codex unavailable; continuing six QA personas with Claude (degraded)" >&2
+[ "$QA_PERSONAS" -eq 0 ] || [ "$DEGRADED_FALLBACK" = false ] || echo "cross-review (qa): Codex unavailable; continuing six QA personas with Claude ${REVIEW_MODEL} (degraded, model-opposite)" >&2
 
 FOCUS=""
 case "$MODE" in

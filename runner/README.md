@@ -64,8 +64,9 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
   findings are ingested before the P6 controller starts; the runner
   refuses `P6:done` while the ledger has open Critical/High findings.
 - **Models are pinned:** the claude writer runs `CLAUDE_WRITER_MODEL`
-  (default `opus`), review lanes run `CLAUDE_REVIEW_MODEL` (default
-  `sonnet`); both are recorded per lane in state.json and the runner
+  (default `opus`), review lanes run `CLAUDE_REVIEW_MODEL` (default: the
+  strongest model in `CLAUDE_MODEL_RANK`, `fable opus sonnet`, that is not
+  the writer model); both are recorded per lane in state.json and the runner
   refuses to start when they are equal — degraded "model-opposite" must
   actually be a different model.
 - **Degraded mode is never silent:** codex missing or unauthenticated →
@@ -94,7 +95,7 @@ runner/run-phase.sh <phase> <proj-x> <theme> [--timeout 3600] [--writer claude|c
   P0 blocks any scoped matcher because it can miss generic implementation
   fallbacks. Version and mode parity remain gated in `ponytail-check.sh`.
 
-Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `PEER_GRACE`
+Env knobs: `CLAUDE_WRITER_MODEL`, `CLAUDE_REVIEW_MODEL`, `CLAUDE_MODEL_RANK`, `PEER_GRACE`
 (seconds a peer may outlive the writer, default 300),
 `PONYTAIL_ENFORCE` (0 = loud escape hatch for the P0 ponytail gate),
 `CONTEXT_BUNDLE_BUDGET` (token budget override for the compiler).
