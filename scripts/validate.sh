@@ -26,6 +26,7 @@ CORE_SKILLS=(
   cross-review
 )
 OPTIONAL_SKILLS=(
+  5b_executing-large-model
   bugfixing
   refactor-dreamer
   sonar-cli
@@ -120,6 +121,8 @@ while IFS= read -r bugfix_file; do
   bugfix_rel="${bugfix_file#"$ROOT/codex/skills/bugfixing/"}"
   check_identical "$bugfix_file" "$ROOT/claude/skills/bugfixing/$bugfix_rel"
 done < <(find "$ROOT/codex/skills/bugfixing" -type f | sort)
+check_identical "$ROOT/claude/skills/5b_executing-large-model/SKILL.md" \
+  "$ROOT/codex/skills/5b_executing-large-model/SKILL.md"
 check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
 for f in 4b_setup/scripts/preflight.sh 4b_setup/scripts/sync-framework.mjs 4a_checkpoint/templates/decisions.md.tmpl \

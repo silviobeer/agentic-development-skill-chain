@@ -40,6 +40,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
 | 4b | `setup` | P0 once per PROJ: persistent isolated worktree, branch, preflight, framework scripts, dependencies, context bundles |
 | 5 | `executing` | Worker-owned code/test/fix edits, TDD, one wave-scoped Ralph pass, hard wave gates, an integration-focused PROJ gate, then direct handoff to mandatory Skill 6 |
+| 5b | `executing-large-model` (opt) | Lean Step 5 for frontier models: same gates, state, and QA handoff as `executing`, procedure replaced by intent and invariants; runner override `SKILLCHAIN_P5_SKILL` |
 | 6 | `qa` | End-to-end QA plus required six-persona opposite-provider evidence review; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
@@ -171,12 +172,24 @@ unavailable.
 ## Optional Skills
 
 ```text
+5b_executing-large-model
 bugfixing
 refactor-dreamer
 sonar-cli
 supabase-local-dev
 vibecoder
 ```
+
+`5b_executing-large-model` is a drop-in alternative to Step 5 for frontier
+models (Claude Fable/Mythos 5.x, Opus 5, GPT-5.x). It keeps every
+deterministic contract of `5_executing` (state.sh, wave tag, wave-gate,
+four-stage Outer Ralph recovery, Quality Gate proof, Skill 6 handoff) and
+removes the walkthrough prose: TDD choreography, per-story model tiering,
+persona reviews, pasted framework skills. It ships no scripts and needs
+`5_executing` installed. Runs record `## Variant: large-model` in
+`progress.md` so they can be compared against the full procedure; in
+framework runs select it with
+`SKILLCHAIN_P5_SKILL="executing-large-model (5b_executing-large-model)"`.
 
 `bugfixing` is a focused repair workflow outside the feature chain: intake,
 browser or deterministic reproduction, test-escape analysis, a red-before-green

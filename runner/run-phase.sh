@@ -120,7 +120,7 @@ phase_index() {
 phase_skill() { # skill loaded by the writer lane
   case "$1" in
     P0) echo "setup (4b_setup)" ;;
-    P5) echo "executing (5_executing)" ;;
+    P5) echo "${SKILLCHAIN_P5_SKILL:-executing (5_executing)}" ;; # e.g. "executing-large-model (5b_executing-large-model)"
     P6) echo "p6-controller" ;;
     P7) echo "documentation (7_documentation)" ;;
     P8) echo "delivery (8_delivery)" ;;

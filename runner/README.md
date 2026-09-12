@@ -9,7 +9,7 @@ files on disk. No conversation history crosses a phase boundary.
 
 | File | Purpose |
 |---|---|
-| `run-phase.sh` | run one phase (`P0 P5 P6 P7 P8`) or `auto` (all remaining phases → morning report) |
+| `run-phase.sh` | run one phase (`P0 P5 P6 P7 P8`) or `auto` (all remaining phases → morning report); `SKILLCHAIN_P5_SKILL="executing-large-model (5b_executing-large-model)"` swaps the P5 writer skill for the lean frontier-model variant |
 | `render-report.mjs` | `morning` (scan all PROJs → `specs/morning-report-<date>.md` + one-liner) and `stop` (stop report) |
 | `spike-dual-lane.sh` | Stage 1 release gate: concurrent lanes, read-only enforcement, JSONL capture, attribution, kill-tree cancellation |
 | `spike-stage2.sh` | Stage 2 release gate: bundle determinism/budgets/projection parity, injector tier matrix, symmetric authenticated cross-review (including six-persona QA, structured Claude output, and 10 MB transport failure), P7 runner gate |
