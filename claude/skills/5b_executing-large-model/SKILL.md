@@ -1,6 +1,6 @@
 ---
 name: executing-large-model
-description: "Lean Step 5 variant for frontier models (Claude Fable/Mythos 5.x, Opus 5, GPT-5.x or later): same state.sh, wave-gate, ledger, Quality Gate and QA-handoff contracts as 5_executing, with the step-by-step TDD choreography, model tiering, and persona reviews removed in favor of intent and invariants. Use when: (1) wave plans exist and CP1 is sealed, (2) the writer lane runs on a frontier model, (3) a run should be compared against the full 5_executing procedure. Not for: weaker models, planning, architecture, requirements, or a repo without 5_executing installed."
+description: "Lean Step 5 variant for frontier models (Claude Fable/Mythos 5.x, Opus 5, GPT-5.x or later): same state.sh, wave-gate, ledger, Quality Gate and QA-handoff contracts as 5_executing, with the step-by-step TDD choreography and persona reviews removed in favor of intent and invariants; the strongest model leads, workers stay tiered by Complexity, reviews go to the strongest opposite model. Use when: (1) wave plans exist and CP1 is sealed, (2) the writer lane runs on a frontier model, (3) a run should be compared against the full 5_executing procedure. Not for: weaker models, planning, architecture, requirements, or a repo without 5_executing installed."
 ---
 
 # Executing — large-model variant
@@ -115,10 +115,13 @@ expected to choose the concrete steps.
   layout direction and interaction contract are preserved. A missing component
   is escalated to the lead and added through the `1c_frontend-design` extension
   procedure, never styled as a one-off.
-- **Model choice.** All workers run on the session model. The wave plan's
-  `Complexity` column is informational; log one line in `progress.md` that
-  tiering was not applied. Reinstate per-story tiering if cost, not quality,
-  becomes the constraint.
+- **Model choice.** The lead runs on the session model, the strongest one in
+  the run: it owns decomposition, integration, and finding triage. Workers are
+  tiered from the wave plan's `Complexity` column: `sonnet` by default, `opus`
+  where the plan says so; a missing column means `sonnet` plus one line in
+  `progress.md`. Reviews go to the strongest opposite-provider model, with the
+  in-family fallback handled by `cross-review.sh`. Reviewer strength never
+  drops below writer strength.
 - **Context.** The lead keeps worker summaries short and reads files only for
   the next decision. Compaction, background spawning, and team versus single
   subagent are host decisions the model makes as it goes.
@@ -191,7 +194,7 @@ Status: pending
 ### Deferred (user decision)
 
 ## Variant Notes
-- Complexity column present: yes/no; tiering not applied.
+- Complexity column present: yes/no; worker models used per story.
 - Recovery stage reached per wave: …
 - Compare against a 5_executing run: wall clock, recovery depth, Quality Gate
   P0/P1 count, Skill 6 bug count.

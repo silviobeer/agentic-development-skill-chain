@@ -184,8 +184,9 @@ vibecoder
 models (Claude Fable/Mythos 5.x, Opus 5, GPT-5.x). It keeps every
 deterministic contract of `5_executing` (state.sh, wave tag, wave-gate,
 four-stage Outer Ralph recovery, Quality Gate proof, Skill 6 handoff) and
-removes the walkthrough prose: TDD choreography, per-story model tiering,
-persona reviews, pasted framework skills. It ships no scripts and needs
+removes the walkthrough prose: TDD choreography, persona reviews, pasted
+framework skills. Worker tiering by `Complexity` stays; the lead runs on the
+strongest model and reviews go to the strongest opposite-provider model. It ships no scripts and needs
 `5_executing` installed. Runs record `## Variant: large-model` in
 `progress.md` so they can be compared against the full procedure; in
 framework runs select it with

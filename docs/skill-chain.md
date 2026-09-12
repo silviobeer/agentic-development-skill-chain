@@ -192,7 +192,7 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 
 | Skill | Purpose |
 |---|---|
-| 5b_executing-large-model | Drop-in Step 5 for frontier models: same state.sh, wave tag, wave-gate, Outer Ralph recovery, Quality Gate proof and Skill 6 handoff as `5_executing`, with TDD choreography, model tiering and persona reviews replaced by intent and invariants; needs `5_executing` installed, selected in framework runs via `SKILLCHAIN_P5_SKILL` |
+| 5b_executing-large-model | Drop-in Step 5 for frontier models: same state.sh, wave tag, wave-gate, Outer Ralph recovery, Quality Gate proof and Skill 6 handoff as `5_executing`, with TDD choreography and persona reviews replaced by intent and invariants (worker tiering by `Complexity` kept, strongest model leads and reviews); needs `5_executing` installed, selected in framework runs via `SKILLCHAIN_P5_SKILL` |
 | bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run at most three Ralph repair attempts, and explain why prior tests missed it; standalone evidence lives in `specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md` |
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
 | vibecoder | Freeform exploratory coding on a scratch branch with a live-appended journal, distilled at wrap-up into a `chain-input.md` feature seed for `1_brainstorming` |
