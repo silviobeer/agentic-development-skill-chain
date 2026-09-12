@@ -86,7 +86,6 @@ fi
 rm -f "$stale_refs"
 
 # Framework helpers must stay byte-identical across all their copies
-# (wave-gate.sh legitimately diverges per platform and is excluded).
 check_identical() {
   local first="$1"; shift
   [ -f "$first" ] || fail "missing $first"
@@ -95,6 +94,7 @@ check_identical() {
     cmp -s "$first" "$other" || fail "helper copies differ: $first vs $other"
   done
 }
+check_identical "$ROOT/claude/skills/5_executing/scripts/wave-gate.sh" "$ROOT/codex/skills/5_executing/scripts/wave-gate.sh"
 check_identical "$ROOT/claude/skills/4b_setup/scripts/state.sh" \
   "$ROOT/codex/skills/4b_setup/scripts/state.sh" \
   "$ROOT/claude/skills/4a_checkpoint/scripts/state.sh" \

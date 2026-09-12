@@ -238,7 +238,7 @@ pointer-only and tells Claude to read `AGENTS.md`.
 
 Framework helper scripts (`state.sh`, `ledger.mjs`, the compiler/injector,
 gates, adapters) are byte-identical across their skill copies — `validate.sh`
-enforces it; `wave-gate.sh` is the per-platform exception.
+enforces it.
 
 ## Install
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wave-gate.sh — evidence-based Wave Completion Gate (Claude variant)
+# wave-gate.sh — evidence-based Wave Completion Gate
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -68,10 +68,15 @@ cleanup() {
     wait "$pid" 2>/dev/null || true
   done
   [[ "$OWNS_RALPH" == false ]] || rm -f "$RALPH_PID"
-  if [[ -n "$DEV_PID" ]] && kill -0 "$DEV_PID" 2>/dev/null; then
+  stop_dev_server
+}
+stop_dev_server() {
+  [[ -n "$DEV_PID" ]] || return 0
+  if kill -0 "$DEV_PID" 2>/dev/null; then
     if [[ "$DEV_PROCESS_GROUP" == true ]]; then kill -- "-$DEV_PID" 2>/dev/null || true; else kill "$DEV_PID" 2>/dev/null || true; fi
     wait "$DEV_PID" 2>/dev/null || true
   fi
+  DEV_PID=""
 }
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -135,7 +140,7 @@ init_ralph_state() {
 }
 
 record_ac() {
-  local index="$1" id="$2" task="$3" command="$4" tests="$5" attempts="$6" rc="$7" selected="$8" status="$9" log="${10}" verified_head="${11}" tmp
+  local index="$1" id="$2" task="$3" command="$4" tests="$5" auth="$6" attempts="$7" rc="$8" selected="$9" status="${10}" log="${11}" verified_head="${12}" tmp
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
   jq --argjson index "$index" --arg id "$id" --arg task "$task" --arg command "$command" --argjson tests "$tests" \
     --argjson attempts "$attempts" --argjson rc "$rc" --argjson selected "$selected" --arg status "$status" \
@@ -146,7 +151,7 @@ record_ac() {
 }
 
 record_regression() {
-  local label="$1" command="$2" tests="$3" rc="$4" selected="$5" status="$6" log="$7" head="$8" tmp
+  local label="$1" command="$2" tests="$3" auth="$4" rc="$5" selected="$6" status="$7" log="$8" head="$9" tmp
   tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX")
   jq --arg label "$label" --arg command "$command" --argjson tests "$tests" --argjson rc "$rc" --argjson selected "$selected" \
     --arg status "$status" --arg log "$log" --arg head "$head" --arg config "$CONFIG_HASH" --argjson auth "$auth" --arg updated "$(date -Iseconds)" '
@@ -293,7 +298,7 @@ done < <(jq -c "${WAVE_KEY}.regression_commands | to_entries[] | select(.value |
 # Advisory only: existing runs keep their paths and evidence history.
 while IFS= read -r file; do
   [[ -f "$file" ]] || continue
-  lines=$(awk 'END {print NR}' "$file")
+  lines=$(wc -l <"$file")
   [[ "$lines" -le 800 ]] || echo "⚠ test file ${file}: ${lines} lines (>800); consider splitting at a planned boundary"
 done < <(jq -r "[${WAVE_KEY}.ac_commands[]?.test_files[]?, ${WAVE_KEY}.regression_commands[]?.test_files[]?] | unique[]" "$CFG")
 
@@ -355,7 +360,7 @@ for ((index=0; index<AC_COUNT; index++)); do
     case "$dependency_rc" in
       0) ;; # Check readiness before cache lookup; external state may have changed.
       76)
-        record_ac "$index" "$id" "$task" "$command" "$tests" 0 76 0 blocked_external "$log" "$VERIFIED_HEAD"
+        record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" 0 76 0 blocked_external "$log" "$VERIFIED_HEAD"
         EXTERNAL_BLOCKED=true
         echo "   ⏸ AC ${id}: $(jq -r '.external_dependency.reason' <<<"$entry")"
         continue ;;
@@ -368,7 +373,7 @@ for ((index=0; index<AC_COUNT; index++)); do
   if jq -e 'has("external_dependency")' <<<"$entry" >/dev/null; then cached=""; fi
   if [[ -n "$cached" && -f $(jq -r '.log // empty' <<<"$cached") ]]; then
     assert_verified_head
-    record_ac "$index" "$id" "$task" "$command" "$tests" "$(jq -r '.attempts' <<<"$cached")" 0 "$(jq -r '.selected' <<<"$cached")" passed "$(jq -r '.log' <<<"$cached")" "$VERIFIED_HEAD"
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$(jq -r '.attempts' <<<"$cached")" 0 "$(jq -r '.selected' <<<"$cached")" passed "$(jq -r '.log' <<<"$cached")" "$VERIFIED_HEAD"
     echo "   ✓ AC ${id} command already green at ${VERIFIED_HEAD}; reused"
     continue
   fi
@@ -376,7 +381,7 @@ for ((index=0; index<AC_COUNT; index++)); do
     [.commands[]? | select(.pass_id==$pass and .command==$command and .test_files==$tests and .auth_consuming==$auth and (.status=="failed" or .status=="failed_empty_selection" or .status=="stalled"))][0] // empty' "$RALPH_STATE")
   if [[ "$AC_ONLY" == true && -n "$failed" ]]; then
     assert_verified_head; assert_clean_worktree
-    record_ac "$index" "$id" "$task" "$command" "$tests" "$(jq -r '.attempts' <<<"$failed")" "$(jq -r '.rc' <<<"$failed")" "$(jq -r '.selected' <<<"$failed")" "$(jq -r '.status' <<<"$failed")" "$(jq -r '.log' <<<"$failed")" "$VERIFIED_HEAD"
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$(jq -r '.attempts' <<<"$failed")" "$(jq -r '.rc' <<<"$failed")" "$(jq -r '.selected' <<<"$failed")" "$(jq -r '.status' <<<"$failed")" "$(jq -r '.log' <<<"$failed")" "$VERIFIED_HEAD"
     AC_ONLY_FAILED=true
     echo "   ✗ AC ${id} shares a failed command from this pass (log: $(jq -r '.log' <<<"$failed"))"
     continue
@@ -396,13 +401,13 @@ for ((index=0; index<AC_COUNT; index++)); do
     fi
     [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for AC ${id} (log: $hook_log)" 74
     if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during AC ${id}" "$AUTH_EXHAUSTED_RC"; fi
-    if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
+    if [[ "$rc" -eq 0 && "$selected" -gt 0 ]]; then record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$attempts" 0 "$selected" passed "$log" "$VERIFIED_HEAD"; break; fi
     if [[ "$rc" -eq 0 ]]; then
-      record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"
+      record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$attempts" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"
       if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} selected 0 tests"; fi
     fi
     if [[ "$rc" -eq 124 ]]; then
-      record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"
+      record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$attempts" "$rc" "$selected" stalled "$log" "$VERIFIED_HEAD"
       if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} timed out"; fi
     fi
     rate_limited=false
@@ -420,8 +425,8 @@ for ((index=0; index<AC_COUNT; index++)); do
       set -e
       case "$evidence_rc" in 0) rate_limited=true ;; 1) ;; *) infra_fail "rate-limit evidence hook failed for AC ${id} rc=${evidence_rc} (log: $rate_limit_log)" "$evidence_rc" ;; esac
     fi
-    if [[ "$rate_limited" == true && "$retry" -eq 1 ]]; then echo "   ↻ provider rate limit evidenced; pausing"; record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
-    record_ac "$index" "$id" "$task" "$command" "$tests" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"
+    if [[ "$rate_limited" == true && "$retry" -eq 1 ]]; then echo "   ↻ provider rate limit evidenced; pausing"; record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$attempts" "$rc" "$selected" rate_limited "$log" "$VERIFIED_HEAD"; sleep_with_heartbeat "$RATE_LIMIT_BACKOFF_SECONDS"; continue; fi
+    record_ac "$index" "$id" "$task" "$command" "$tests" "$auth" "$attempts" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"
     if [[ "$AC_ONLY" == true ]]; then AC_ONLY_FAILED=true; break; else fail "AC ${id} failed rc=${rc}, selected=${selected} (log: $log)"; fi
   done
   assert_verified_head
@@ -467,9 +472,9 @@ for ((index=0; index<REG_COUNT; index++)); do
   fi
   [[ "$rc" -eq 74 ]] && infra_fail "auth-budget preflight failed for regression ${label}" 74
   if [[ "$auth" == true ]] && { [[ "$rc" -eq "$AUTH_EXHAUSTED_RC" ]] || grep -q 'AUTH_BUDGET_EXHAUSTED' "$log" "$hook_log" 2>/dev/null; }; then infra_fail "auth budget exhausted before/during regression ${label}" "$AUTH_EXHAUSTED_RC"; fi
-  [[ "$rc" -eq 0 ]] || { record_regression "$label" "$command" "$tests" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "regression ${label} failed rc=${rc}"; }
-  if [[ "$require_selection" == true && "$selected" -le 0 ]]; then record_regression "$label" "$command" "$tests" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "regression ${label} selected 0 tests"; fi
-  record_regression "$label" "$command" "$tests" 0 "$selected" passed "$log" "$VERIFIED_HEAD"
+  [[ "$rc" -eq 0 ]] || { record_regression "$label" "$command" "$tests" "$auth" "$rc" "$selected" failed "$log" "$VERIFIED_HEAD"; fail "regression ${label} failed rc=${rc}"; }
+  if [[ "$require_selection" == true && "$selected" -le 0 ]]; then record_regression "$label" "$command" "$tests" "$auth" 0 0 failed_empty_selection "$log" "$VERIFIED_HEAD"; fail "regression ${label} selected 0 tests"; fi
+  record_regression "$label" "$command" "$tests" "$auth" 0 "$selected" passed "$log" "$VERIFIED_HEAD"
   if [[ "$require_selection" == true ]]; then
     echo "   ✓ ${label} (${selected} selected)"
   else
@@ -481,67 +486,7 @@ done
 rm -f "$RALPH_PID"; OWNS_RALPH=false
 tmp=$(mktemp "${RALPH_STATE}.tmp.XXXXXX"); jq --arg updated "$(date -Iseconds)" '.ralph_status="complete"|.updated_at=$updated' "$RALPH_STATE" >"$tmp" && mv "$tmp" "$RALPH_STATE"
 
-step "3–4/6 Build and CodeRabbit wave review (parallel)"
-BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
-command -v coderabbit >/dev/null || fail "coderabbit not installed"
-WAVE_BASE="${WAVE_BASE_SHA:-}"
-if [[ -n "$WAVE_BASE" ]]; then git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 || fail "invalid WAVE_BASE_SHA"; else WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true); fi
-[[ -n "$WAVE_BASE" ]] || fail "missing wave base SHA/tag"
-FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
-attempt=1
-while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
-CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
-CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
-BUILD_LOG="${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log"
-CR_STDERR="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.stderr.log"
-# Only the commands overlap; the coordinator checks results and writes the ledger.
-# Without --foreground, timeout contains each command's children in its own group.
-BUILD_INPUTS=$(node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" snapshot)
-started=$(date +%s)
-timeout --kill-after=5s "$BUILD_TIMEOUT" bash -c "$BUILD_CMD" >"$BUILD_LOG" 2>&1 & BUILD_PID=$!
-timeout --kill-after=5s "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW" 2>"$CR_STDERR" & CR_PID=$!
-BUILD_RC=0; wait "$BUILD_PID" || BUILD_RC=$?; BUILD_PID=""
-CR_RC=0; wait "$CR_PID" || CR_RC=$?; CR_PID=""
-echo "   Build exit ${BUILD_RC}; CodeRabbit exit ${CR_RC}; parallel phase $(( $(date +%s) - started ))s"
-[[ ! -s "$CR_STDERR" ]] || cat "$CR_STDERR" >&2
-assert_verified_head; assert_clean_worktree
-[[ "$BUILD_RC" -ne 124 ]] || fail "build timed out (log: $BUILD_LOG)"
-[[ "$BUILD_RC" -eq 0 ]] || { cat "$BUILD_LOG" >&2; fail "build failed with exit ${BUILD_RC} (log: $BUILD_LOG)"; }
-node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" record-build "$BUILD_LOG" "$VERIFIED_HEAD" "$BUILD_INPUTS"
-: >"$CR_NORMALIZED"
-if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
-if [[ "$CR_RC" -eq 124 ]]; then
-    fail "CodeRabbit timed out and its output is not valid JSONL (raw: $CR_RAW)"
-  else
-    fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
-  fi
-fi
-RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
-NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
-[[ "$RAW_FINDINGS" -eq "$NORMALIZED_FINDINGS" ]] || fail "CodeRabbit finding count mismatch raw=${RAW_FINDINGS}, normalized=${NORMALIZED_FINDINGS}"
-jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.severity|IN("critical","high","medium","low")) and (.summary|type=="string" and test("\\S")) and ((.category==null) or (.category|type=="string")) and ((.file==null) or (.file|type=="string")) and ((.line==null) or ((.line|type)=="number" and (.line|floor)==.line)) and ((.anchor==null) or (.anchor|type=="string")))' "$CR_NORMALIZED" >/dev/null \
-  || fail "CodeRabbit emitted invalid finding records (normalized: $CR_NORMALIZED)"
-[[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
-[[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
-if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
-CR_SCRUBBED=$(mktemp "${CR_RAW}.tmp.XXXXXX")
-jq -c 'if .type=="review_context" then del(.workingDirectory) else . end' "$CR_RAW" >"$CR_SCRUBBED" && mv "$CR_SCRUBBED" "$CR_RAW"
-
-LEDGER_AVAILABLE=false
-if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then LEDGER_AVAILABLE=true; fi
-if [[ "$RAW_FINDINGS" -gt 0 && "$LEDGER_AVAILABLE" == true ]]; then
-  node scripts/ledger.mjs add "$PROJ" "$THEME" --wave "$WAVE" <"$CR_NORMALIZED" >/dev/null || fail "ledger ingestion failed"
-fi
-CUMULATIVE_BLOCKING=0
-if [[ "$LEDGER_AVAILABLE" == true && -f "$BASE/findings.json" ]]; then
-  CUMULATIVE_BLOCKING=$(jq --argjson advisory "$ADVISORY_JSON" '[.findings[] | select(.status=="open") | .severity as $s | select(($advisory | index($s) | not))] | length' "$BASE/findings.json")
-elif [[ "$LEDGER_AVAILABLE" == false ]]; then
-  CUMULATIVE_BLOCKING=$(jq -s --argjson advisory "$ADVISORY_JSON" '[.[] | .severity as $s | select(($advisory | index($s) | not))] | length' "$CR_NORMALIZED")
-fi
-[[ "$CUMULATIVE_BLOCKING" -eq 0 ]] || fail "${CUMULATIVE_BLOCKING} cumulative/current open blocking finding(s) remain after review ingestion"
-assert_verified_head; assert_clean_worktree
-
-step "5/6 Browser smoke test"
+step "3/6 Browser smoke test"
 ROUTES_JSON=$(jq -c --arg wave "$WAVE" '[.frontend.routes[]? | select((.wave|tostring)==$wave)]' "$CFG")
 if [[ $(jq 'length' <<<"$ROUTES_JSON") -eq 0 ]]; then
   ROUTES_JSON=$(jq -c "[${WAVE_KEY}.frontend_routes[]? | if type==\"string\" then {path:.,expected_url:.,expected_text:null,protected:false,auth_state:null} else . end]" "$CFG")
@@ -595,14 +540,73 @@ if [[ "$ROUTE_COUNT" -eq 0 ]]; then echo "   (backend-only wave — skipped)"; e
     done
   fi
 fi
+stop_dev_server
 assert_verified_head; assert_clean_worktree
 
-step "6/6 Component registry"
+step "4/6 Component registry"
 if [[ -f scripts/gen-component-registry.mjs && ( -d src/components || -d src/features ) ]]; then
   set +e; node scripts/gen-component-registry.mjs --check; REG_RC=$?; set -e
   [[ "$REG_RC" -eq 0 || "$REG_RC" -eq 3 ]] || fail "component registry out of date"
 else echo "   (component registry unavailable/not applicable — skipped)"; fi
 
+step "5–6/6 Build and CodeRabbit wave review (parallel; last so environmental smoke failures cost no review)"
+BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
+command -v coderabbit >/dev/null || fail "coderabbit not installed"
+WAVE_BASE="${WAVE_BASE_SHA:-}"
+if [[ -n "$WAVE_BASE" ]]; then git rev-parse --verify "${WAVE_BASE}^{commit}" >/dev/null 2>&1 || fail "invalid WAVE_BASE_SHA"; else WAVE_BASE=$(git rev-parse --verify "wave-${WAVE}-start-PROJ-${PROJ}^{commit}" 2>/dev/null || true); fi
+[[ -n "$WAVE_BASE" ]] || fail "missing wave base SHA/tag"
+FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
+attempt=1
+while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
+CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
+CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
+BUILD_LOG="${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log"
+CR_STDERR="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.stderr.log"
+# Only the commands overlap; the coordinator checks results and writes the ledger.
+# Without --foreground, timeout contains each command's children in its own group.
+BUILD_INPUTS=$(node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" snapshot)
+started=$(date +%s)
+timeout --kill-after=5s "$BUILD_TIMEOUT" bash -c "$BUILD_CMD" >"$BUILD_LOG" 2>&1 & BUILD_PID=$!
+timeout --kill-after=5s "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW" 2>"$CR_STDERR" & CR_PID=$!
+BUILD_RC=0; wait "$BUILD_PID" || BUILD_RC=$?; BUILD_PID=""
+CR_RC=0; wait "$CR_PID" || CR_RC=$?; CR_PID=""
+echo "   Build exit ${BUILD_RC}; CodeRabbit exit ${CR_RC}; parallel phase $(( $(date +%s) - started ))s"
+[[ ! -s "$CR_STDERR" ]] || cat "$CR_STDERR" >&2
+assert_verified_head; assert_clean_worktree
+[[ "$BUILD_RC" -ne 124 ]] || fail "build timed out (log: $BUILD_LOG)"
+[[ "$BUILD_RC" -eq 0 ]] || { cat "$BUILD_LOG" >&2; fail "build failed with exit ${BUILD_RC} (log: $BUILD_LOG)"; }
+node "$SCRIPT_DIR/quality-evidence.mjs" "$PROJ" "$THEME" record-build "$BUILD_LOG" "$VERIFIED_HEAD" "$BUILD_INPUTS"
+: >"$CR_NORMALIZED"
+if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
+  if [[ "$CR_RC" -eq 124 ]]; then
+    fail "CodeRabbit timed out and its output is not valid JSONL (raw: $CR_RAW)"
+  else
+    fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
+  fi
+fi
+RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
+NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
+[[ "$RAW_FINDINGS" -eq "$NORMALIZED_FINDINGS" ]] || fail "CodeRabbit finding count mismatch raw=${RAW_FINDINGS}, normalized=${NORMALIZED_FINDINGS}"
+jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.severity|IN("critical","high","medium","low")) and (.summary|type=="string" and test("\\S")) and ((.category==null) or (.category|type=="string")) and ((.file==null) or (.file|type=="string")) and ((.line==null) or ((.line|type)=="number" and (.line|floor)==.line)) and ((.anchor==null) or (.anchor|type=="string")))' "$CR_NORMALIZED" >/dev/null \
+  || fail "CodeRabbit emitted invalid finding records (normalized: $CR_NORMALIZED)"
+[[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
+[[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
+if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
+CR_SCRUBBED=$(mktemp "${CR_RAW}.tmp.XXXXXX")
+jq -c 'if .type=="review_context" then del(.workingDirectory) else . end' "$CR_RAW" >"$CR_SCRUBBED" && mv "$CR_SCRUBBED" "$CR_RAW"
+
+LEDGER_AVAILABLE=false
+if [[ -f scripts/ledger.mjs ]] && command -v node >/dev/null; then LEDGER_AVAILABLE=true; fi
+if [[ "$RAW_FINDINGS" -gt 0 && "$LEDGER_AVAILABLE" == true ]]; then
+  node scripts/ledger.mjs add "$PROJ" "$THEME" --wave "$WAVE" <"$CR_NORMALIZED" >/dev/null || fail "ledger ingestion failed"
+fi
+CUMULATIVE_BLOCKING=0
+if [[ "$LEDGER_AVAILABLE" == true && -f "$BASE/findings.json" ]]; then
+  CUMULATIVE_BLOCKING=$(jq --argjson advisory "$ADVISORY_JSON" '[.findings[] | select(.status=="open") | .severity as $s | select(($advisory | index($s) | not))] | length' "$BASE/findings.json")
+elif [[ "$LEDGER_AVAILABLE" == false ]]; then
+  CUMULATIVE_BLOCKING=$(jq -s --argjson advisory "$ADVISORY_JSON" '[.[] | .severity as $s | select(($advisory | index($s) | not))] | length' "$CR_NORMALIZED")
+fi
+[[ "$CUMULATIVE_BLOCKING" -eq 0 ]] || fail "${CUMULATIVE_BLOCKING} cumulative/current open blocking finding(s) remain after review ingestion"
 assert_verified_head; assert_clean_worktree
 TS=$(date -Iseconds)
 cat >>"$PROGRESS" <<EOF

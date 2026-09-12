@@ -152,7 +152,8 @@ EOF
     printf '#!/usr/bin/env bash\n%s\n' "$review" >"$CASE/bin/coderabbit"
     config=$(default_config | jq --arg build "$build" '.build_cmd=$build | .timeouts.build_seconds=1 | .timeouts.coderabbit_seconds=1 | .waves["1"].frontend_routes=["/"]')
     write_config "$config"; commit_case; expect_fail run_gate
-    [[ ! -e "$BROWSER_CALL_LOG" ]] || fail "$LABEL: smoke ran after parallel failure"
+    [[ -e "$BROWSER_CALL_LOG" ]] || fail "$LABEL: smoke did not run before build/review"
+    ! grep -q "Gate — PASSED" "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: wave certified after parallel failure"
     case "$failure" in
       build-*) [[ -f "$PARALLEL_DIR/review-done" ]] || fail "$LABEL: review was not collected"; grep -q 'build .*\(exit 7\|timed out\)' "$GATE_OUT" || fail "$LABEL: build failure lost" ;;
       review-*) [[ -f "$PARALLEL_DIR/build-done" ]] || fail "$LABEL: build was not collected"; grep -q 'CodeRabbit .*\(rc=8\|timed out\)' "$GATE_OUT" || fail "$LABEL: review failure lost" ;;

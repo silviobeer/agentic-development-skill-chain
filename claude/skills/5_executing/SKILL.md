@@ -94,10 +94,11 @@ Before P0 seals an auth-budget project, `bash scripts/wave-gate.sh --auth-budget
 
 The script validates:
 1. **Current wave ACs** — every structured `ac_commands` entry exits 0 and reports a non-empty selected-test count. A cached pass requires the same command, test files, auth classification, gate-config fingerprint, positive selection, and committed `verified_head`; equivalent commands may share execution across AC IDs, with evidence recorded for each ID. Changed or uncommitted code cannot be certified.
-2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before build; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
-3. **Build** — `build_cmd` from config exits 0.
-4. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
-5. **Smoke Test** — the configured dev server is reused or started by the gate. Anonymous routes must match URL and characteristic content; redirects are failures. Protected routes require auth state or authenticated E2E coverage.
+2. **Declared targeted regressions** — every `regression_commands` entry covers shared behavior affected by this wave and runs after the current ACs and before smoke; selection-aware entries must prove that they selected tests. Broad hosted-auth/browser suites belong in `phase_commands`, not every wave.
+3. **Smoke Test** — the configured dev server is reused or started by the gate. Anonymous routes must match URL and characteristic content; redirects are failures. Protected routes require auth state or authenticated E2E coverage.
+4. **Component registry** — `gen-component-registry.mjs --check` passes where applicable.
+5. **Build** — `build_cmd` from config exits 0; runs in parallel with CodeRabbit as the last phase.
+6. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
 
 The wave gate does not run Sonar. The top-level `sonar_cmd` runs once, at the PROJ-end Quality Gate (Step 9) after all waves pass — not per wave.
 
@@ -473,7 +474,7 @@ Update `progress.md` after the initial pass, each recovery stage, each reuse or 
 ### 5. Build check — handled by `wave-gate.sh`
 
 Do not run an extra build between Ralph and the wave gate. Build is intentionally centralized:
-- **Wave-end build:** `wave-gate.sh` runs `build_cmd` once per wave. After ACs and regressions pass, build and CodeRabbit run concurrently on the same committed HEAD. The coordinator retains separate logs, waits for both results, then checks findings before smoke; either failure blocks. Interruption stops both command groups. Database and browser tests remain sequential.
+- **Wave-end build:** `wave-gate.sh` runs `build_cmd` once per wave. After ACs, regressions, browser smoke and the component registry check pass, build and CodeRabbit run concurrently on the same committed HEAD as the last gate phase, so an environmental smoke failure costs no review. The coordinator retains separate logs, waits for both results, then checks findings; either failure blocks. Interruption stops both command groups. Database and browser tests remain sequential.
 - **PROJ-end build:** the Quality Gate verifies the assembled PROJ before QA, reusing matching final-wave build evidence only when declared artifacts and inputs remain valid.
 
 If the wave gate finds a build failure, dispatch a fix worker with the verbatim compiler output, then rerun the gate.
