@@ -261,11 +261,15 @@ path reads both to decide whether it can skip its own interactive walk-through;
 without `--persist`, CP1 has no evidence that the review ran and
 always falls through to the full interactive loop.
 
-### 5. User Review
-- Present the architecture for review
-- Present the automatic cross-review result alongside the architecture
-- Ask: "Does this design make sense across all PRDs? Any questions?"
-- Wait for approval before suggesting handoff
+### 5. Continue into writing-plans (no separate approval stop)
+- Present a compact summary: the decisions, the cross-review result, and any
+  open product question. Do not ask for approval — the architecture is
+  approved together with the wave plans at Checkpoint 1 (4a), which walks
+  both point by point and cascades changes into every affected artifact.
+- Then invoke **writing-plans** (4) in the same session.
+- Stop here only when Critical/High cross-review findings remain after round 3,
+  a product decision is still open, or the user asked up front to review the
+  architecture on its own before plans are written.
 
 ## Checklist Before Completion
 - [ ] Checked existing architecture via git
@@ -281,12 +285,12 @@ always falls through to the full interactive loop.
 - [ ] New dependencies listed (skip existing packages)
 - [ ] Architecture file saved to `3-4_plan/PROJ-<X>-architecture.md`
 - [ ] Architecture delta saved to `architecture-delta.md`, decisions only, every line traceable to the full document
-- [ ] User has reviewed and approved
+- [ ] Cross-review clean or escalated; approval itself belongs to CP1 (4a)
 - [ ] `specs/INDEX.md` status updated to "In Progress" (if INDEX exists)
 
 ## Handoff
-After approval, tell the user:
-> "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`, with a condensed `architecture-delta.md` for implementer context bundles. Next step: use the **writing-plans** skill to create wave-based implementation plans. Each wave becomes its own plan file."
+Say once, then continue:
+> "Architecture is ready at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`, with a condensed `architecture-delta.md` for implementer context bundles. Cross-review: <clean | N findings reconciled>. Continuing into **writing-plans**; you approve architecture and plans together at Checkpoint 1."
 
 ## Git Commit
 ```

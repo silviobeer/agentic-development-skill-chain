@@ -528,9 +528,15 @@ path reads both to decide whether it can skip its own interactive walk-through;
 without `--persist`, CP1 has no evidence that the review ran and
 always falls through to the full interactive loop.
 
-### 7. User Review
+### 7. Continue into checkpoint (no separate approval stop)
 
-Present all wave plans for approval. Adjust if needed.
+Present a compact summary: waves, stories per wave, execution mode, and the
+cross-review result. Do not ask for approval here — architecture and plans are
+approved together at Checkpoint 1 (4a), which auto-approves when both
+cross-reviews are already clean and otherwise walks the package point by point.
+Then invoke **checkpoint** (4a) in the same session. Stop here only when
+Critical/High cross-review findings remain after round 3, a product decision is
+still open, or the user asked to review the plans on their own first.
 
 Present the automatic cross-review result with the wave plans. Re-run the deterministic validator after user-requested changes before handoff.
 
@@ -551,7 +557,7 @@ Present the automatic cross-review result with the wave plans. Re-run the determ
 
 ## Execution Handoff
 
-Once cross-review is complete and the user has approved the plans, say once:
+Once cross-review is complete, say once before invoking checkpoint:
 
 > "Cross-review settled. If you want the rest to run unattended, say
 > **'continue automatic until delivery, goal is PR draft'** — that means:
