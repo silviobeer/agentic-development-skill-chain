@@ -6,6 +6,9 @@ the execution half of the chain unattended — dual provider lanes, machine-
 readable state, a findings ledger, and hard gates instead of good
 intentions.
 
+Not a developer, or just want the plain-language version of what this does
+and why? Start with [docs/WHY.md](docs/WHY.md).
+
 The chain turns a rough product idea into a buildable concept, explores UI
 shape when needed, writes requirements, creates architecture and
 implementation plans, executes the work wave by wave, runs QA, curates
