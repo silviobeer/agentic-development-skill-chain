@@ -558,7 +558,7 @@ ok "reports render a target-cwd P8 resume through the actual runner path"
 CI_POLL="$ROOT/codex/skills/8_delivery/scripts/ci-poll.sh"
 ci_bin="$TMP_ROOT/ci-bin"
 mkdir -p "$ci_bin"
-printf '#!/usr/bin/env bash\nset -euo pipefail\nif [ "$1 $2" = "pr view" ]; then\n  if [[ " $* " = *" --json state "* ]]; then printf "%%s\\n" "${GH_PR_STATE:-MERGED}"; exit 0; fi\n  count=0; [ ! -f "$GH_PR_COUNT" ] || count="$(cat "$GH_PR_COUNT")"\n  count=$((count + 1)); printf "%%s" "$count" >"$GH_PR_COUNT"\n  if [ "$count" -eq 1 ]; then printf "%%s\\n" "$GH_HEAD_FIRST"; else printf "%%s\\n" "$GH_HEAD_SECOND"; fi\nelif [ "$1 $2" = "run list" ]; then\n  cat "$GH_RUNS_FILE"\nelif [ "$1 $2" = "pr checks" ]; then\n  exit 0\nelse\n  exit 9\nfi\n' >"$ci_bin/gh"
+printf '#!/usr/bin/env bash\nset -euo pipefail\nif [ "$1 $2" = "pr view" ]; then\n  if [[ " $* " = *" --json state "* ]]; then printf "%%s\\n" "${GH_PR_STATE:-MERGED}"; exit 0; fi\n  count=0; [ ! -f "$GH_PR_COUNT" ] || count="$(cat "$GH_PR_COUNT")"\n  count=$((count + 1)); printf "%%s" "$count" >"$GH_PR_COUNT"\n  if [ "$count" -eq 1 ]; then printf "%%s\\n" "$GH_HEAD_FIRST"; else printf "%%s\\n" "$GH_HEAD_SECOND"; fi\nelif [ "$1 $2" = "run list" ]; then\n  cat "$GH_RUNS_FILE"\nelif [ "$1 $2" = "pr checks" ]; then\n  if [[ " $* " = *" --json "* ]]; then printf "%%s\\n" "[]"; else exit 0; fi\nelse\n  exit 9\nfi\n' >"$ci_bin/gh"
 chmod +x "$ci_bin/gh"
 jq -cn '[{databaseId:1,status:"completed",conclusion:"success",name:"ci"}]' >"$TMP_ROOT/gh-runs.json"
 head_a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -567,6 +567,19 @@ if PATH="$ci_bin:$PATH" GH_RUNS_FILE="$TMP_ROOT/gh-runs.json" GH_PR_COUNT="$TMP_
 if PATH="$ci_bin:$PATH" GH_RUNS_FILE="$TMP_ROOT/gh-runs.json" GH_PR_COUNT="$TMP_ROOT/gh-count-2" GH_HEAD_FIRST="$head_a" GH_HEAD_SECOND="$head_b" bash "$CI_POLL" 1 1 "$head_a" >/dev/null 2>&1; then fail "ci-poll accepted a PR-head change during polling"; fi
 cmp "$CI_POLL" "$ROOT/claude/skills/8_delivery/scripts/ci-poll.sh" || fail "ci-poll provider copies differ"
 ok "final CI polling binds and rechecks the exact expected PR head"
+
+# A third-party check (CodeRabbit, Vercel, ...) has no GitHub Actions run, so
+# `gh run list` alone reports every workflow completed while it is still
+# pending. ci-poll must keep waiting on it instead of declaring green.
+pending_bin="$TMP_ROOT/ci-bin-pending"
+mkdir -p "$pending_bin"
+printf '#!/usr/bin/env bash\nset -euo pipefail\nif [ "$1 $2" = "pr view" ]; then\n  printf "%%s\\n" "%s"\nelif [ "$1 $2" = "run list" ]; then\n  cat "$GH_RUNS_FILE"\nelif [ "$1 $2" = "pr checks" ]; then\n  if [[ " $* " = *" --json "* ]]; then printf "%%s\\n" "[{\\"bucket\\":\\"pending\\",\\"name\\":\\"CodeRabbit\\"}]"; else exit 0; fi\nelse\n  exit 9\nfi\n' "$head_a" >"$pending_bin/gh"
+chmod +x "$pending_bin/gh"
+if PATH="$pending_bin:$PATH" GH_RUNS_FILE="$TMP_ROOT/gh-runs.json" bash "$CI_POLL" 1 0 "$head_a" >/dev/null 2>"$TMP_ROOT/ci-poll-pending.out"; then
+  fail "ci-poll declared green while a third-party check was still pending"
+fi
+grep -q "TIMEOUT" "$TMP_ROOT/ci-poll-pending.out" || fail "ci-poll did not report the pending third-party check as the wait reason"
+ok "ci-poll waits on pending third-party PR checks, not just GitHub Actions runs"
 
 # P8 crash-window resume: durable P8:done+removed with a live registered path
 # must not be skipped by either run_one_phase or the outer auto loop.

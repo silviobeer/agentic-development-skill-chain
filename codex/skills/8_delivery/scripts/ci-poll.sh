@@ -3,7 +3,9 @@
 # checks with verbatim logs for fix agents.
 #
 # Resolves the PR head SHA and requires a completed, successful latest run for
-# every workflow on that commit. This deliberately treats "no run yet" as red:
+# every workflow on that commit, plus zero pending PR checks (this also
+# covers third-party checks such as CodeRabbit, which run no GitHub Actions
+# workflow of their own). This deliberately treats "no run yet" as red:
 # queued concurrency-group work has no PR check to watch.
 #
 # Usage:  ci-poll.sh <pr-number> [timeout-seconds] [expected-head]
@@ -33,22 +35,34 @@ latest_runs() {
     --jq 'group_by(.name) | map(max_by(.databaseId))'
 }
 
+# gh run list only sees GitHub Actions workflow runs. Third-party checks
+# (CodeRabbit's PR review, Vercel, etc.) are separate check contexts that
+# only `gh pr checks` reports — waiting on Actions alone declares victory
+# while such a check is still mid-review, so a later-arriving finding
+# triggers a fix + push that retriggers the checks just called green.
+pending_third_party_checks() {
+  gh pr checks "$PR" --json bucket,name --jq '[.[] | select(.bucket == "pending")]' 2>/dev/null || echo '[]'
+}
+
 DEADLINE=$(( $(date +%s) + TIMEOUT ))
 while :; do
   RUNS="$(latest_runs 2>/dev/null || echo '[]')"
   TOTAL=$(jq 'length' <<<"$RUNS")
   PENDING=$(jq '[.[] | select(.status != "completed")] | length' <<<"$RUNS")
-  [ "$TOTAL" -gt 0 ] && [ "$PENDING" -eq 0 ] && break
+  PENDING_CHECKS="$(pending_third_party_checks)"
+  CHECKS_PENDING=$(jq 'length' <<<"$PENDING_CHECKS")
+  [ "$TOTAL" -gt 0 ] && [ "$PENDING" -eq 0 ] && [ "$CHECKS_PENDING" -eq 0 ] && break
   if [ "$(date +%s)" -ge "$DEADLINE" ]; then
     if [ "$TOTAL" -eq 0 ]; then
       echo "❌ TIMEOUT: no workflow run appeared for ${HEAD_SHA:0:7}; nothing verified this commit." >&2
     else
       echo "❌ TIMEOUT after ${TIMEOUT}s — still running:" >&2
       jq -r '.[] | select(.status != "completed") | "   \(.name): \(.status)"' <<<"$RUNS" >&2
+      jq -r '.[] | "   \(.name): pending"' <<<"$PENDING_CHECKS" >&2
     fi
     exit 2
   fi
-  echo "   [$(date +%H:%M:%S)] ${TOTAL} workflow(s), ${PENDING} not finished — waiting"
+  echo "   [$(date +%H:%M:%S)] ${TOTAL} workflow(s), ${PENDING} not finished, ${CHECKS_PENDING} check(s) pending — waiting"
   sleep 30
 done
 

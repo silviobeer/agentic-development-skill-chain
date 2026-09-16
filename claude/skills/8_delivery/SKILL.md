@@ -87,11 +87,17 @@ sync-back is Stage 3 — do not improvise ticket comments.
 Run `bash scripts/ci-poll.sh <pr-number>`:
 
 - Exit 0 (green) → `bash scripts/state.sh set <X> <theme> .pr.ci green`, continue.
-- Exit 1 (red) → the script printed the failing checks and verbatim
-  `--log-failed` output. Spawn a `micro-fixer` with EXACTLY that
-  verbatim output + the affected file paths (no context pack — §5 spawn
-  tiering), commit, push, re-poll. **Max 3 attempts**; the 4th red on
-  the same check is a stop condition (§8).
+- Exit 1 (red) → the script printed every currently failing check and its
+  verbatim `--log-failed` output in one pass. Dispatch a `micro-fixer` per
+  failing check immediately, concurrently (disjoint ownership — §5 spawn
+  tiering, no context pack), with EXACTLY that check's verbatim output +
+  affected file paths. Each fixer commits its own fix. **Push once, only
+  after every fixer in this round has committed** — a push before the
+  round is complete retriggers checks (including third-party ones like
+  CodeRabbit) that already finished, restarting the wait for no reason.
+  Then re-poll once. **Max 3 attempts** (one attempt = one
+  dispatch-fix-push-repoll round); the 4th red on the same check is a
+  stop condition (§8).
 - Exit 2 (timeout) → stop condition; record `.pr.ci timeout`.
 
 ### 5. Seal the autonomous part
@@ -168,14 +174,16 @@ Apply the **checkpoint** (4a) reconcile loop to the PR comments, via
 
 1. Classify each comment, point by point: **fix now** / **debt** /
    **reject with rationale**.
-2. `fix now` → `micro-fixer` spawn (comment verbatim + file paths),
-   verify, commit.
+2. `fix now` → dispatch a `micro-fixer` per comment immediately,
+   concurrently for disjoint files (comment verbatim + file paths each),
+   verify, commit. Do not push per comment.
 3. `debt` → `ponytail:` marker + ledger record
    (`node scripts/ledger.mjs add <X> <theme>` with status `deferred`),
    reply on the comment with the finding id.
 4. `reject` → reply on the PR with the rationale — never silently ignore.
-5. Append the round to `specs/PROJ-<X>-<theme>/decisions.md`
-   (decisions template frame), push, re-request review.
+5. Once every comment in the round is classified and its `fix now` work
+   committed, append the round to `specs/PROJ-<X>-<theme>/decisions.md`
+   (decisions template frame), push once, re-request review.
 6. Principle-level feedback ("I never want to see this again") →
    AGENTS.md/GUIDELINES candidate through the existing approval
    pipeline (documentation skill owns the merge).
