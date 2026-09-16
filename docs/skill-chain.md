@@ -95,12 +95,14 @@ After decomposition:
 After `checkpoint` (4a) seals Checkpoint 1, the host-neutral phase runner
 (`runner/run-phase.sh auto <X> <theme>`) drives P0 → P5 → P6 → P7 → P8
 unattended — dual Claude + Codex lanes with a single writer-orchestrator per phase,
-`state.json`/`findings.json` as the only handoff, stop policy with rescue
-branch + stop report, and a rendered morning report at run end. If the
-`codex` CLI is missing or unauthenticated, the run degrades to
-single-provider with a model-opposite review lane — flagged in the
-morning report and PR body, never silent. See [runner/README.md](../runner/README.md)
-and CONCEPT.md for the full model.
+`state.json`/`findings.json` as the only handoff, and a stop policy: a failed
+writer, timeout, unsealed phase, or red gate parks the run — rescue branch
+for uncommitted work, state moved to `blocked` with the exact cause, a
+rendered stop report — instead of continuing degraded. A rendered morning
+report closes every run. If the `codex` CLI is missing or unauthenticated,
+the run degrades to single-provider with a model-opposite review lane —
+flagged in the morning report and PR body, never silent. See
+[runner/README.md](../runner/README.md) and CONCEPT.md for the full model.
 
 The writer lane owns decomposition, dispatch, integration, deterministic
 verification, gates, commits, and operational records. When delegation is
@@ -187,6 +189,24 @@ Stage 2 adds the bootstrap and the full context system:
   than truncating review material. The QA gate launches one isolated worker per
   persona: Codex-authored QA fails closed without Claude, while Claude-authored
   QA may fall back loudly to six Claude workers when Codex is unavailable.
+- **Integration-focused PROJ gate:** once every wave passes, the PROJ
+  quality gate reviews only the assembled cross-wave diff from `BASE_SHA`
+  (contracts, shared state, authorization boundaries, unresolved wave
+  findings) rather than replaying wave ACs — plus a verified `build_cmd`,
+  Sonar once at PROJ end with a bounded 3-round fix/rescan loop, and
+  declared quality-phase tests/lint. The reviewer, build and coverage can
+  run concurrently where resources allow; Sonar waits for coverage. See
+  [Executing Skill](executing-skill.md#proj-quality-gate).
+- **Hard gates:** P6 cannot seal with an open Critical/High finding. P7
+  cannot seal unless the curated docs pass both FORM (`curation-caps.sh`,
+  caps above) and TRUTH (a `cross-review` that actually ran this P7 with
+  no blocking findings left). The runner independently re-verifies every
+  gate after its seal.
+- **Bounded evidence retention:** CodeRabbit's raw output is kept because
+  the local gate parses it; CI and Sonar reports stay in their source
+  systems, while the PROJ gate retains only command logs and task-receipt
+  hashes. `cross-review` persists validated normalized findings, not full
+  model responses that may carry sensitive context.
 
 For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, see [Executing Skill](executing-skill.md).
 
@@ -199,3 +219,6 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
 | vibecoder | Freeform exploratory coding on a scratch branch with a live-appended journal, distilled at wrap-up into a `chain-input.md` feature seed for `1_brainstorming` |
 | sonar-cli | Set up and operate SonarScanner CLI and SonarQube CLI for project analysis, quality gates, and issue triage |
+| supabase-local-dev | Diagnose shared-local-Supabase-DB problems outside the chain's own P0/wave-gate flow: migration drift between git worktrees sharing one Postgres instance (keyed by `config.toml`'s committed `project_id`), RLS/grant surprises from testing as the `postgres` superuser, and `config.toml` vs. deployed truth; same `migration-drift-check.sh` check |
+
+Claude-specific experimental or personal skills are intentionally excluded.

@@ -71,85 +71,22 @@ runner/run-phase.sh auto <proj-x> <theme>     # P0 → P5 → P6 → P7 → P8
 # morning: read specs/morning-report-<date>.md, then review the PR (CP2)
 ```
 
-What makes an overnight run trustworthy:
+What makes an overnight run trustworthy, in short: dual Claude + Codex lanes
+per phase with exactly one writer orchestrator (the peer stays read-only),
+`state.json`/`findings.json` as the only handoff, a persistent per-PROJ
+worktree, evidence-based wave gates followed by an integration-focused PROJ
+gate, provider-opposite cross-review on every artifact, budgeted context
+bundles per role, the shared Ponytail minimalism ladder, hard P6/P7 gates
+re-verified independently by the runner, and a stop policy that parks a run
+on a failed writer, timeout, unsealed phase, or red gate instead of
+continuing degraded. Reports and PR bodies are rendered from state + ledger
+by template scripts, never hand-written.
 
-- **Dual lanes, one writer orchestrator.** Every phase runs a fresh Claude and
-  Codex lane; exactly one top-level lane may write, and it delegates covered
-  edits to workers under its authority while the peer stays read-only. Handoff between
-  phases happens only via `specs/PROJ-*/state.json` (written solely by
-  `state.sh`) and the findings ledger `findings.json` (written solely by
-  `ledger.mjs`).
-- **Subagent-first edits.** When delegation is available and permitted, workers
-  own all covered code, test, fix, and documentation edits. The lead owns
-  decomposition, dispatch, integration, deterministic verification, gates, and
-  operational records; disjoint work runs concurrently, overlap serially, and
-  local editing is only a visibly reported unavailable/prohibited fallback.
-- **Persistent PROJ worktree.** P0–P8 run on `proj/PROJ-X` in a registered
-  sibling worktree. Dependencies are installed inside it; `.env.local`, the
-  development database, and hosted-auth limits remain deliberately shared and
-  are surfaced in state and reports. Migrations and auth-consuming gates use a
-  common repository lock, exclusive by default. Independent test fixtures may
-  opt into shared mode on that same lock; migrations remain exclusive. This
-  prevents concurrent collisions, not schema drift between runs. On a
-  Supabase project, `migration-drift-check.sh` additionally guards the
-  sequential case: preflight (once, at P0) and every wave gate re-verify that
-  the shared local DB's applied migrations still match this worktree's own
-  `supabase/migrations/`, hard-failing with the drifted version(s) and the fix
-  otherwise.
-- **Evidence-based wave gates.** Step 4 runs `wave-gate.sh --ac-only` to
-  record current-HEAD AC results. Equivalent commands share execution across
-  AC IDs; failed commands share results only within that pass. The full gate
-  reuses matching passes, runs targeted regressions, then runs build and
-  CodeRabbit concurrently. External/auth regressions remain live; only explicitly
-  opted-in deterministic local regressions can reuse evidence.
-  Missing declared external prerequisites produce `blocked_external` (exit 76),
-  not a green AC or a next-wave unlock. Scenario-selection checks run in Phase 0.
-  See [gate behavior](docs/executing-skill.md#wave-gate).
-- **Integration-focused PROJ gate.** Cross-wave review, build and coverage can
-  overlap where resources permit; Sonar waits for coverage. Review and Sonar
-  findings enter combined, bounded recovery rounds. Build and coverage reuse
-  requires matching inputs and intact declared artifacts. Final handoff checks
-  command evidence as well as written statuses. See [execution details](docs/executing-skill.md#proj-quality-gate).
-- **Refreshable project helpers.** P0 and implementation start/resume sync from
-  the installed skills. A hash manifest identifies untouched copies and protects
-  project adaptations. See [installation and refresh](docs/installation.md).
-- **Bounded evidence retention.** CodeRabbit raw output is kept because the
-  local gate parses it. CI and Sonar reports remain in their source systems;
-  the PROJ gate retains command logs and task-receipt hashes. Cross-review
-  persists validated normalized findings instead of full
-  model responses that may contain sensitive context.
-- **Cross-model review.** Review routes to the provider OPPOSITE the
-  artifact's author; a review gate is never satisfied by the model that
-  authored the artifact. Claude-authored work goes to Codex, while
-  Codex-authored work goes to an authenticated, isolated Claude process
-  with validated structured output. Review inputs are not silently truncated:
-  large diffs use explicit Git pathspecs, omitted paths are named, and a
-  conservative default byte ceiling fails before provider invocation. Claude's
-  hard 10 MB stdin ceiling is also reported explicitly. Any permitted model-opposite
-  fallback is recorded and flagged, never silent.
-- **Context bundles.** P0 compiles one canonical, token-budgeted context
-  bundle per agent role from the curated `docs/` baseline (budget breach
-  fails P0). Claude subagents get their bundle via a SubagentStart hook,
-  Codex lanes read their projection file — same canonical hash on both.
-  Micro-fixers and explore agents get nothing by design.
-- **Minimalism ladder.** The third-party
-  [Ponytail](https://github.com/DietrichGebert/ponytail) plugin, same
-  version and mode on both providers (parity gated in preflight), uses its
-  native all-subagent path so generic implementation fallbacks are covered.
-- **Hard gates.** P6 cannot seal with open Critical/High findings. P7
-  cannot seal unless the docs pass the size caps (form), a docs
-  cross-review actually ran during this P7 (evidence), and no blocking
-  cross-review findings remain (truth). The runner re-verifies every gate
-  independently after the seal.
-- **Stop policy.** A failed writer, timeout, unsealed phase, or red gate
-  parks the run: rescue branch for uncommitted work, state → `blocked`
-  with the exact cause, rendered stop report. Reports and PR bodies are
-  rendered from state + ledger by template scripts, never hand-written.
-
-Details: [runner/README.md](runner/README.md),
-[docs/skill-chain.md](docs/skill-chain.md), and `CONCEPT.md` for the full
-model. Stage 3+ of the concept (P3 runner rework, deeper pre-mortem
-orchestration, Jira import, and optional per-story worktree parallelism) is not built yet; the
+Details: [docs/skill-chain.md](docs/skill-chain.md#framework-runs-agent-workflow-stage-1--stage-2)
+for the full mechanics, [runner/README.md](runner/README.md) for the runner
+itself, and `CONCEPT.md` for the full model and rationale. Stage 3+ of the
+concept (P3 runner rework, deeper pre-mortem orchestration, Jira import, and
+optional per-story worktree parallelism) is not built yet; the
 producing-skill cross-review handoffs themselves are already wired.
 
 ## Outside the Chain
@@ -180,45 +117,10 @@ supabase-local-dev
 vibecoder
 ```
 
-`5b_executing-large-model` is a drop-in alternative to Step 5 for frontier
-models (Claude Fable/Mythos 5.x, Opus 5, GPT-5.x). It keeps every
-deterministic contract of `5_executing` (state.sh, wave tag, wave-gate,
-four-stage Outer Ralph recovery, Quality Gate proof, Skill 6 handoff) and
-removes the walkthrough prose: TDD choreography, persona reviews, pasted
-framework skills. Worker tiering by `Complexity` stays; the lead runs on the
-strongest model and reviews go to the strongest opposite-provider model. It ships no scripts and needs
-`5_executing` installed. Runs record `## Variant: large-model` in
-`progress.md` so they can be compared against the full procedure; in
-framework runs select it with
-`SKILLCHAIN_P5_SKILL="executing-large-model (5b_executing-large-model)"`.
-
-`bugfixing` is a focused repair workflow outside the feature chain: intake,
-browser or deterministic reproduction, test-escape analysis, a red-before-green
-regression test, a narrow `micro-fixer`, bounded Ralph verification, and reuse of
-the existing CodeRabbit/Sonar gates. Standalone runs keep the evidence in
-`specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md`; Ralph is
-capped at three repair attempts, CodeRabbit runs only when available, and Sonar
-is reused only when the repository is already configured for it.
-
-`refactor-dreamer` is a separate long-run/overnight skill that scans a
-grown codebase for architecture drift, refactor opportunities, and ADR
-candidates, producing a `chain-input.md` that can feed back into the chain.
-
-`sonar-cli` is a focused helper for configuring and running SonarScanner
-CLI and triaging quality-gate data.
-
-`supabase-local-dev` diagnoses shared-local-Supabase-DB problems on a repo
-using local Supabase: migration drift between git worktrees of the same
-repo (they share one local Postgres instance, keyed by `config.toml`'s
-committed `project_id`), RLS/grant surprises from testing as the `postgres`
-superuser, and `config.toml` vs. deployed truth. Gives the same
-`migration-drift-check.sh` check the chain runs automatically at P0/wave-gate,
-for use outside that flow — a plain dev session on `main`, a manual repro.
-
-`vibecoder` runs a freeform exploratory coding session on a scratch branch:
-it keeps a live journal of what gets tried and why direction changes while
-the session happens, then distills the journal plus the resulting diff into
-a `chain-input.md` feature seed for `1_brainstorming` at wrap-up.
+Each sits outside the main 0–8 flow — a drop-in Step 5 substitute for
+frontier models (`5b`), a standalone repair workflow, or standalone tooling.
+See [docs/skill-chain.md#optional-skills](docs/skill-chain.md#optional-skills)
+for what each one does and when to reach for it.
 
 Claude-specific experimental or personal skills are intentionally excluded.
 
