@@ -49,8 +49,9 @@ that plan and implement from it (writing-plans, implementers).
 6. Approved concept/PRD/architecture of blocking sibling PROJs, as dependency
    context only.
 
-Ask the user (`AskUserQuestion`) only about open cross-cutting questions: accounts
-and roles, cross-device sync, third-party integrations.
+Ask the user (`AskUserQuestion`) only about open cross-cutting questions, e.g.
+accounts and roles, cross-device sync, third-party integrations, migration
+rollback policy, or a UI handoff that conflicts with § Stack.
 
 ## Output 1: `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
 
