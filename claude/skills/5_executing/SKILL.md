@@ -193,6 +193,8 @@ Updated after every task, after the initial wave verification and each recovery 
 
 ### Code Review
 Status: pending | passed
+Spec: <findings, worst> — vs PRD/AC/plan
+Standards: <findings, worst> — vs AGENTS.md/conventions
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | P0 Critical | 0 | 0 | 0 |
