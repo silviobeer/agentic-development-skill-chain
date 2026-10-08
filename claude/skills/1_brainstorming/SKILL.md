@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "Use as Step 1 of the PROJ workflow before creating or changing any feature, component, workflow, or behavior. Turns a feature idea into one or more approved buildable concepts through project discovery, scope decomposition, structured intake, bounded exploration, assumption playback, and risk review. Produces specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md, then hands off to visual-companion for UI features or requirements-engineer for backend/API features."
+description: "Turn a feature idea or supplied problem brief into an approved buildable concept. Clarify the problem only when no usable clarification artifact exists, then compare directions, scope the work, and hand off to visual-companion or requirements-engineer."
 ---
 
 # Brainstorming Ideas Into Feature Concepts
@@ -13,9 +13,11 @@ This is the start of the whole PROJ skill chain. It establishes the PROJ number,
 
 This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the chain-guide Step 1 output.
 
+Work in two passes: **Clarification** establishes the problem, users, success factors, non-goals, and constraints; **Concept** compares directions and decides scope. If the user supplies a clarification artifact, read it and skip the clarification interview. Carry its facts into the concept without reopening settled questions; ask only about material gaps or contradictions.
+
 The concept document defines the feature's purpose, users, scope, success criteria, constraints, explored approaches, selected direction, and known risks.
 
-Start by understanding the current project context. Then assess whether the seed idea fits one PROJ or should be decomposed into multiple PROJs. After the scope boundary is approved, collect the minimum inputs needed to shape each feature concept. Ask questions one at a time. Explore alternatives before choosing a direction. Do not proceed until the user confirms that nothing important is unclear.
+Start by understanding the current project context and clarifying the problem. Then assess whether the seed idea fits one PROJ or should be decomposed into multiple PROJs. After the scope boundary is approved, collect the minimum inputs needed to shape each feature concept. Ask questions one at a time. Explore alternatives before choosing a direction. Do not proceed until the user confirms that nothing important is unclear.
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write code, scaffold a project, edit production files, or create an implementation plan until you have presented a feature concept and the user has approved it.
@@ -177,9 +179,15 @@ Downstream consumers:
 
 Record in the concept's `Project Context` that `0_context/existing-state.md` exists and is the source of as-is truth.
 
+## Clarification
+
+Before exploring solutions, establish the problem owner (and deputy if relevant), job to be done, current pain, outcome/adoption/guardrail success factors with known baselines and targets, non-goals, and constraints. Keep success factors in business terms; measurement implementation belongs later. Do not choose scope, solution direction, UI, or technology in this pass.
+
+Use a user-provided brief or other clarification artifact as the source when it covers these points. Record its path or link in the concept and skip questions it answers. If no artifact exists, gather the missing facts conversationally and preserve them in the concept's `Clarification` section. Do not require a separate brief file or gate record.
+
 ## Project Decomposition Gate
 
-Run this gate immediately after project-context discovery and before detailed feature-concept intake.
+Run this gate after clarification and before detailed feature-concept intake. Split by distinct user outcomes, not by a proposed solution's parts.
 
 ### Why This Exists
 
@@ -267,23 +275,24 @@ If the user rejects decomposition, document the conscious decision in the concep
 Create a task for each item and complete them in order:
 
 1. **Explore project context** - inspect docs, specs, routes, components, APIs, recent commits, and relevant agent instructions. On the discovery track with no codebase, run the **Brownfield Context Intake** instead/in addition: capture existing surfaces, design system, vocabulary, and constraints into `0_context/`.
-2. **Run project decomposition gate** - if the idea spans multiple independent user goals, subsystems, risks, rollout paths, or audiences, stop detailed questioning and propose a multi-PROJ split. If `specs/product-roadmap.md` exists, the cut and the PROJ number are already decided there: take the entry's user outcome, `Depends on`, and boundaries as given, and set its `Status` to `concept`. Only decompose further if this single entry turns out to be more than one PROJ — then split it in the roadmap too, with a changelog line.
-3. **Approve project boundary** - get explicit user approval for one PROJ or an approved multi-PROJ map before feature intake.
-4. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or write all concepts in dependency order.
-5. **Collect feature-concept intake** - gather required inputs for the current PROJ, using project discovery where possible.
-6. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
-7. **Clarifying questions** - ask one at a time until mandatory deep-dives are covered.
-8. **Controlled exploration** - explore 2-4 viable directions before selecting an approach.
-9. **Assumption playback** - read back every assumption and wait for confirmation/correction.
-10. **Devil's-Advocate pass** - list 3-5 weaknesses, risks, or unresolved tensions and resolve them with the user.
-11. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
-12. **Present feature concept** - section by section, scaled to complexity, and get approval.
-13. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-14. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_brainstorm/`, then run `bash ~/.claude/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
-15. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
-16. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
-17. **User reviews written concept** - wait for approval before transition.
-18. **Repeat or transition** - for multi-PROJ maps, repeat concept creation for the next approved PROJ or transition the current PROJ to visual-companion/requirements-engineer.
+2. **Clarify the problem** - read a supplied clarification artifact and skip the questions it answers; otherwise gather the problem, users, success factors, non-goals, and constraints without choosing a solution.
+3. **Run project decomposition gate** - if the clarified problem spans multiple independent user outcomes, subsystems, risks, rollout paths, or audiences, propose a multi-PROJ split. If `specs/product-roadmap.md` exists, the cut and the PROJ number are already decided there: take the entry's user outcome, `Depends on`, and boundaries as given, and set its `Status` to `concept`. Only decompose further if this single entry turns out to be more than one PROJ — then split it in the roadmap too, with a changelog line.
+4. **Approve project boundary** - get explicit user approval for one PROJ or an approved multi-PROJ map before feature intake.
+5. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or write all concepts in dependency order.
+6. **Collect feature-concept intake** - gather required inputs for the current PROJ, using the clarification source and project discovery where possible.
+7. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
+8. **Clarifying questions** - ask one at a time until remaining concept gaps are covered.
+9. **Controlled exploration** - explore 2-4 viable directions before selecting an approach.
+10. **Assumption playback** - read back every assumption and wait for confirmation/correction.
+11. **Devil's-Advocate pass** - list 3-5 weaknesses, risks, or unresolved tensions and resolve them with the user.
+12. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
+13. **Present feature concept** - section by section, scaled to complexity, and get approval.
+14. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
+15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_brainstorm/`, then run `bash ~/.claude/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
+16. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
+17. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
+18. **User reviews written concept** - wait for approval before transition.
+19. **Repeat or transition** - for multi-PROJ maps, repeat concept creation for the next approved PROJ or transition the current PROJ to visual-companion/requirements-engineer.
 
 ## Feature Concept Intake
 
@@ -303,7 +312,7 @@ Summarize discoveries briefly before asking clarifying questions.
 
 ### Required User Inputs
 
-These must be known before the concept can be approved:
+These must be known before the concept can be approved. Use the clarification artifact or conversation for the problem facts; do not ask for them again when already clear:
 
 - **Feature seed:** What is the feature idea, problem, or opportunity?
 - **Primary users:** Who uses this, in which concrete scenario?
@@ -349,12 +358,12 @@ Use these to choose the right direction, not to inflate scope:
 
 ## Clarifying Questions
 
-Mandatory deep-dives:
+Cover these gaps when the clarification source or concept intake has not already answered them:
 
-- **Success criteria:** Ask at least two questions unless already concrete and measurable.
-- **Out-of-scope:** Ask at least two questions to define boundaries and "later".
-- **Users and scenarios:** Ask at least two questions to get concrete personas and usage contexts.
-- **Edge cases:** Ask at least one "what if" question per major feature area.
+- **Success criteria:** Make unclear outcomes, adoption, guardrails, baselines, or targets concrete.
+- **Scope:** Define what is in, out, and later without changing the clarified non-goals silently.
+- **Users and scenarios:** Fill in missing usage contexts for the chosen direction.
+- **Edge cases:** Ask about consequential failures or exceptions that could change the direction or scope.
 
 Prefer multiple-choice questions when helpful. Open-ended questions are fine when the user has useful context that options would bias.
 
@@ -505,6 +514,14 @@ Approved concept
 - As-is reference (discovery track): `0_context/existing-state.md` if captured
 - Relevant constraints:
 - Prior related specs:
+
+## Clarification
+- Source: <supplied artifact path/link | captured in this concept>
+- Problem Owner / deputy: <if known>
+- Job to be done: <when, who, goal, benefit>
+- Success factors: <outcome, adoption, guardrail; known baselines and targets>
+- Non-goals and constraints: <from clarification>
+- Open clarification questions: <none | list>
 
 ## Problem And Goal
 

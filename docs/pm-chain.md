@@ -52,7 +52,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | Step | Skill | Purpose on this track |
 |---|---|---|
 | 0a | product-vision (new product only) | Establish what the product is — `docs/PRODUCT.md` (purpose, users, non-goals, success) — and cut it into a numbered PROJ map in `specs/product-roadmap.md`. Skip when the engagement is a single feature inside an existing product |
-| 1 | brainstorming | Turn stakeholder input and requirements into a first concept; for brownfield, capture the existing state into `0_context/` |
+| 1 | brainstorming | Clarify the problem, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the mockups; every concept-affecting change is recorded in `iteration-log.md` |
@@ -60,6 +60,8 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 2 | requirements-engineer | Produce developer-ready PRDs and pass the required opposite-provider review before handoff |
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
 | 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
+
+In Step 1, **Clarification** establishes the problem owner, job to be done, current pain, success factors, non-goals, and constraints without choosing a solution. A supplied brief provides these facts, so `brainstorming` skips the questions it answers. The concept keeps a `Clarification` section with the source and key facts; it then compares directions and decides scope. Project decomposition follows clarification, so the split reflects distinct user outcomes rather than parts of a proposed solution. No separate brief file or gate record is required.
 
 ## The review-reconcile loop
 

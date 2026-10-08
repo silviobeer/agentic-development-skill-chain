@@ -9,7 +9,7 @@ intentions.
 Not a developer, or just want the plain-language version of what this does
 and why? Start with [docs/WHY.md](docs/WHY.md).
 
-The chain turns a rough product idea into a buildable concept, explores UI
+The chain clarifies the problem before turning a rough product idea into a buildable concept, explores UI
 shape when needed, writes requirements, creates architecture and
 implementation plans, executes the work wave by wave, runs QA, curates
 documentation, and delivers a PR. Two human checkpoints frame the
@@ -30,7 +30,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 0a | `product-vision` | Once per product, new build: interview into `docs/PRODUCT.md` (what/who/non-goals) and cut the product into a numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
-| 1 | `brainstorming` | Explore the idea, allocate PROJ-X, write the concept |
+| 1 | `brainstorming` | Clarify the problem (or use a supplied brief), then compare directions, allocate PROJ-X, and write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `ui-mockup` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |
