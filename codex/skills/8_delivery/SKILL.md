@@ -1,6 +1,6 @@
 ---
 name: delivery
-description: "Run P8 delivery for a finished PROJ: probe merge conflicts against main in a throwaway worktree, render the PR body from state.json + findings.json, create the PR via gh, poll CI with a bounded fix loop, and reconcile Checkpoint 2 review comments. Use when: (1) documentation (7) is complete and committed on the PROJ branch, (2) CI turned red on an open PROJ PR and needs the bounded fix loop, (3) PR review comments came back and need the CP2 reconcile loop. Not for: implementing stories (use executing), QA (use qa), writing docs (use documentation), plan approval (use checkpoint)."
+description: "Run P8 delivery for a finished PROJ: probe merge conflicts against main in a throwaway worktree, render the PR body from state.json + findings.json, create the PR via gh, poll CI with a bounded fix loop, and reconcile Checkpoint 2 review comments. Use when: (1) documentation (7) is complete and committed on the PROJ branch, (2) CI turned red on an open PROJ PR and needs the bounded fix loop, (3) PR review comments came back and need the CP2 reconcile loop. Not for: implementing stories (use executing), QA (use qa), writing docs (use documentation), plan approval (use executing-large-model, which runs Checkpoint 1)."
 ---
 
 # Delivery — P8: Conflict Probe, PR, CI, Checkpoint 2
@@ -170,14 +170,16 @@ CI head, open-PR waiting status, and post-merge rerun command from the sealed
 state/helper result; nothing further happens autonomously.
 
 → NEXT ACTION: human reviews and merges the PR (Checkpoint 2 — for
-overnight runs, in the morning via the morning report). After the merge,
+overnight runs, in the morning from the run summary and the PR body). After the merge,
 set this PROJ's `Status` to `shipped` in `specs/product-roadmap.md` if that
 file exists — it is what tells `chain-guide` (0) that dependent PROJs are
 unblocked.
 
 ### 6. Checkpoint 2 — reconcile PR review comments (when they arrive)
 
-Apply the **checkpoint** (4a) reconcile loop to the PR comments, via
+Apply the reconcile loop of the **checkpoint** subskill
+(`5_executing/subskills/checkpoint.md`, CP2 Variant; this skill is its
+orchestrator) to the PR comments, via
 `gh pr view --comments` / `gh api`:
 
 1. Classify each comment, point by point: **fix now** / **debt** /
@@ -189,9 +191,10 @@ Apply the **checkpoint** (4a) reconcile loop to the PR comments, via
    (`node scripts/ledger.mjs add <X> <theme>` with status `deferred`),
    reply on the comment with the finding id.
 4. `reject` → reply on the PR with the rationale — never silently ignore.
-5. Once every comment in the round is classified and its `fix now` work
-   committed, append the round to `specs/PROJ-<X>-<theme>/decisions.md`
-   (decisions template frame), push once, re-request review.
+5. Append each classification to `specs/PROJ-<X>-<theme>/decisions.md`
+   (decisions template frame) as soon as it is decided, before the next
+   comment. Once every comment in the round is classified and its
+   `fix now` work committed, push once and re-request review.
 6. Principle-level feedback ("I never want to see this again") →
    AGENTS.md/GUIDELINES candidate through the existing approval
    pipeline (documentation skill owns the merge).

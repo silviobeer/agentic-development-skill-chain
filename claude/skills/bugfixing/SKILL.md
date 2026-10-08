@@ -32,7 +32,7 @@ versions:
 - Reuse `5_executing`'s deterministic evidence principles: actual commands,
   verbatim failures, and positive controls. This skill retains its own cap of
   at most three repair attempts.
-- Dispatch one `micro-fixer` from `4b_setup/manifests/roles/micro-fixer.md` for
+- Dispatch one `micro-fixer` from `5_executing/manifests/roles/micro-fixer.md` for
   the implementation when delegation is available and permitted. If delegation
   is unavailable or prohibited, report why, apply the same narrow prompt, and
   implement locally.

@@ -124,7 +124,7 @@ The architecture names the decision and WHY in plain language and points there
 
 ## Output 2: `specs/PROJ-<X>-<theme>/architecture-delta.md` (always)
 
-Implementer context bundles (compiled by `4b_setup`) prefer this file and block the
+Implementer context bundles (compiled by the P0 setup subskill) prefer this file and block the
 role outright if the bundle exceeds its ~6.5k-token budget. Write it every time.
 
 ```markdown
@@ -177,7 +177,7 @@ bash scripts/cross-review.sh architecture <X> <theme> \
 ## Continue into writing-plans
 
 Summarize decisions, cross-review result, and open questions, then invoke
-**writing-plans** (4) in the same session — approval happens at Checkpoint 1 (4a).
+**writing-plans** (4) in the same session — approval happens at Checkpoint 1 (run by Step 5, executing-large-model).
 Stop instead only if Critical/High findings remain after round 3, the review
 failed to run (exit `1` is not a round), a product decision is open, or the user
 asked to review the architecture alone first.

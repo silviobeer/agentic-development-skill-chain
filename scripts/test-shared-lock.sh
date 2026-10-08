@@ -2,7 +2,7 @@
 # Real flock concurrency checks; no database, browser or external service.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-HELPER="$ROOT/claude/skills/4b_setup/scripts/worktree.sh"
+HELPER="$ROOT/claude/skills/5_executing/scripts/worktree.sh"
 TEST_DIR=$(mktemp -d)
 children=()
 cleanup() {
@@ -51,6 +51,6 @@ rc=0
 (cd "$TEST_DIR/repo" && bash "$HELPER" with-shared-lock --shared -- bash -c 'exit 17') || rc=$?
 [ "$rc" -eq 17 ] || fail "child exit code lost"
 for provider in claude codex; do
-  for skill in 4b_setup 8_delivery; do cmp "$HELPER" "$ROOT/$provider/skills/$skill/scripts/worktree.sh"; done
+  for skill in 8_delivery; do cmp "$HELPER" "$ROOT/$provider/skills/$skill/scripts/worktree.sh"; done
 done
 echo "shared-lock concurrency and diagnostics: PASS"

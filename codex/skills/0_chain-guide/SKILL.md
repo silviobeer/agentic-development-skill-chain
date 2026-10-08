@@ -25,9 +25,9 @@ Step  Skill                  Output
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/2_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
- 4a   checkpoint (CP1)       specs/PROJ-<X>-<theme>/decisions.md + state.json sealed CP1:approved
- 4b   setup (P0)             proj/PROJ-<X> branch, preflight block in state.json, framework scripts in scripts/
-  5   executing              implements code + tests + specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md
+ 5b   executing-large-model  default Step 5 — CP1 + P0 subskills: decisions.md, state.json CP1:approved → P0:done, proj/PROJ-<X> worktree + scripts/
+                             then implements code + tests + specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md
+  5   executing              same contracts with the full step-by-step procedure, for weaker writer models; hosts the subskills + scripts
   6   qa                     appends QA Test Results to each PRD file (+ ledger records in findings.json)
   7   documentation          creates/updates docs/PROJECT.md
   8   delivery (P8)          PR via gh with rendered body, CI green, CP2 comment reconcile
@@ -36,8 +36,11 @@ Step  Skill                  Output
 **Reading the numbers.** A bare number is a main-line step. A letter suffix
 is a variant at the same stage — `1b`–`1e` run in sequence inside the UI
 branch, `2b`/`2c` are optional forks, `0a`/`0b`/`0c` are alternative entry
-paths (0a+0c for a new build, 0b for an existing codebase), and `4a`/`4b`
-are mandatory despite the letter. A skill with no number is not a step at
+paths (0a+0c for a new build, 0b for an existing codebase), and `5b` is the
+default Step 5 — `5` is its full-procedure fallback for weaker models and
+hosts the shared scripts. Checkpoint 1 and P0 setup are not separate steps:
+they are subskills in `5_executing/subskills/`, run in subagents by whichever
+Step 5 skill leads, before the first wave. A skill with no number is not a step at
 all: `cross-review` is a mechanism invoked by producing skills, never routed
 to directly, and `bugfixing`/`refactor-dreamer`/`sonar-cli` run outside the
 chain.
@@ -69,8 +72,8 @@ code. Skip it on the discovery track — there is no codebase there.
 curated context baseline — docs/PRODUCT.md, ARCHITECTURE.md, GUIDELINES.md,
 DESIGN-SYSTEM.md, components.md, security-baseline.md, test-conventions.md,
 root AGENTS.md — from a code scan (provenance-marked drafts) plus a
-developer interview, reconciled via the checkpoint (4a) bootstrap variant
-and sealed as a baseline commit (no state.json — that is born at CP1).
+developer interview, reconciled via the bootstrap variant of executing's checkpoint subskill
+and sealed as a baseline commit (no state.json — concept (1) creates one per PROJ).
 `cross-review` is the opposite-provider review mechanism; it is required by
 requirements-engineer, P6 QA (evidence check), and P7 (docs truth-check), and
 optionally invoked after concept, architecture, and plans. Users are never
@@ -81,10 +84,11 @@ why tests missed a bug to the optional `bugfixing` skill. It operates outside
 the numbered feature flow and does not create a PROJ for an ordinary repair.
 
 **Autonomous full-chain runs** go through the phase runner: after
-`checkpoint` (4a) seals `CP1:approved`, `runner/run-phase.sh auto <X> <theme>`
+Step 5 seals `CP1:approved` through the checkpoint subskill, `runner/run-phase.sh auto <X> <theme>`
 drives P0 → P5 → P6 → P7 → P8 unattended with dual provider lanes and
-ends with `specs/morning-report-<date>.md`. Skills 4b/5/6/7/8 are the
-same skills the runner's lanes load — interactive use stays supported.
+ends with an open PR and a one-line summary (morning report on demand:
+`node runner/render-report.mjs morning specs`). Setup (P0) and skills 5/6/7/8 are the
+same procedures the runner's lanes load — interactive use stays supported.
 
 ## Two Tracks
 
@@ -155,7 +159,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
    - `2b_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `3-4_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `3-4_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
-8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'`: `CP1:approved` → step 4a done; `P0:done` → step 4b done; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
+8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.codex/skills/5_executing/scripts/state.sh get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1; `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
 9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
    - Has every wave marked complete? → step 5 done
    - Has "QA Test Results" section at top level? → step 6 done
@@ -206,19 +210,19 @@ Based on detected state, tell the user:
 > "Architecture at `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Next step: use **writing-plans** (4) to create per-wave implementation plans."
 
 **Wave plans exist, no state.json (CP1 not yet run):**
-> "Wave plans ready in `specs/PROJ-<X>-<theme>/3-4_plan/`. Next step: use **checkpoint** (4a) — Checkpoint 1 reviews architecture + plans point by point, writes the decision log, and seals `CP1:approved` in state.json. For a manual run without the framework, **executing** (5) can still be used directly."
+> "Wave plans ready in `specs/PROJ-<X>-<theme>/3-4_plan/`. Next step: use **executing-large-model** (5b) — it first runs Checkpoint 1 through the checkpoint subskill (architecture + plans point by point, decision log, `CP1:approved` sealed in state.json), then P0 setup, then the waves. Without the framework it runs the standalone preflights instead. On a weaker writer model use **executing** (5) instead — same flow, full procedure."
 
 **state.json says CP1:approved, no P0:**
-> "Checkpoint 1 is approved for `PROJ-<X>-<theme>`. Next step: use **setup** (4b) — it creates the PROJ branch, runs the tool/auth preflight, and copies the framework scripts. After that, either `runner/run-phase.sh auto <X> <theme>` runs P5–P8 unattended, or continue interactively with **executing** (5)."
+> "Checkpoint 1 is approved for `PROJ-<X>-<theme>`. Next step: use **executing-large-model** (5b) — the setup subskill runs P0 (PROJ branch, tool/auth preflight, framework scripts) and it continues into the waves. Unattended alternative: `runner/run-phase.sh auto <X> <theme>` runs P0 and P5–P8."
 
 **state.json says P0:done, no implementation:**
-> "P0 setup is complete. Next step: **executing** (5) — interactively in this session, or unattended via `runner/run-phase.sh auto <X> <theme>` (dual-lane, ends with the morning report)."
+> "P0 setup is complete. Next step: **executing-large-model** (5b) — interactively in this session, or unattended via `runner/run-phase.sh auto <X> <theme>` (dual-lane, ends with an open PR and a one-line summary)."
 
 **state.json says blocked:**
 > "The run for `PROJ-<X>-<theme>` is parked (stop condition). Read `5_progress/stop-report.md` — it lists what happened, the rescue branch, and the cleanup list. After fixing the cause: `bash scripts/state.sh transition <X> <theme> <phase> running`, then re-run the phase."
 
 **Progress.md exists, waves partially complete:**
-> "Implementation in progress for `PROJ-<X>-<theme>`. Wave <N> is the next one. Continue with **executing** (5)."
+> "Implementation in progress for `PROJ-<X>-<theme>`. Wave <N> is the next one. Continue with **executing-large-model** (5b) (or **executing** (5) if the run started there — `progress.md` records the variant)."
 
 **All waves complete, no QA results:**
 > "All waves implemented. Next step: use **qa** (6) for end-to-end testing against the PRDs' acceptance criteria."
@@ -268,9 +272,8 @@ If the user asks "what does each step do?":
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |
 | 4 | writing-plans | Wave-based implementation plans; propagates UI handoff into frontend/full-stack tasks |
-| 4a | checkpoint | Human checkpoints as structured reconcile loops: CP1 (arch + plans → decision log → seal state.json) and CP2 (PR comments, via delivery) |
-| 4b | setup | P0 once per PROJ: branch + BASE_SHA, tool/auth preflight, framework scripts into the repo, state.json extended |
-| 5 | executing | Implement wave by wave with TDD, using UI handoff constraints where relevant |
+| 5b | executing-large-model | Default Step 5: CP1 + P0 via the subskills below, then the waves with the same gates as 5, procedure replaced by invariants |
+| 5 | executing | Full-procedure Step 5 for weaker writer models; hosts the subskills — CP1 (checkpoint subskill: reconcile loop → decision log → seal state.json) and P0 (setup subskill: branch + BASE_SHA, preflight, framework scripts), both in subagents; then implement wave by wave with TDD, using UI handoff constraints where relevant |
 | 6 | qa | End-to-end test all PRDs, security audit, QA Results appended per PRD; read-only finder in framework runs (P6 controller fixes) |
 | 7 | documentation | Conditionally update README.md, docs/PROJECT.md, docs/TECHNICAL.md; merge approved AGENTS.md candidates (≤40 lines) |
 | 8 | delivery | Conflict probe, PR with rendered body, CI fix loop (max 3), Checkpoint 2 comment reconcile |

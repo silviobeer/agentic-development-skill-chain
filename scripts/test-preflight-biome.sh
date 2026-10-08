@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREFLIGHT="$ROOT/codex/skills/4b_setup/scripts/preflight.sh"
+PREFLIGHT="$ROOT/codex/skills/5_executing/scripts/preflight.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -82,7 +82,7 @@ sonar_output="$(cd "$sonar" && \
 grep -q 'npm-wrapped scanner engine' <<<"$sonar_output" \
   || fail "npm-wrapped sonar_cmd was not accepted without standalone sonar-scanner"
 
-cmp -s "$PREFLIGHT" "$ROOT/claude/skills/4b_setup/scripts/preflight.sh" \
+cmp -s "$PREFLIGHT" "$ROOT/claude/skills/5_executing/scripts/preflight.sh" \
   || fail "preflight provider copies are not byte-identical"
 
 echo "preflight compatibility tests: PASS"

@@ -61,8 +61,8 @@ printf '# Ground file\nAssumption: node 22.\n' > specs/PROJ-96-stage2/ground-fil
 mkdir -p specs/intake
 printf '# Bootstrap decisions\n\n- D-BOOTSTRAP-01 · Point: error convention · Decision: adopt\n' > specs/intake/decisions.md
 
-for s in 4b_setup/scripts/state.sh 4b_setup/scripts/compile-context-bundles.mjs \
-         4b_setup/scripts/context-injector.mjs 4b_setup/scripts/ponytail-check.sh \
+for s in 5_executing/scripts/state.sh 5_executing/scripts/compile-context-bundles.mjs \
+         5_executing/scripts/context-injector.mjs 5_executing/scripts/ponytail-check.sh \
          6_qa/scripts/ledger.mjs 7_documentation/scripts/curation-caps.sh \
          0b_intake/scripts/intake-seal-check.sh \
          cross-review/scripts/cross-review.sh cross-review/scripts/review-with-claude.sh \
@@ -71,7 +71,7 @@ for s in 4b_setup/scripts/state.sh 4b_setup/scripts/compile-context-bundles.mjs 
 done
 mkdir -p templates
 cp "$SKILLS/cross-review/templates/cross-review-prompt.md.tmpl" templates/
-cp "$SKILLS"/4b_setup/manifests/roles/*.md templates/roles/
+cp "$SKILLS"/5_executing/manifests/roles/*.md templates/roles/
 chmod +x scripts/*.sh
 git add -A; git commit -qm base
 BASE_SHA="$(git rev-parse HEAD)"

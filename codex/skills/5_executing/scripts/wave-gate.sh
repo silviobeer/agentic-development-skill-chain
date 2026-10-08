@@ -314,7 +314,7 @@ if [[ -d supabase/migrations ]]; then
     scripts/migration-drift-check.sh \
       || fail "local Supabase DB has migrations this worktree's supabase/migrations/ doesn't (see message above) — run \`supabase db reset\` from this worktree"
   else
-    fail "supabase/migrations/ present but scripts/migration-drift-check.sh is missing (copy the 4b_setup helper set into scripts/)"
+    fail "supabase/migrations/ present but scripts/migration-drift-check.sh is missing (copy the 5_executing helper set into scripts/)"
   fi
 fi
 

@@ -288,7 +288,7 @@ Create a task for each item and complete them in order:
 12. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
 13. **Present feature concept** - section by section, scaled to complexity, and get approval.
 14. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.claude/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
+15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.claude/skills/5_executing/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only the Step 5 checkpoint subskill may approve it.
 16. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`.
 17. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
 18. **User reviews written concept** - wait for approval before transition.

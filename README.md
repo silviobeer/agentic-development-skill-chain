@@ -39,19 +39,18 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |
 | 3 | `architecture` | PROJ-level tech design across all PRDs; flows straight into 4 when its cross-review is clean |
-| 4 | `writing-plans` | Wave-based implementation plans; flows straight into 4a — CP1 is the single planning approval |
-| 4a | `checkpoint` | CP1/CP2/bootstrap as structured reconcile loops with a decision log; CP1 seals `state.json` to `CP1:approved` |
-| 4b | `setup` | P0 once per PROJ: persistent isolated worktree, branch, preflight, framework scripts, dependencies, context bundles |
-| 5 | `executing` | Worker-owned code/test/fix edits, TDD, one wave-scoped Ralph pass, hard wave gates, an integration-focused PROJ gate, then direct handoff to mandatory Skill 6 |
-| 5b | `executing-large-model` (opt) | Lean Step 5 for frontier models: same gates, state, and QA handoff as `executing`, procedure replaced by intent and invariants; runner override `SKILLCHAIN_P5_SKILL` |
+| 4 | `writing-plans` | Wave-based implementation plans; flows straight into 5, whose CP1 is the single planning approval |
+| 5 | `executing` | Full-procedure Step 5 for weaker writer models (runner: `SKILLCHAIN_P5_SKILL`); hosts CP1 and P0 as subskills run in subagents — `checkpoint` (CP1/CP2/bootstrap reconcile loops with a decision log, seals `CP1:approved`) and `setup` (persistent isolated worktree, branch, preflight, framework scripts, dependencies, context bundles) — then worker-owned code/test/fix edits, TDD, one wave-scoped Ralph pass, hard wave gates, an integration-focused PROJ gate, then direct handoff to mandatory Skill 6 |
+| 5b | `executing-large-model` | **Default Step 5**: CP1 + P0 through the subskills above, then the waves with the same gates, state, and QA handoff as `executing`, procedure replaced by intent and invariants |
 | 6 | `qa` | End-to-end QA plus required six-persona opposite-provider evidence review; read-only finder in framework runs, findings into the ledger |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
 
 A bare number is a main-line step; a letter suffix is a variant at the same
 stage — `1b`–`1e` are a sequence inside the UI branch, `2b`/`2c` optional
-forks, `0a`/`0b`/`0c` alternative entry paths, and `4a`/`4b` mandatory
-despite the letter. Skills with no number are not steps (see below). Inside
+forks, `0a`/`0b`/`0c` alternative entry paths. Checkpoint 1 and P0 setup are
+subskills in `5_executing/subskills/`, not steps of their own; `5b` is the
+default Step 5 and `5` its full-procedure fallback. Skills with no number are not steps (see below). Inside
 `specs/PROJ-<X>-<theme>/`, each subfolder carries the number of the skill
 that writes it.
 
@@ -66,12 +65,13 @@ developer via Linear at Step 2, no codebase required. See
 
 ## The Agent Workflow Framework
 
-After `checkpoint` (4a) seals CP1, the host-neutral phase runner drives the
+After Step 5 seals CP1 through the checkpoint subskill, the host-neutral phase runner drives the
 execution phases unattended:
 
 ```bash
 runner/run-phase.sh auto <proj-x> <theme>     # P0 → P5 → P6 → P7 → P8
-# morning: read specs/morning-report-<date>.md, then review the PR (CP2)
+# morning: read the run's one-line summary and the PR body, then review the PR (CP2)
+# optional cross-PROJ overview: node runner/render-report.mjs morning specs
 ```
 
 What makes an overnight run trustworthy, in short: dual Claude + Codex lanes
@@ -112,7 +112,6 @@ unavailable.
 ## Optional Skills
 
 ```text
-5b_executing-large-model
 bugfixing
 refactor-dreamer
 sonar-cli

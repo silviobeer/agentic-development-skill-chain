@@ -1,23 +1,32 @@
----
-name: setup
-description: "Run P0 setup for an approved PROJ: preflight all required CLIs and auth states, create the proj/PROJ-X branch with BASE_SHA tag, copy the framework scripts and templates into the repo, and extend state.json for the execution phases. Use when: (1) Checkpoint 1 approval is sealed in state.json (CP1:approved) and execution has not started, (2) preflight must be re-run after fixing a stop condition, (3) the framework scripts in the repo need refreshing from the installed skills. Not for: architecture/plan approval (use checkpoint), implementing stories (use executing), PR delivery (use delivery)."
----
+# Setup — P0 Subskill of Executing (runs as a subagent)
 
-# Setup — P0 Once Per PROJ, Fully Automatic
-
-Owns the P0 phase of the agent workflow (CONCEPT.md §4). This skill
-replaces the FIRST-ACTION preflight block that used to live inside
-Skill 5: setup happens ONCE per PROJ, before any execution session,
-so implementer lanes start with a clean branch, verified tools, and a
-machine-readable state file.
+Owns the P0 phase of the agent workflow (CONCEPT.md §4). This is a
+subskill of `5_executing`, not a standalone skill: the Step 5 lead
+(`5b_executing-large-model` by default, or `5_executing`) spawns ONE subagent with this file as its instructions once
+state.json reads `CP1:approved` (or a P0 resume state); the phase
+runner's P0 lane loads it directly. Setup happens ONCE per PROJ, before
+any implementation, so implementer lanes start with a clean branch,
+verified tools, and a machine-readable state file.
 
 P0 is script-driven — run the scripts, record the results — with exactly
 ONE bounded judgment step: the ground file (step 5b, context-curator
 judgment). There are no user questions in P0.
 
+## Subagent Contract
+
+- **Input from the orchestrator:** `<X> <theme>` and the control checkout
+  path. Everything else is on disk.
+- **Never ask the user.** The two prompts below (missing design system,
+  legacy folder layout) take their stated default — skip / keep the
+  existing layout — are recorded in `5_progress/PROJ-<X>-progress.md`,
+  and are listed in the return so the orchestrator can relay them.
+- **Return ≤ 300 tokens:** final `phase:status`, `.worktree.path`,
+  branch, `base_sha`, `degraded`, the stop reason when blocked, and the
+  defaulted decisions. Logs stay in this context.
+
 ## Codex Adaptation
 
-This skill is aligned with the Claude variant. In Codex:
+This subskill is aligned with the Claude variant. In Codex:
 
 - Do not require `claude --dangerously-skip-permissions` or
   `bypassPermissions` for THIS session. Use the current Codex session
@@ -29,12 +38,12 @@ This skill is aligned with the Claude variant. In Codex:
   `~/.claude/skills/...`.
 - The preflight itself is host-neutral: `claude` stays a HARD tool
   (it hosts the phase chain) and `codex` stays degradable, regardless
-  of which CLI runs this skill.
+  of which CLI runs this subskill.
 
 ## Input
 
-- `specs/PROJ-<X>-<theme>/state.json` at `CP1:approved` (sealed by
-  **checkpoint** at Checkpoint 1)
+- `specs/PROJ-<X>-<theme>/state.json` at `CP1:approved` (sealed by the
+  **checkpoint** subskill at Checkpoint 1)
 - `specs/PROJ-<X>-<theme>/3-4_plan/` — wave plans + `wave-gate-config.json`
 
 ## Workflow
@@ -44,20 +53,22 @@ This skill is aligned with the Claude variant. In Codex:
 <HARD-GATE>
 Read the state with the repo helper, or directly with the installed helper when
 the repo copy is not present yet:
-`bash ${STATE_SH:-~/.codex/skills/4b_setup/scripts/state.sh} get <X> <theme> '.phase + ":" + .status'`.
+`bash ${STATE_SH:-~/.codex/skills/5_executing/scripts/state.sh} get <X> <theme> '.phase + ":" + .status'`.
 Do not copy a missing helper into the control checkout before `prepare`; that
 would correctly trip its clean-checkout gate.
 
-- `CP1:approved` → proceed.
-- state.json missing or any other phase/status → STOP. Route to
-  **checkpoint** (4a) — P0 never runs on an unapproved plan.
+- `CP1:approved`, `P0:running`, `P0:blocked`, `P0:done` (refresh) → proceed;
+  step 1 handles each resume state.
+- state.json missing or any other phase/status → STOP and return
+  `not approved` — the orchestrator runs the **checkpoint** subskill
+  first. P0 never runs on an unapproved plan.
 
 Before changing state or creating a worktree, run the plan consistency gate:
 
 ```bash
 PLAN_DIR=specs/PROJ-<X>-<theme>/3-4_plan
 [ -d "$PLAN_DIR" ] || PLAN_DIR=specs/PROJ-<X>-<theme>/6_plan
-node ~/.codex/skills/4b_setup/scripts/validate-wave-plan.mjs "$PLAN_DIR"
+node ~/.codex/skills/5_executing/scripts/validate-wave-plan.mjs "$PLAN_DIR"
 ```
 
 Any non-zero exit is a hard stop: route back to **writing-plans**. For a
@@ -71,11 +82,11 @@ validation before it creates anything.
 From the control checkout root, run:
 
 ```bash
-WORKTREE=$(~/.codex/skills/4b_setup/scripts/worktree.sh prepare <X> <theme>)
+WORKTREE=$(~/.codex/skills/5_executing/scripts/worktree.sh prepare <X> <theme>)
 cd "$WORKTREE"
-P0_STATE=$(bash ~/.codex/skills/4b_setup/scripts/state.sh get <X> <theme> '.phase + ":" + .status')
+P0_STATE=$(bash ~/.codex/skills/5_executing/scripts/state.sh get <X> <theme> '.phase + ":" + .status')
 case "$P0_STATE" in
-  CP1:approved|P0:blocked) bash ~/.codex/skills/4b_setup/scripts/state.sh transition <X> <theme> P0 running ;;
+  CP1:approved|P0:blocked) bash ~/.codex/skills/5_executing/scripts/state.sh transition <X> <theme> P0 running ;;
   P0:running) : ;; # interrupted P0 resumes without a duplicate transition
   P0:done) P0_ALREADY_DONE=1 ;; # refresh-only; never transition or reseal
   *) echo "unexpected P0 resume state: $P0_STATE" >&2; exit 1 ;;
@@ -133,7 +144,7 @@ and browser runs serialized when they share fixtures. Execution's
 Before running any repo preflight, synchronize from the installed skill tree:
 
 ```bash
-node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs
+node ~/.codex/skills/5_executing/scripts/sync-framework.mjs
 ```
 
 A non-zero exit blocks setup until the reported helper differences are reconciled. The command plans the whole inventory before copying anything; unrecognized or modified project copies are never overwritten. Compare each conflict with its installed source, merge the needed upstream changes while preserving project adaptations, test the result, then rerun with `--adopt scripts/<reviewed-file>` (repeat the option for multiple files). Do not adopt stale code to bypass an update. No separate user confirmation is required for an already-authorized helper refresh.
@@ -147,10 +158,10 @@ If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
 ### 3. Tool + auth preflight
 
 Run `bash scripts/preflight.sh <X> <theme>` (if `scripts/` lacks it, copy
-the WHOLE 4b_setup helper set first — `preflight.sh`, `ponytail-check.sh`,
+the WHOLE 5_executing helper set first — `preflight.sh`, `ponytail-check.sh`,
 `compile-context-bundles.mjs`, `context-injector.mjs`, `state.sh`,
 `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh` from
-`~/.codex/skills/4b_setup/scripts/` — preflight calls its siblings; a
+`~/.codex/skills/5_executing/scripts/` — preflight calls its siblings; a
 lone copy also works, it falls back to the installed skill tree). It checks
 the CONCEPT.md §7 CLI list including auth states and a bounded live
 probe per provider (claude hard, codex degradable) and writes the
@@ -199,16 +210,16 @@ migration without blocking.
 The synchronizer in step 1 installs this inventory and records source/project SHA-256 hashes in `.skillchain-helpers.json`. Verify it before sealing P0:
 
 ```bash
-node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs --check
+node ~/.codex/skills/5_executing/scripts/sync-framework.mjs --check
 ```
 
 Commit the manifest and changed helpers/templates with setup. Do not manually overwrite an older helper. Unmodified managed copies update automatically; reviewed adaptations survive until their installed source or local bytes change, at which point reconciliation is required. Run only at setup/resume boundaries, never during a gate or while workers are editing these files.
 
 | From (installed skill) | To |
 |---|---|
-| `4b_setup/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh`, `sync-framework.mjs` | `scripts/` |
-| `4b_setup/manifests/roles/*.md` | `templates/roles/` |
-| `4a_checkpoint/templates/decisions.md.tmpl` | `templates/` |
+| `5_executing/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh`, `sync-framework.mjs` | `scripts/` |
+| `5_executing/manifests/roles/*.md` | `templates/roles/` |
+| `5_executing/templates/decisions.md.tmpl` | `templates/` |
 | `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |
 | `cross-review/templates/cross-review-prompt.md.tmpl` | `templates/` |
 | `6_qa/scripts/ledger.mjs`, `harvest-debt.sh` | `scripts/` |
@@ -316,9 +327,10 @@ reports, never silent.
 2. Commit everything from steps 1–5 on the PROJ branch:
    `chore(PROJ-<X>): P0 setup — branch, preflight, framework scripts, context bundles`
 
-→ NEXT ACTION: start execution — either the phase runner
+→ RETURN to the orchestrator with the summary from the Subagent Contract.
+It continues with execution — either the phase runner
 (`runner/run-phase.sh P5 <X> <theme>`, autonomous dual-lane) or the
-**executing** skill (5) directly in this session.
+Step 5 wave loop directly in its session.
 
 When P0 is runner-managed, the runner detects the registered PROJ worktree,
 re-executes itself there once, and starts every later phase from that path. The
@@ -345,7 +357,7 @@ re-executes itself there once, and starts every later phase from that path. The
 Any hard preflight failure or git error is a stop condition (§8): state
 → `P0:blocked` with the exact cause in `.stop.reason`, stop report
 written, nothing half-configured left silently in place. P0 is
-idempotent — after fixing the cause, re-run this skill; completed steps
+idempotent — after fixing the cause, re-run this subskill; completed steps
 (existing branch, identical script copies) are skipped, not duplicated.
 
 ## Legacy Folder Layout
@@ -367,4 +379,4 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents. It is never a precondition for this subskill.

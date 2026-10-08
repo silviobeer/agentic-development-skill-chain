@@ -60,9 +60,8 @@ together. Product-level artifacts live outside the PROJ folder —
 | 2c | `review-reconcile` | PRD review returned gaps | `2_PRDs/*-review-decisions.md`, `review-changelog.md` |
 | 3 | `architecture` | Required | `3-4_plan/PROJ-<X>-architecture.md` |
 | 4 | `writing-plans` | Required | `3-4_plan/PROJ-<X>-wave-<N>-plan.md` |
-| 4a | `checkpoint` | Required | `decisions.md`, `state.json` sealed `CP1:approved` |
-| 4b | `setup` | Required | PROJ branch, preflight, framework scripts, context bundles |
-| 5 | `executing` | Required | Code, tests, `5_progress/PROJ-<X>-progress.md` |
+| 5b | `executing-large-model` | Required (default Step 5) | Same outputs as 5 below, lean procedure |
+| 5 | `executing` | Alternative for weaker writer models | CP1 + P0 via its checkpoint and setup subskills (`decisions.md`, `state.json` sealed `CP1:approved` → `P0:done`, PROJ branch, preflight, framework scripts, context bundles); code, tests, `5_progress/PROJ-<X>-progress.md` |
 | 6 | `qa` | Required before release, including six-persona opposite-provider evidence review | QA results appended to PRDs/progress |
 | 7 | `documentation` | Required before closeout | `docs/PROJECT.md` and related docs |
 | 8 | `delivery` | Required to ship | PR with rendered body, CI green, CP2 reconcile |

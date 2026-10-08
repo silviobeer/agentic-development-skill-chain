@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Context bundle role manifest",
-  "description": "Frontmatter contract for 4b_setup/manifests/roles/<role>.md — provider-neutral role metadata following the claude-skills frontmatter taxonomy (name/description + declarative extensions). The compiler (compile-context-bundles.mjs) projects these into canonical bundles plus Claude/Codex projections; the injector (context-injector.mjs) matches spawned subagent types against `matcher`. The source-id -> path map and the hard never-inject list (whole PRDs, other stories' wave plans, progress.md, SKILL.md texts, src/**/agent.md) live in the compiler, not here: a manifest can only pick from the closed `inject` vocabulary below.",
+  "description": "Frontmatter contract for 5_executing/manifests/roles/<role>.md — provider-neutral role metadata following the claude-skills frontmatter taxonomy (name/description + declarative extensions). The compiler (compile-context-bundles.mjs) projects these into canonical bundles plus Claude/Codex projections; the injector (context-injector.mjs) matches spawned subagent types against `matcher`. The source-id -> path map and the hard never-inject list (whole PRDs, other stories' wave plans, progress.md, SKILL.md texts, src/**/agent.md) live in the compiler, not here: a manifest can only pick from the closed `inject` vocabulary below.",
   "type": "object",
   "required": ["name", "description", "tier", "scope", "inject", "budget_tokens", "matcher"],
   "properties": {

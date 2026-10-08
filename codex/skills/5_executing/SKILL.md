@@ -1,9 +1,14 @@
 ---
 name: executing
-description: "Execute implementation plans user-story by user-story in dependency order, using TDD, wave-scoped Ralph verification, wave gates, code review, and QA handoff. Use when: (1) an implementation plan exists and is ready for execution, (2) feature tasks need to be implemented with disciplined verification. Not for: planning, architecture, or requirements."
+description: "Execute implementation plans user-story by user-story in dependency order, using TDD, wave-scoped Ralph verification, wave gates, code review, and QA handoff. Full-procedure Step 5 for weaker writer models; the chain default is 5b_executing-large-model with the same contracts. Hosts the Checkpoint 1 and P0 setup subskills (run in subagents) and the framework scripts. Use when the writer model is below frontier level, or for a comparison run, and: (1) wave plans exist and need CP1 approval, P0 setup, and execution, (2) an approved plan is ready for execution or a run must resume, (3) feature tasks need to be implemented with disciplined verification. Not for: planning, architecture, or requirements."
 ---
 
 # Executing
+
+> The chain's default Step 5 is `5b_executing-large-model`: same gates, state and
+> handoff contracts, less procedure. Use this skill when the writer model is
+> below frontier level or for a comparison run. Both run the subskills in
+> `subskills/` and the scripts in `scripts/` from this folder.
 
 Orchestrate implementation user story by user story. Workers own code, test, and fix edits; the lead owns decomposition, dispatch, integration, deterministic verification, gates, and operational records. After every worker in a wave finishes, the lead runs one wave-scoped Outer Ralph pass over that wave's acceptance criteria.
 
@@ -28,6 +33,7 @@ This skill was imported from a Claude workflow. In Codex, follow these overrides
 
 The orchestrator stays lean so it survives the full PROJ → QA → docs chain.
 
+- Run the checkpoint and setup subskills (CP1, P0) in subagents; keep only the review point list and the verdicts here.
 - Delegate every implementation and correction edit when Codex subagent policy permits it.
 - Keep decomposition, dispatch, integration, deterministic checks, gates, state/findings/progress updates, and commits with the lead.
 - Run disjoint work concurrently; serialize dependent or overlapping work.
@@ -39,19 +45,36 @@ The orchestrator stays lean so it survives the full PROJ → QA → docs chain.
 
 <HARD-GATE>
 Before doing implementation work:
-1. **P0 setup gate — setup (4b) owns all preflights.**
-   - If `specs/PROJ-<X>-<theme>/state.json` exists:
-     `bash scripts/state.sh get <X> <theme> '.phase + ":" + .status'` must be
-     `P0:done` (fresh PROJ) or `P5:*` (resume). Anything earlier → STOP and
-     route: `CP1:*` → run **checkpoint** (4a); `CP1:approved` → run
-     **setup** (4b). The former inline preflights — `.coderabbit.yaml`,
-     Supabase/browser/CLI + auth checks — now run in 4b's `preflight.sh`;
-     do NOT re-run them here.
+1. **CP1 + P0 — run the checkpoint and setup subskills as subagents.**
+   This skill owns Checkpoint 1 and P0; their procedures live in
+   `subskills/checkpoint.md` and `subskills/setup.md` and run in spawned
+   subagents so this context keeps only verdicts. If
+   `specs/PROJ-<X>-<theme>/state.json` is missing, ask the user once:
+   framework run (create it with `bash ~/.codex/skills/5_executing/scripts/state.sh init <X> <theme>`, then route
+   as below — never implement past an unsealed CP1) or standalone run
+   (step 2). If it exists, route on
+   `bash ~/.codex/skills/5_executing/scripts/state.sh get <X> <theme> '.phase + ":" + .status'`
+   (the installed helper — the repo copy may not exist before P0):
+   - `CP1:pending` / `CP1:running` / `CP1:blocked` → **checkpoint** (`subskills/checkpoint.md`,
+     CP1 roles): spawn the prepare subagent and wait for it. `sealed` → go on.
+     Otherwise walk its points with the user yourself, one outcome per point,
+     then spawn the apply subagent with the decisions verbatim; repeat until
+     it returns `sealed`. Never approve on the user's behalf.
+   - `CP1:approved`, `P0:running`, `P0:blocked` → **setup**
+     (`subskills/setup.md`): spawn ONE subagent with `<X> <theme>` and this
+     checkout's path, and wait for it. `P0:blocked` back → STOP and report the
+     stop reason; after the fix, re-invoking this skill resumes P0
+     idempotently. Relay any defaulted decisions it lists, then `cd` into the
+     returned `.worktree.path`.
+   - `P0:done` (fresh PROJ) or `P5:*` (resume) → continue below. The phase
+     runner arrives here directly; its P0 lane already ran setup.
+   - All preflights (permissions, `.coderabbit.yaml`, Supabase/browser/CLI +
+     auth) belong to setup's `preflight.sh`; do NOT re-run them here.
    - Verify the current directory is `.worktree.path` from state. P0 owns the
      persistent PROJ worktree and the runner re-executes there; do not implement
      from the control checkout. Dependencies are isolated, while `.env.local`,
      development data, and hosted-auth limits are deliberately shared.
-   - **On every implementation start or resume**, after verifying the worktree path and before launching workers, run `node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs`. Use the installed command, not a potentially stale project copy. A non-zero result blocks implementation: reconcile reported differences against installed sources, test adaptations, and rerun with `--adopt <reviewed-path>` for each resolved file. Never overwrite or blindly adopt project customizations.
+   - **On every implementation start or resume**, after verifying the worktree path and before launching workers, run `node ~/.codex/skills/5_executing/scripts/sync-framework.mjs`. Use the installed command, not a potentially stale project copy. A non-zero result blocks implementation: reconcile reported differences against installed sources, test adaptations, and rerun with `--adopt <reviewed-path>` for each resolved file. Never overwrite or blindly adopt project customizations.
    - Commit `.skillchain-helpers.json` and changed managed helpers/templates before implementation. If a refresh changes context tooling or role templates, recompile the context bundles and record them via `state.sh`. This new commit invalidates old gate evidence; never refresh during workers or a gate.
    - Then mark the phase if needed: if state shows `P0:done`, run `bash scripts/state.sh transition <X> <theme> P5 running`.
 2. **Standalone fallback (no state.json — manual run without the framework):**
@@ -61,8 +84,8 @@ Before doing implementation work:
    (`browser_navigate`, `browser_snapshot`, …) when `wave-gate-config.json`
    has `frontend_routes`, Supabase CLI/MCP when the project uses Supabase.
    Any hard tool missing → STOP.
-3. Record BASE_SHA: from `state.json` (`.base_sha`, set by 4b) — standalone: `git rev-parse HEAD`
-4. Create `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` using the template below
+3. Record BASE_SHA: from `state.json` (`.base_sha`, set by the setup subskill) — standalone: `git rev-parse HEAD`
+4. Create `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` using the template below — if P0 already wrote it (negative controls, defaulted decisions), add the missing template sections and keep its content; never overwrite
 5. Store BASE_SHA in progress.md
 
 This file is your single source of truth for the whole PROJ. Update it after EVERY action.
@@ -108,7 +131,7 @@ On success the script appends a `### Wave N Gate — PASSED` block with timestam
 
 **Framework runs (state.json exists):** after every green gate, update the machine state too — `bash scripts/state.sh set <X> <theme> .waves '{"current": <N>, "total": <M>, "stories": {…per-US status…}}'` (merge with the existing block). The gate pipes its normalized CodeRabbit findings into the ledger when `scripts/ledger.mjs` is present; Sonar evidence remains in the configured system — never re-enter either by hand.
 
-**If a framework helper is missing:** run `node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs` to restore the managed inventory, resolve any reported conflicts, and commit before running the gate. Standalone runs use the same synchronization before their first wave.
+**If a framework helper is missing:** run `node ~/.codex/skills/5_executing/scripts/sync-framework.mjs` to restore the managed inventory, resolve any reported conflicts, and commit before running the gate. Standalone runs use the same synchronization before their first wave.
 
 **If jq, coderabbit, or agent-browser are missing:** the script prints a clear error and exits non-zero. Install them, do not work around the gate.
 
@@ -154,8 +177,8 @@ Updated after every task, after the initial wave verification and each recovery 
 ### Wave-Scoped Ralph Evidence
 - Initial pass: AC-1 PASS; AC-2 FAIL — [exact failure reason]
 - Recovery stage: normal fix round 1 → follow-up worker dispatched
-- Reused during repair: AC-1 — verified at [committed HEAD]; changed files not plausibly affecting it
-- Rerun: AC-2 PASS — [exact command, positive selection, verified HEAD]
+- Invalidated: AC-1 — evidence from [old HEAD] void after the correction commit (reuse only at the same committed HEAD and gate-config fingerprint)
+- Rerun: AC-1 PASS, AC-2 PASS — [exact command, positive selection, verified HEAD]
 - Commit: `feat(PROJ-<X>-PRD-<Y>): implement US-1 [name]`
 
 ---

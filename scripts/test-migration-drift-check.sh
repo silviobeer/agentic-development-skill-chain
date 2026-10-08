@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GUARD="$ROOT/claude/skills/4b_setup/scripts/migration-drift-check.sh"
+GUARD="$ROOT/claude/skills/5_executing/scripts/migration-drift-check.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -75,7 +75,7 @@ chmod +x "$unreachable/bin/supabase" "$unreachable/bin/npx"
 run_guard "$unreachable"
 [[ "$RC" -eq 0 ]] || fail "unreachable DB: expected skip (exit 0), got $RC ($OUTPUT)"
 
-cmp -s "$GUARD" "$ROOT/codex/skills/4b_setup/scripts/migration-drift-check.sh" \
+cmp -s "$GUARD" "$ROOT/codex/skills/5_executing/scripts/migration-drift-check.sh" \
   || fail "migration-drift-check.sh provider copies are not byte-identical"
 
 echo "migration drift guard tests: PASS"

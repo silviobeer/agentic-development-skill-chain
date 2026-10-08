@@ -26,7 +26,7 @@ If a global `supabase` binary is older than the CLI version the project pins in 
 
 ## In the skill chain
 
-`scripts/migration-drift-check.sh` (copied by `4b_setup`, alongside `preflight.sh`/`worktree.sh`) runs this exact check automatically: once at P0 preflight, and again at the start of every `wave-gate.sh` wave (P0 runs once per PROJ; a wave gate re-trusts the shared DB every time, long after P0). Both hard-fail with the migration versions and the `supabase db reset` fix. This skill exists for everything *outside* that flow — a plain dev session on `main`, a manual repro, a bug report that looks like an application bug but is environment drift — where nothing runs the check for you.
+`scripts/migration-drift-check.sh` (copied by the P0 setup subskill of `5_executing`, alongside `preflight.sh`/`worktree.sh`) runs this exact check automatically: once at P0 preflight, and again at the start of every `wave-gate.sh` wave (P0 runs once per PROJ; a wave gate re-trusts the shared DB every time, long after P0). Both hard-fail with the migration versions and the `supabase db reset` fix. This skill exists for everything *outside* that flow — a plain dev session on `main`, a manual repro, a bug report that looks like an application bug but is environment drift — where nothing runs the check for you.
 
 ## Other shared-local-Supabase gotchas
 

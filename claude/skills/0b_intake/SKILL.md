@@ -1,6 +1,6 @@
 ---
 name: intake
-description: "Bootstrap the curated context baseline for a brownfield (or near-greenfield) repo: scan the code and draft ALL curated docs with per-statement provenance markers, interview the developer through every gap/assumption/inconsistency, reconcile via the checkpoint loop, then seal as the initial curation baseline commit. Use when: (1) a repo has code but no curated docs/ baseline (docs/PRODUCT.md missing), (2) an explicit drift audit of the curated docs is requested, (3) a near-greenfield project needs its baseline before the first PROJ. Not for: per-PROJ documentation (use documentation), ongoing doc updates (P7 curation owns those), plan approval (use checkpoint)."
+description: "Bootstrap the curated context baseline for a brownfield (or near-greenfield) repo: scan the code and draft ALL curated docs with per-statement provenance markers, interview the developer through every gap/assumption/inconsistency, reconcile via the checkpoint loop, then seal as the initial curation baseline commit. Use when: (1) a repo has code but no curated docs/ baseline (docs/PRODUCT.md missing), (2) an explicit drift audit of the curated docs is requested, (3) a near-greenfield project needs its baseline before the first PROJ. Not for: per-PROJ documentation (use documentation), ongoing doc updates (P7 curation owns those), plan approval (use executing-large-model, which runs Checkpoint 1)."
 ---
 
 # Intake — Bootstrap the Curated Context Baseline
@@ -50,7 +50,7 @@ the same way — deltas, not rewrites.
 - No curated baseline yet (`docs/PRODUCT.md` missing), OR the user
   explicitly asked for a drift audit of the existing baseline.
 - Working space: `specs/intake/` (drafts + decision log). This is
-  pre-PROJ — there is **NO state.json**; state.json is born at CP1.
+  pre-PROJ — there is **NO state.json**; concept (1) creates one per PROJ.
 - Drift audit variant: draft the delta against the existing docs instead
   of from scratch; everything else (interview, checkpoint, seal) is the
   same path.
@@ -102,9 +102,12 @@ AskUserQuestion — grouped by topic, never as one wall of questions.
 - `[assumed]` items the developer confirms lose their marker; corrected
   ones are rewritten from the answer.
 
-### 3. Reconcile via checkpoint (4a, Bootstrap Variant)
+### 3. Reconcile via checkpoint (Bootstrap Variant)
 
-Route to the **checkpoint** skill's Bootstrap Variant: the generated
+Run the Bootstrap Variant of the **checkpoint** subskill
+(`5_executing/subskills/checkpoint.md` in the installed skill tree; this
+skill is its orchestrator — the user dialogue stays here, prepare and apply
+run in subagents per its **Roles**): the generated
 docs are HYPOTHESES, not truth. Same point-by-point pattern — every
 review point ends in exactly one of adopt / change / reject / defer,
 recorded in `specs/intake/decisions.md` (`D-BOOTSTRAP-<NN>` ids,
@@ -128,7 +131,7 @@ every decision into the affected draft(s).
 From here on, P7 curation owns every docs/ update.
 
 → NEXT ACTION: start the first PROJ through the chain (**chain-guide**
-routes it); at P0 the setup skill compiles this baseline into the
+routes it); at P0 the setup subskill compiles this baseline into the
 context bundles.
 
 ## Failure Behavior

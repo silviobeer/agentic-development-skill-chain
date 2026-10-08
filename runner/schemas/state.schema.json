@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SkillChain run state",
-  "description": "State machine for one PROJ run, at specs/PROJ-<X>-<theme>/state.json. Written ONLY via state.sh (skill 4b_setup / 4a_checkpoint). progress.md stays the human-readable view; this file is the machine-readable truth for resume, gating, and rendering.",
+  "description": "State machine for one PROJ run, at specs/PROJ-<X>-<theme>/state.json. Written ONLY via state.sh (5_executing: setup + checkpoint subskills). progress.md stays the human-readable view; this file is the machine-readable truth for resume, gating, and rendering.",
   "type": "object",
   "required": ["proj", "theme", "phase", "status", "updated_at"],
   "properties": {
@@ -16,7 +16,7 @@
     },
     "phase": {
       "enum": ["CP1", "P0", "P5", "P6", "P7", "P8", "done"],
-      "description": "Current phase. state.json is created at CP1 (4a_checkpoint); P2d/P3/P4 run before it exists."
+      "description": "Current phase. state.json is created by concept (1) at CP1:pending; the 5_executing checkpoint subskill approves CP1."
     },
     "status": {
       "enum": ["pending", "running", "approved", "blocked", "done"],
@@ -28,7 +28,7 @@
     },
     "base_sha": {
       "type": "string",
-      "description": "Commit the PROJ branch was cut from (set by 4b_setup)"
+      "description": "Commit the PROJ branch was cut from (set by the 5_executing setup subskill)"
     },
     "branch": {
       "type": "string",
@@ -52,7 +52,7 @@
     },
     "decision_log": {
       "type": "string",
-      "description": "Path to decisions.md written by 4a_checkpoint"
+      "description": "Path to decisions.md written by the 5_executing checkpoint subskill"
     },
     "degraded": {
       "type": "boolean",
@@ -106,7 +106,7 @@
     },
     "preflight": {
       "type": "object",
-      "description": "Result block written by preflight.sh (4b_setup)",
+      "description": "Result block written by preflight.sh (5_executing setup subskill)",
       "properties": {
         "at": { "type": "string" },
         "ok": { "type": "boolean" },
@@ -140,7 +140,7 @@
     },
     "context": {
       "type": "object",
-      "description": "Context system state (Stage 2): compiled bundle hashes + ponytail parity result. Written during P0 (4b_setup / preflight.sh).",
+      "description": "Context system state (Stage 2): compiled bundle hashes + ponytail parity result. Written during P0 (5_executing setup subskill / preflight.sh).",
       "properties": {
         "bundles": {
           "type": "object",

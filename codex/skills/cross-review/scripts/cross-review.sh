@@ -55,7 +55,7 @@ case "$AUTHOR_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --autho
 case "$REQUIRED_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --require-provider must be claude or codex" >&2; exit 64 ;; esac
 
 resolve() { if [ -f "$1" ]; then echo "$1"; else echo "$SCRIPT_DIR/$2"; fi; }
-STATE_SH="$(resolve scripts/state.sh ../../4b_setup/scripts/state.sh)"
+STATE_SH="$(resolve scripts/state.sh ../../5_executing/scripts/state.sh)"
 LEDGER="$(resolve scripts/ledger.mjs ../../6_qa/scripts/ledger.mjs)"
 TMPL="$(resolve templates/cross-review-prompt.md.tmpl ../templates/cross-review-prompt.md.tmpl)"
 [ -f "$TMPL" ] || { echo "cross-review.sh: prompt template not found" >&2; exit 1; }

@@ -17,7 +17,7 @@
 // of the same inputs are byte-identical; only bundles.lock.json carries
 // compiled_at. All writes are atomic (tmp + rename). The compiler is
 // state-free — recording hashes into state.json is the caller's job
-// (4b_setup step 6a, via state.sh).
+// (setup subskill step 6a, via state.sh).
 //
 // Usage:
 //   node compile-context-bundles.mjs compile <proj-x> <theme> [--wave N] [--budget N] [--roles-dir D]
@@ -68,7 +68,7 @@ function tokens(s) { return Math.ceil(s.length / 4); } // documented heuristic: 
 // --- role manifests -----------------------------------------------------------
 function rolesDir() {
   if (rolesDirArg) return rolesDirArg;
-  if (existsSync("templates/roles")) return "templates/roles";           // repo copy (4b_setup installs)
+  if (existsSync("templates/roles")) return "templates/roles";           // repo copy (P0 setup installs)
   return join(SCRIPT_DIR, "..", "manifests", "roles");                    // skill tree
 }
 

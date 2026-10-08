@@ -159,10 +159,10 @@ run_validator | grep -F "1 wave(s), 1 AC(s)" >/dev/null
 
 for copy in \
   "$ROOT/claude/skills/4_writing-plans/scripts/validate-wave-plan.mjs" \
-  "$ROOT/codex/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
-  "$ROOT/claude/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
-  "$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs" \
-  "$ROOT/claude/skills/4b_setup/scripts/validate-wave-plan.mjs"
+  "$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
+  "$ROOT/claude/skills/5_executing/scripts/validate-wave-plan.mjs" \
+  "$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
+  "$ROOT/claude/skills/5_executing/scripts/validate-wave-plan.mjs"
 do
   cmp "$VALIDATOR" "$copy"
 done

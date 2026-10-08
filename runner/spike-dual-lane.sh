@@ -195,7 +195,7 @@ step "runner mechanics: stubbed writer failure -> peer cancelled, run parked"
 RWORK="$(mktemp -d)"
 STUB="$RWORK/stub-bin"
 mkdir -p "$STUB" "$RWORK/repo/specs/PROJ-98-spike" "$RWORK/repo/scripts"
-cp "$REPO_ROOT/claude/skills/4b_setup/scripts/state.sh" "$RWORK/repo/scripts/state.sh"
+cp "$REPO_ROOT/claude/skills/5_executing/scripts/state.sh" "$RWORK/repo/scripts/state.sh"
 cp "$REPO_ROOT/claude/skills/6_qa/scripts/ledger.mjs" "$RWORK/repo/scripts/ledger.mjs"
 cat >"$STUB/claude" <<'STUBEOF'
 #!/bin/sh

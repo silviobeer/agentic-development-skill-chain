@@ -60,8 +60,8 @@ P0 and every implementation start/resume run the installed synchronizer before
 workers start:
 
 ```bash
-node ~/.codex/skills/4b_setup/scripts/sync-framework.mjs
-# Claude: node ~/.claude/skills/4b_setup/scripts/sync-framework.mjs
+node ~/.codex/skills/5_executing/scripts/sync-framework.mjs
+# Claude: node ~/.claude/skills/5_executing/scripts/sync-framework.mjs
 ```
 
 Run from the PROJ worktree root, or pass `--target /path/to/worktree`.
@@ -86,7 +86,7 @@ not a remote branch, and never silently discards project-specific adaptations.
   again; do not try to push from `~/.claude/skills/` or `~/.codex/skills/`.
 - Re-running the installers also refreshes the shared P0/P8 worktree helper,
   the plan-consistency validator, and the provider-specific Wave Gate.
-- The 0-to-8 core chain and its `cross-review` mechanism are installed, along with the documented optional skills: `5b_executing-large-model`, `bugfixing`, `refactor-dreamer`, `sonar-cli`, `supabase-local-dev`, and `vibecoder`.
+- The 0-to-8 core chain and its `cross-review` mechanism are installed, along with the documented optional skills: `bugfixing`, `refactor-dreamer`, `sonar-cli`, `supabase-local-dev`, and `vibecoder`.
 - `CLAUDE.md` is not installed as a skill. It is a repo-level pointer file only.
 
 ## Updating an existing PROJ for the optimized gates

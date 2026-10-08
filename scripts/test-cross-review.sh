@@ -76,7 +76,7 @@ done
 # Manual rounds beyond the automatic limit work before and after state exists.
 run_review 4000 --round 4 >"$CASE/out" 2>&1
 mkdir -p specs/PROJ-1-test
-bash "$ROOT/codex/skills/4b_setup/scripts/state.sh" init 1 test >/dev/null
+bash "$ROOT/codex/skills/5_executing/scripts/state.sh" init 1 test >/dev/null
 for round in 4 100; do
   run_review 4000 --round "$round" --persist >"$CASE/out" 2>&1
   [ "$(jq -r '.cross_review[-1].round' specs/PROJ-1-test/state.json)" -eq "$round" ]

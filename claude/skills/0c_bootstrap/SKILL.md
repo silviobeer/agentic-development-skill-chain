@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: "Turn an approved product vision into a running, empty project: decide the stack and record it as the single source of truth in docs/ARCHITECTURE.md § Stack, run the real scaffold command, verify build and tests are green, and write root AGENTS.md plus the CLAUDE.md pointer. Use when: (1) the product vision exists and the workspace has no application code yet, (2) an existing repo needs its stack recorded and its agent files created. Not for: an existing codebase with code to extract (use intake), product scope (use product-vision), PROJ-level tech design (use architecture), per-PROJ P0 setup (use setup)."
+description: "Turn an approved product vision into a running, empty project: decide the stack and record it as the single source of truth in docs/ARCHITECTURE.md § Stack, run the real scaffold command, verify build and tests are green, and write root AGENTS.md plus the CLAUDE.md pointer. Use when: (1) the product vision exists and the workspace has no application code yet, (2) an existing repo needs its stack recorded and its agent files created. Not for: an existing codebase with code to extract (use intake), product scope (use product-vision), PROJ-level tech design (use architecture), per-PROJ P0 setup (run by Step 5, executing-large-model)."
 ---
 
 # Bootstrap — Stack, Scaffold, Agent Files

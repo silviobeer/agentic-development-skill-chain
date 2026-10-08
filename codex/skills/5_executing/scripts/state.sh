@@ -20,7 +20,7 @@
 # Exit codes:
 #   0  ok
 #   1  validation failed / illegal transition (nothing written)
-#   2  state.json missing (run 'state.sh init' — owned by 4a_checkpoint at CP1)
+#   2  state.json missing (run 'state.sh init' — owned by the checkpoint subskill of 5_executing at CP1)
 #   64 usage error
 set -euo pipefail
 
@@ -119,7 +119,7 @@ write() {
   mv "$tmp" "$STATE"
 }
 
-require_state() { [ -f "$STATE" ] || { echo "state.sh: $STATE missing (create it via 'state.sh init' — owned by 4a_checkpoint)" >&2; exit 2; }; }
+require_state() { [ -f "$STATE" ] || { echo "state.sh: $STATE missing (create it via 'state.sh init' — owned by the checkpoint subskill of 5_executing)" >&2; exit 2; }; }
 
 case "$CMD" in
   init)

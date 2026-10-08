@@ -9,7 +9,7 @@ files on disk. No conversation history crosses a phase boundary.
 
 | File | Purpose |
 |---|---|
-| `run-phase.sh` | run one phase (`P0 P5 P6 P7 P8`) or `auto` (all remaining phases → morning report); `SKILLCHAIN_P5_SKILL="executing-large-model (5b_executing-large-model)"` swaps the P5 writer skill for the lean frontier-model variant |
+| `run-phase.sh` | run one phase (`P0 P5 P6 P7 P8`) or `auto` (all remaining phases → one-line summary; the morning report renders only when P8 neither left an open PR nor removed the worktree); P5 loads `5b_executing-large-model` by default; `SKILLCHAIN_P5_SKILL="executing (5_executing)"` swaps in the full-procedure skill for weaker writer models |
 | `render-report.mjs` | `morning` (scan all PROJs → `specs/morning-report-<date>.md` + one-liner) and `stop` (stop report) |
 | `spike-dual-lane.sh` | Stage 1 release gate: concurrent lanes, read-only enforcement, JSONL capture, attribution, kill-tree cancellation |
 | `spike-stage2.sh` | Stage 2 release gate: bundle determinism/budgets/projection parity, injector tier matrix, symmetric authenticated cross-review (including six-persona QA, structured Claude output, and 10 MB transport failure), P7 runner gate |
@@ -30,9 +30,10 @@ not seal P5 or unlock the next wave. See the
 ## Typical overnight run
 
 ```bash
-# after CP1 was approved via the checkpoint skill (state.json = CP1:approved):
+# after CP1 was approved via the Step 5 checkpoint subskill (state.json = CP1:approved):
 runner/run-phase.sh auto <proj-x> <theme>            # P0 → P5 → P6 → P7 → P8
-# morning: read specs/morning-report-<date>.md, then review the PR (CP2)
+# morning: read the run's one-line summary and the PR body, then review the PR (CP2)
+# optional cross-PROJ overview: node runner/render-report.mjs morning specs
 ```
 
 Single phase / resume after a stop:

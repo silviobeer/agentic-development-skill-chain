@@ -178,15 +178,15 @@ bash scripts/cross-review.sh plan <X> <theme> \
 - Follow cross-review's reconcile/re-review loop through round 3 while any findings remain; stop early when clean. Escalate remaining Critical/High before execution; ask only about unresolved product decisions. Manual extra rounds are unlimited.
 - `--persist` is required: CP1's fast path reads `.cross_review[]` in state.json and the ledger; without it CP1 always runs the full interactive loop.
 
-### 7. Hand off to checkpoint
+### 7. Hand off to Step 5
 
-Present waves, stories per wave, execution mode, and the cross-review result. Don't ask for approval — Checkpoint 1 (4a) approves architecture and plans together (auto-approves when both cross-reviews are clean). Invoke **checkpoint** in the same session. Stop instead only if Critical/High findings remain after round 3, a product decision is open, a PRD/architecture handback is unresolved, or the user wants to review the plans first.
+Present waves, stories per wave, execution mode, and the cross-review result. Don't ask for approval — Checkpoint 1 approves architecture and plans together (auto-approves when both cross-reviews are clean). Invoke **executing-large-model** (5b, the default Step 5) in the same session; it runs CP1 and P0 through its checkpoint and setup subskills before any implementation. Stop instead only if Critical/High findings remain after round 3, a product decision is open, a PRD/architecture handback is unresolved, or the user wants to review the plans first.
 
-Say once before invoking checkpoint:
+Say once before invoking executing-large-model:
 
-> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). For an unattended run say **'continue automatic until delivery, goal is PR draft'**: checkpoint (4a) for CP1, setup (4b) for branch + preflight, then `runner/run-phase.sh auto <X> <theme>` for P5–P8 ending in an open PR and morning report. No other approval stop follows CP1.
+> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). For an unattended run say **'continue automatic until delivery, goal is PR draft'**: executing-large-model (5b) runs CP1 and P0 (branch + preflight) through the Step 5 subskills, then `runner/run-phase.sh auto <X> <theme>` for P5–P8 ending in an open PR and a one-line run summary. No other approval stop follows CP1.
 >
-> Manual path: ensure `scripts/wave-gate.sh` exists (copy from `~/.codex/skills/5_executing/scripts/wave-gate.sh`, `chmod +x`, commit) and `jq`, `coderabbit`, `agent-browser` are installed, then run `/5_executing`. Quality Gate and QA follow the last wave automatically."
+> Manual path: run `/5b_executing-large-model` (or `/5_executing` on a weaker model) — the setup subskill installs the gate scripts and preflights `jq`, `coderabbit`, and browser tooling in the PROJ worktree. Quality Gate and QA follow the last wave automatically."
 
 ## Rules
 

@@ -81,11 +81,11 @@ if [ "$WRITER_MODEL" = "$REVIEW_MODEL" ]; then
   exit 64
 fi
 
-# state.sh: prefer the repo copy (4b_setup installs it), fall back to the skill tree
+# state.sh: prefer the repo copy (P0 setup installs it), fall back to the skill tree
 if [ -x scripts/state.sh ]; then
   STATE_SH="scripts/state.sh"
-elif [ -x "$RUNNER_DIR/../claude/skills/4b_setup/scripts/state.sh" ]; then
-  STATE_SH="$RUNNER_DIR/../claude/skills/4b_setup/scripts/state.sh"
+elif [ -x "$RUNNER_DIR/../claude/skills/5_executing/scripts/state.sh" ]; then
+  STATE_SH="$RUNNER_DIR/../claude/skills/5_executing/scripts/state.sh"
 else
   echo "run-phase.sh: state.sh not found (scripts/state.sh or skill tree)" >&2; exit 1
 fi
@@ -96,8 +96,8 @@ LEDGER=""
 
 WORKTREE_HELPER=""
 for candidate in scripts/worktree.sh \
-  "$RUNNER_DIR/../claude/skills/4b_setup/scripts/worktree.sh" \
-  "$RUNNER_DIR/../codex/skills/4b_setup/scripts/worktree.sh"; do
+  "$RUNNER_DIR/../claude/skills/5_executing/scripts/worktree.sh" \
+  "$RUNNER_DIR/../codex/skills/5_executing/scripts/worktree.sh"; do
   if [ -x "$candidate" ]; then WORKTREE_HELPER="$(realpath -m "$candidate")"; break; fi
 done
 WORKTREE_WAS_REMOVED=0
@@ -124,8 +124,8 @@ phase_index() {
 
 phase_skill() { # skill loaded by the writer lane
   case "$1" in
-    P0) echo "setup (4b_setup)" ;;
-    P5) echo "${SKILLCHAIN_P5_SKILL:-executing (5_executing)}" ;; # e.g. "executing-large-model (5b_executing-large-model)"
+    P0) echo "setup — the P0 subskill of executing (5_executing/subskills/setup.md)" ;;
+    P5) echo "${SKILLCHAIN_P5_SKILL:-executing-large-model (5b_executing-large-model)}" ;; # weaker writer models: "executing (5_executing)"
     P6) echo "p6-controller" ;;
     P7) echo "documentation (7_documentation)" ;;
     P8) echo "delivery (8_delivery)" ;;
@@ -318,7 +318,7 @@ open_cross_review_blocking() {
       ] | length' "$BASE/findings.json" 2>/dev/null || echo 0
 }
 
-curation_caps_path() { # repo copy first (4b_setup installs it), then skill tree
+curation_caps_path() { # repo copy first (P0 setup installs it), then skill tree
   if [ -f scripts/curation-caps.sh ]; then
     echo "scripts/curation-caps.sh"
   elif [ -f "$RUNNER_DIR/../claude/skills/7_documentation/scripts/curation-caps.sh" ]; then

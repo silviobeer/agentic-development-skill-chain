@@ -1,11 +1,10 @@
----
-name: checkpoint
-description: "Run a human checkpoint as a structured reconcile loop: present a compact review package, collect feedback point by point (adopt/change/reject/defer), write the decision log, cascade every change through all affected planning artifacts, and seal the result in state.json. Use when: (1) architecture + wave plans are ready for Checkpoint 1 approval before any execution, (2) PR review comments need reconciling at Checkpoint 2 (invoked via delivery), (3) intake bootstrap drafts need validation (via the intake skill, 0b). Not for: producing the plans themselves (use writing-plans), resolving PRD reviews on the discovery track (use review-reconcile), P0 setup (use setup)."
----
-
 # Checkpoint — Structured Reconcile Loop For CP1, Bootstrap, CP2
 
-Checkpoints are not a "looks good? yes/no" question. This skill
+Subskill of `5_executing`, not a standalone skill; any Step 5 lead
+(`5b_executing-large-model` by default, or `5_executing`) runs it at CP1: its caller (the
+"orchestrator" below) runs it through subagents, see **Roles**.
+
+Checkpoints are not a "looks good? yes/no" question. This subskill
 generalizes the proven `review-reconcile` (2c) pattern to the two human
 checkpoints of the agent workflow (CONCEPT.md §4): feedback is collected
 point by point, every point ends in an explicit decision, the decision
@@ -15,18 +14,53 @@ autonomous — this loop is where the human steers.
 
 Three call sites, one loop:
 
-| Call site | Reviewed | Seal |
+| Call site (orchestrator) | Reviewed | Seal |
 |---|---|---|
-| **CP1** (main) | architecture-delta + wave plans + gate config + api-contracts | `state.json` → `CP1:approved` — the ONLY thing that unlocks P0 |
+| **CP1** (Step 5 lead — main) | architecture-delta + wave plans + gate config + api-contracts | `state.json` → `CP1:approved` — the ONLY thing that unlocks P0 |
 | **Bootstrap** (via 0b_intake) | intake first drafts (all eight baseline files) | curated baseline commit — no state.json |
 | **CP2** (via delivery, 8) | PR review comments | classified comments: fix now / debt / reject |
 
 ## Codex Adaptation
 
-This skill is aligned with the Claude variant. In Codex: reusable skill
+This subskill is aligned with the Claude variant. In Codex: reusable skill
 assets live under `~/.codex/skills/...`; collect the point-by-point
 decisions through structured questions in the conversation (there is no
 AskUserQuestion tool).
+
+## Roles — Subagents Do The Work, The Orchestrator Owns The Conversation
+
+Subagents cannot reach the user, and the review loop exists precisely to
+put each point in front of one. So the work is split in three, and the
+orchestrator's context only ever holds the compact point list:
+
+1. **Prepare subagent** (spawned first, foreground): runs Step 0. Fast path
+   taken → it appends Step 0's single `adopt` entry to the decision log,
+   runs Step 5, and returns `sealed`. Otherwise it runs
+   Step 1 and returns the review package as a numbered point list
+   (≤ 300 tokens plus artifact paths).
+2. **Orchestrator** (the main agent of the calling skill): runs Step 2
+   with the user — one point at a time, one outcome per point — and
+   appends each outcome to the decision log (Step 3, Cascade `pending`)
+   before raising the next point, so an interrupted round loses nothing.
+   It edits no other artifact.
+3. **Apply subagent** (fresh spawn; given the decision-log path and the
+   round's ids): runs Steps 4–5, fills each entry's Cascade field, and
+   returns `sealed`, or the validator/self-review errors. Errors become
+   the next round's points — back to 2.
+
+Steps 0–5 above are the CP1 procedure. The variants reuse the split with
+their own content:
+
+- **Bootstrap** (orchestrator: intake): prepare skips Step 0 (no fast
+  path) and returns the Bootstrap review queue; decisions go to
+  `specs/intake/decisions.md`; apply cascades into the drafts only. No
+  state.json, no plan validator — intake itself seals with the baseline
+  commit.
+- **CP2** (orchestrator: delivery): prepare skips Step 0 and returns the
+  classified-comment list; apply runs the `debt` ledger records and PR
+  replies. `fix now` items are dispatched by delivery itself; there is no
+  CP1 seal. Without subagents (or where delegation is
+prohibited) the orchestrator runs every step inline and says why.
 
 ## Core Principle
 
@@ -68,7 +102,7 @@ first):
    by `cross-review.sh --persist`, never by hand) has at least one record with
    `mode == "architecture"` and at least one with `mode == "plan"`:
    ```bash
-   bash ~/.codex/skills/4a_checkpoint/scripts/state.sh get <X> <theme> \
+   bash ~/.codex/skills/5_executing/scripts/state.sh get <X> <theme> \
      '[.cross_review[]? | .mode] | (index("architecture") != null) and (index("plan") != null)'
    ```
    `false` (a mode never ran — declined, or run without `--persist`) → no fast
@@ -112,7 +146,7 @@ Build a summary the human can decide on in minutes:
 
 Point to the full artifacts by path for drill-down; do not paste them.
 
-### 2. Collect feedback point by point
+### 2. Collect feedback point by point (orchestrator only)
 
 Walk the package one point at a time (structured questions in the
 conversation — never one bulk "any comments?" prompt). For each point:
@@ -127,8 +161,9 @@ conversation — never one bulk "any comments?" prompt). For each point:
 
 Append this round to `specs/PROJ-<X>-<theme>/decisions.md` using
 `templates/decisions.md.tmpl` (copy the template frame; one `D-<X>-<NN>`
-entry per point, IDs unique across rounds). The log is append-only —
-earlier rounds are never edited. P7 curation later migrates decisions
+entry per point, IDs unique across rounds), each entry written as soon
+as its point is decided, Cascade `pending` until Step 4 fills it. The log
+is append-only — earlier rounds are never edited. P7 curation later migrates decisions
 with lasting value into `docs/ARCHITECTURE.md`/ADRs.
 
 ### 4. Cascade updates into ALL affected artifacts
@@ -147,7 +182,7 @@ Run the machine consistency validator after every cascade and once more even
 when the round adopted every point unchanged:
 
 ```bash
-node ~/.codex/skills/4a_checkpoint/scripts/validate-wave-plan.mjs \
+node ~/.codex/skills/5_executing/scripts/validate-wave-plan.mjs \
   specs/PROJ-<X>-<theme>/3-4_plan
 ```
 
@@ -164,18 +199,20 @@ Only after the cascade is clean:
 
 1. Read the `state.json` created with the PROJ folder by concept (1).
    If this is a legacy PROJ without one, recover once with
-   `bash ~/.codex/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`;
+   `bash ~/.codex/skills/5_executing/scripts/state.sh init <X> <theme>`;
    it must still be `CP1:pending` before this checkpoint approves it.
-2. `bash scripts/state.sh transition <X> <theme> CP1 running` (first
-   round only), then `bash scripts/state.sh transition <X> <theme> CP1 approved`
-3. `bash scripts/state.sh set <X> <theme> .decision_log specs/PROJ-<X>-<theme>/decisions.md`
+2. `bash ~/.codex/skills/5_executing/scripts/state.sh transition <X> <theme> CP1 running` (first
+   round, or resuming from `CP1:blocked`), then `bash ~/.codex/skills/5_executing/scripts/state.sh transition <X> <theme> CP1 approved`
+   (the installed helper — the repo copy arrives with P0)
+3. `bash ~/.codex/skills/5_executing/scripts/state.sh set <X> <theme> .decision_log specs/PROJ-<X>-<theme>/decisions.md`
 4. Commit: `docs(PROJ-<X>): CP1 approved — decision log + cascaded plan updates`
 
 `CP1:approved` in state.json is the only thing that unlocks P0. Never
 set it by hand, never set it while decisions are open or deferred
 points are unresolved-but-blocking.
 
-→ NEXT ACTION: run **setup** (4b) for P0, then execution.
+→ RETURN `sealed` to the orchestrator; the Step 5 lead then spawns the
+**setup** subskill (`subskills/setup.md`) for P0.
 
 ## CP2 Variant (invoked by delivery, 8)
 
@@ -211,7 +248,7 @@ turn them into a baseline the developer actually stands behind.
 - **Seal:** a git COMMIT of the curated baseline (done by the intake
   skill after `intake-seal-check.sh` passes) — explicitly NO
   `state.sh init` and NO phase transition. The bootstrap is pre-PROJ:
-  state.json is born at CP1 of the first PROJ.
+  each PROJ's state.json is created later by concept (1).
 
 ## Completion Checklist
 
@@ -250,4 +287,4 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents. It is never a precondition for this subskill.

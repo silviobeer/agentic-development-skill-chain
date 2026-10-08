@@ -4,8 +4,8 @@ set -euo pipefail
 export SKILLCHAIN_POLL_SECONDS=0.1 # stubs return instantly; production default stays
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HELPER="$ROOT/codex/skills/4b_setup/scripts/worktree.sh"
-STATE_SOURCE="$ROOT/codex/skills/4b_setup/scripts/state.sh"
+HELPER="$ROOT/codex/skills/5_executing/scripts/worktree.sh"
+STATE_SOURCE="$ROOT/codex/skills/5_executing/scripts/state.sh"
 PLAN_FIXTURES="$ROOT/scripts/fixtures/wave-plan-validator"
 TMP_ROOT="$(mktemp -d)"
 cleanup_tmp() { rm -rf "$TMP_ROOT"; }
@@ -476,7 +476,7 @@ runner_out="$TMP_ROOT/runner.out"
   PATH="$runner_bin:$PATH" \
   RUNNER_TEST_CONTROL="$repo" \
   RUNNER_TEST_HELPER="$HELPER" \
-  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs" \
+  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
   "$ROOT/runner/run-phase.sh" P0 12 runner --timeout 30 >"$runner_out" 2>&1)
 [ "$(grep -c 're-entering persistent PROJ worktree exactly once' "$runner_out")" -eq 1 ] || { cat "$runner_out" >&2; fail "runner did not re-exec exactly once"; }
 wt="$TMP_ROOT/runner/control-proj12"
@@ -492,7 +492,7 @@ restart_out="$TMP_ROOT/runner-restart.out"
   PATH="$runner_bin:$PATH" \
   RUNNER_TEST_CONTROL="$repo" \
   RUNNER_TEST_HELPER="$HELPER" \
-  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs" \
+  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
   "$ROOT/runner/run-phase.sh" P0 12 runner --timeout 30 >"$restart_out" 2>&1)
 grep -F "registered PROJ worktree is already P0:done before runner restart" "$restart_out" >/dev/null || { cat "$restart_out" >&2; fail "P0 crash-window restart launched another writer"; }
 ok "runner restart discovers an already sealed P0 target before spawning"
@@ -510,7 +510,7 @@ set +e
   PATH="$auto_bin:$PATH" \
   RUNNER_TEST_CONTROL="$repo" \
   RUNNER_TEST_HELPER="$HELPER" \
-  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs" \
+  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
   RUNNER_TEST_P5_PWD="$TMP_ROOT/p5-pwd" \
   "$ROOT/runner/run-phase.sh" auto 27 omega --timeout 30 >"$TMP_ROOT/runner-auto.out" 2>&1)
 auto_rc=$?
@@ -526,7 +526,7 @@ set +e
   PATH="$auto_bin:$PATH" \
   RUNNER_TEST_CONTROL="$repo" \
   RUNNER_TEST_HELPER="$HELPER" \
-  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs" \
+  RUNNER_TEST_VALIDATOR="$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs" \
   RUNNER_TEST_P5_PWD="$TMP_ROOT/p5-pwd" \
   "$ROOT/runner/run-phase.sh" auto 27 omega --timeout 30 >"$TMP_ROOT/runner-advanced-restart.out" 2>&1)
 advanced_rc=$?
@@ -536,7 +536,7 @@ grep -E "registered PROJ worktree is already P[5-8]:" "$TMP_ROOT/runner-advanced
 ok "auto restart re-enters an advanced PROJ lifecycle without relaunching P0"
 
 for copy in \
-  "$ROOT/claude/skills/4b_setup/scripts/worktree.sh" \
+  "$ROOT/claude/skills/5_executing/scripts/worktree.sh" \
   "$ROOT/codex/skills/8_delivery/scripts/worktree.sh" \
   "$ROOT/claude/skills/8_delivery/scripts/worktree.sh"
 do
@@ -544,11 +544,11 @@ do
 done
 ok "all setup/delivery provider copies of worktree.sh are byte-identical"
 
-PREFLIGHT="$ROOT/codex/skills/4b_setup/scripts/preflight.sh"
+PREFLIGHT="$ROOT/codex/skills/5_executing/scripts/preflight.sh"
 grep -F 'git gh claude node jq coderabbit realpath flock unlink' "$PREFLIGHT" >/dev/null || fail "preflight hard-tool list lacks worktree lifecycle tools"
 jq -e '[.waves[]?.frontend_routes[]?, .frontend.routes[]?] | length > 0' "$PLAN_FIXTURES/config-protected-e2e-valid.json" >/dev/null || fail "structured frontend routes were not detected"
 grep -F '[.waves[]?.frontend_routes[]?, .frontend.routes[]?] | length > 0' "$PREFLIGHT" >/dev/null || fail "preflight does not use structured frontend detection"
-cmp "$PREFLIGHT" "$ROOT/claude/skills/4b_setup/scripts/preflight.sh" || fail "preflight provider copies differ"
+cmp "$PREFLIGHT" "$ROOT/claude/skills/5_executing/scripts/preflight.sh" || fail "preflight provider copies differ"
 ok "preflight hard-checks worktree tools and detects structured frontend routes"
 
 grep -F 'join(here, "run-phase.sh")' "$ROOT/runner/render-report.mjs" >/dev/null || fail "report resume command does not resolve the actual runner"

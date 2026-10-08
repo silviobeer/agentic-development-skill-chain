@@ -1,6 +1,6 @@
 # Agent Workflow Framework — Concept
 
-**Status:** Draft v0.21 — under iteration (leading version; the German
+**Status:** Draft v0.22 — under iteration (leading version; the German
 KONZEPT.md is frozen at v0.9)
 *(v0.4: context-economy review — session-per-phase, spawn tiering,
 scripts instead of LLM for deterministic work, budget enforcement)*
@@ -58,8 +58,15 @@ QA gates plus automatic concept/architecture/plan reviews; Codex → Claude
 hardened with auth preflight, isolated validated structured output, a
 conservative default input cap with explicit diff omissions, and handling of Claude's 10 MB stdin
 ceiling)*
+*(v0.22: `4a_checkpoint` and `4b_setup` folded into `5_executing` as
+subskills (`subskills/checkpoint.md`, `subskills/setup.md`) run in
+subagents; the orchestrator keeps the CP user dialogue; helpers
+deduplicated into `5_executing/scripts/`; § references below use the new
+names, the roadmap and version notes keep the historical ones;
+`5b_executing-large-model` becomes the default Step 5 and runner P5 skill,
+`5_executing` the full-procedure alternative for weaker writer models)*
 
-**Date:** 2026-08-10
+**Date:** 2026-10-08
 **Basis:** the repository's aligned Codex + Claude SkillChain 0–8
 (`codex/skills/`, `claude/skills/`) at the current main branch
 
@@ -86,11 +93,12 @@ from Jira, where Teklens creates/enriches them (TODO, Stage 3; adds
 status/PR-link sync-back). Downstream, both modes are identical. The human
 intervenes at exactly two points: approving architecture + plan, and
 merging the PR. Both checkpoints run as a structured reconcile loop
-(`4a_checkpoint`): feedback is collected point by point, recorded in a
+(checkpoint subskill of `5_executing`): feedback is collected point by point, recorded in a
 decision log, and written back into all affected artifacts in a cascade.
 Everything in between runs autonomously; on defined stop conditions the
 run is parked in a controlled way (rescue branch, stop report), and every
-run ends with a morning report + push notification.
+run ends with a one-line summary + push notification (morning report
+rendered on demand, see §8).
 
 **How:** A host-neutral runner starts fresh Claude and Codex lanes per
 phase and runs them concurrently wherever their work is independent
@@ -140,7 +148,7 @@ every PROJ keeps them current and small.
 ```
                HUMAN ◇ CP1                                    HUMAN ◇ CP2
            approve arch + plan                            PR review + merge
-           (4a_checkpoint:                               (reconcile loop for
+           (5_executing checkpoint:                      (reconcile loop for
             reconcile + decision log)                     comments, via gh)
                   │                                                ▲
                   │                                                │
@@ -261,7 +269,7 @@ never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
   ┌───────────▼───────────┐
   │ P4  PLANNING          │  waves, dependencies, contracts, gate config
   └───────────┬───────────┘
-              ▼ ◇ CHECKPOINT 1 (human, via 4a_checkpoint):
+              ▼ ◇ CHECKPOINT 1 (human, via 5_executing checkpoint subskill):
                 reconcile loop → decision log → cascade updates
                 into artifacts → state.json "approved" unlocks P0
   ┌───────────────────────┐
@@ -345,7 +353,7 @@ codebase handles errors via X in ~60% of cases and Y in ~40% — which
 is the rule going forward?" The answer becomes a GUIDELINES rule; the
 losing pattern becomes a known-debt note, not silently rewritten.
 
-**Step 3 — Reconcile & seal** via the `4a_checkpoint` loop (decision
+**Step 3 — Reconcile & seal** via the checkpoint subskill loop (decision
 log; generated docs are hypotheses, not truth). Final docs must pass
 the file caps (§5) — the interview output is curated, not dumped.
 
@@ -437,7 +445,7 @@ The import skill `2d_prd-import` (build in Stage 3):
    chain needs DETERMINISTICALLY verifiable ACs (Ralph loop = test
    commands). The import checks every story: are the ACs phrased
    testably? Missing/vague ACs → findings list that is either decided at
-   the CP1 reconcile (via `4a_checkpoint`) or played back as a Jira
+   the CP1 reconcile (via the checkpoint subskill) or played back as a Jira
    comment.
 
 **Sync-back (Mode B only, during/after the run):**
@@ -504,7 +512,7 @@ JSON-lines contract, ledger integration, budgets, and identical failure
 semantics in both directions; it does not make either third-party plugin
 a core dependency.
 
-**Producing-skill call sites (analogous to `4a_checkpoint`):**
+**Producing-skill call sites (analogous to the checkpoint subskill):**
 
 | Call site | Artifacts reviewed | Review focus |
 |---|---|---|
@@ -580,9 +588,15 @@ a recorded explanation of why the previous tests missed the defect.
   commands, missing contracts) — the-fool modes PLUS the cross-model
   pass via `cross-review`, which makes the old vague "have another
   model look it over" literal and structured.
-- Then ◇ Checkpoint 1 — handled by the checkpoint skill (below).
+- Then ◇ Checkpoint 1 — handled by executing's checkpoint subskill (below).
 
-### Checkpoint Skill `4a_checkpoint` (new)
+### Checkpoint Subskill (`5_executing/subskills/checkpoint.md`)
+
+Runs in subagents (prepare → orchestrator dialogue → apply): subagents
+cannot reach the user, so the point-by-point conversation stays with the
+calling orchestrator (executing for CP1, intake for bootstrap, delivery
+for CP2) while the fast path, review package, cascade and seal run in
+spawned contexts.
 
 Checkpoints are not a "looks good? yes/no" question but a structured
 reconcile loop (generalizing the proven pattern from
@@ -604,8 +618,8 @@ reconcile loop (generalizing the proven pattern from
    (the consistency check from Skill 4).
 5. **Seal the approval:** create the minimal `state.json` if it does not
    yet exist — using the skill-shipped `state.sh` from
-   `4a_checkpoint/scripts/` (the identical helper `4b_setup` later
-   copies into the repo at P0) — then transition it to `approved` with
+   `5_executing/scripts/` (the identical helper the setup subskill
+   later copies into the repo at P0) — then transition it to `approved` with
    a decision-log reference. Only this unlocks the phase runner for P0.
 
 The same loop is used in three places:
@@ -620,9 +634,10 @@ The same loop is used in three places:
   ("I never want to see this again") is harvested as an AGENTS.md/
   GUIDELINES candidate.
 
-### P0 — Setup (Skill `4b_setup`, new; replaces the FIRST-ACTION block from Skill 5)
+### P0 — Setup (`5_executing/subskills/setup.md`; replaces the FIRST-ACTION block from Skill 5)
 
-Once per PROJ, fully automatic:
+Once per PROJ, fully automatic, in one subagent spawned by the executing
+orchestrator (or the runner's P0 lane):
 
 1. From the clean committed CP1 checkout, create or resume the persistent
    sibling worktree on `proj/PROJ-X` and tag BASE_SHA. The default path is
@@ -1156,7 +1171,7 @@ and model versions: same data in → byte-identical structure out.
 
 **Delivery convention:** every deterministic step is a script inside
 its skill's `scripts/` directory, every rendered artifact has a
-template inside the skill's `templates/` directory. `4b_setup` copies
+template inside the skill's `templates/` directory. P0 setup copies
 both into the repo (`scripts/`, `templates/`) and commits them —
 versioned with the repo, testable outside sessions, identical behavior
 on every machine. Skill 5's `scripts/wave-gate.sh` is the existing
@@ -1178,11 +1193,11 @@ response.
 
 | Script (skill) | Input | Output | Behavior / exit |
 |---|---|---|---|
-| `preflight.sh` (4b_setup) | CLI list §7 (embedded), env | report to stdout; state.json `preflight` block | checks `command -v` + auth per tool; exit ≠ 0 on any missing HARD tool (stop condition); skippable tools → logged skip |
-| `compile-context-bundles.mjs` (4b_setup) | root `AGENTS.md`, `docs/*`, `specs/PROJ-<X>-<theme>/*`, injection matrix §5 | one canonical bundle per role plus Claude/Codex projections | counts tokens and hashes both provider projections; exit ≠ 0 on budget breach or semantic drift |
-| `state.sh` (4b_setup) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
-| `worktree.sh` (4b_setup/8_delivery) | PROJ id, control checkout, state | persistent PROJ worktree lifecycle | creates/resumes safely; links ignored `.env.local`; installs from lockfile; reports conservative cleanup eligibility |
-| `validate-wave-plan.mjs` (4_writing-plans/4a_checkpoint/4b_setup) | wave plans + `wave-gate-config.json` | deterministic consistency verdict | validates unique AC mappings, bidirectional test files, broad regressions, auth budget, and protected-route coverage |
+| `preflight.sh` (5_executing) | CLI list §7 (embedded), env | report to stdout; state.json `preflight` block | checks `command -v` + auth per tool; exit ≠ 0 on any missing HARD tool (stop condition); skippable tools → logged skip |
+| `compile-context-bundles.mjs` (5_executing) | root `AGENTS.md`, `docs/*`, `specs/PROJ-<X>-<theme>/*`, injection matrix §5 | one canonical bundle per role plus Claude/Codex projections | counts tokens and hashes both provider projections; exit ≠ 0 on budget breach or semantic drift |
+| `state.sh` (5_executing) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
+| `worktree.sh` (5_executing/8_delivery) | PROJ id, control checkout, state | persistent PROJ worktree lifecycle | creates/resumes safely; links ignored `.env.local`; installs from lockfile; reports conservative cleanup eligibility |
+| `validate-wave-plan.mjs` (4_writing-plans/5_executing) | wave plans + `wave-gate-config.json` | deterministic consistency verdict | validates unique AC mappings, bidirectional test files, broad regressions, auth budget, and protected-route coverage |
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | runs current ACs + declared regressions, archives CodeRabbit evidence, checks cumulative blocking ledger, manages frontend readiness; red evidence → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
 | `ledger.mjs` (quality) | non-empty normalized findings JSONL from all sources | deduped, normalized `findings.json`; fix-queue clusters | dedupe key file/anchor/category, adding a stable summary fingerprint when no location exists; idempotent with reopen support; empty stdin fails |
@@ -1204,7 +1219,7 @@ response.
 | `pr-body.md.tmpl` (8_delivery) | state.json + findings.json | PR description: built scope, gate/QA results, known gaps, debt section, 📚 doc changes | P8 step 3 |
 | `morning-report.md.tmpl` (framework) | state.json + findings.json (all PROJs) | `specs/morning-report-<date>.md` | run end |
 | `stop-report.md.tmpl` (framework) | state.json + verbatim error capture | `specs/PROJ-<X>-<theme>/5_progress/stop-report.md` | on stop condition |
-| `decisions.md.tmpl` (4a_checkpoint) | reconcile-loop results | `specs/PROJ-<X>-<theme>/decisions.md` (append per checkpoint) | CP1/bootstrap/CP2 |
+| `decisions.md.tmpl` (5_executing) | reconcile-loop results | `specs/PROJ-<X>-<theme>/decisions.md` (append per checkpoint) | CP1/bootstrap/CP2 |
 | `progress-blocks.md.tmpl` (5_executing) | state.json | the structured blocks in progress.md (wave gate PASSED, Ralph iterations, QA results) | after each gate/loop |
 | `jira-comment.md.tmpl` (2d_prd-import, Mode B) | state.json + findings.json | status/PR-link/debt comments on tickets | sync-back (TODO) |
 | `agent-md-entry.md.tmpl` (5_executing) | learning (free text) + date + commit SHA | uniform agent.md entry block | on write — the one place where LLM content flows in, but inside a fixed frame |
@@ -1273,17 +1288,21 @@ controlled way:
 
 ### Morning Report
 
-At the end of every run (successful or stopped), a report is rendered
-from `state.json` + `findings.json` by a **template script**
+The cross-PROJ report is rendered from `state.json` + `findings.json` by a
+**template script** (`node runner/render-report.mjs morning specs`)
 (`specs/morning-report-<date>.md`): per PROJ status, PR link, gate/QA
 summary, deferred debt, known gaps, provider/model degradations
 (cross-review fallbacks), stop reports, cleanup list. It is
 the first thing the human reads in the morning — before the PRs.
 
-**Delivery:** the report file is canonical. At run end the runner sends
-a best-effort provider/OS notification with a one-liner status
-("2 PROJs done, 2 PRs open, 1 stop report") and the path to the report;
-notification failure never loses or invalidates the report.
+**Delivery:** a successful run ends in P8 with the PR open (waiting for
+merge) or the worktree removed; in both cases the runner does NOT render the
+report, because the filesystem must stay clean for post-merge cleanup. It
+prints and best-effort notifies a one-line summary instead (final CI head,
+PR, post-merge rerun command); the durable state is on the retained PROJ
+branch and in the PR body. The morning report file is rendered at run end only
+when neither applies, and otherwise on demand. A stopped run always renders
+its stop report. Notification failure never loses state.
 
 ---
 
@@ -1377,10 +1396,10 @@ agent-browser smoke tests.
 | Sonar | SonarQube Cloud, already set up (org/token/project) |
 | Execution mode | paired Claude + Codex lanes are the DEFAULT (one writer, one read-only peer); Mode 2 (shared-checkout team inside the writer lane, file-disjoint waves) as the cheap middle tier; Mode 3 (worktree writer processes + merge gate) opt-in, built only on telemetry evidence (Stage 4). Cost stays bounded via model tiering per role |
 | Parallelism cap | 3 (applies to Modes 2/3; framework.config, adjustable via telemetry) |
-| Skill numbering | dock on: `0a_product-vision`, `0c_bootstrap`, `0b_intake`, `2d_prd-import`, `cross-review`, `4a_checkpoint`, `4b_setup`, `8_delivery` |
+| Skill numbering | dock on: `0a_product-vision`, `0c_bootstrap`, `0b_intake`, `2d_prd-import`, `cross-review`, `8_delivery`; CP1 + P0 are subskills of `5_executing` |
 | PRD source | TWO modes, downstream identical. Mode A (DEFAULT): PRDs written directly into the repo (existing structure) — the new chain is tested in this mode first. Mode B (TODO, Stage 3): Jira import, created/enriched via Teklens (teklens.ai); local snapshot = working truth per run; Jira keys in commits/PRs; sync-back |
 | PRD ownership | PM PRDs are raw input: developers enrich with technical stories, re-cut into buildable PRDs (in Jira for Mode B), and OWN the selection of the story set sent into the agentic loop — the framework checks AC quality, not scope |
-| Morning report | file in `specs/` (canonical) + best-effort notification at run end |
+| Morning report | one-line summary + best-effort notification at run end; file in `specs/` rendered on demand (or at run end when P8 left neither an open PR nor a removed worktree) |
 | Minimalism ladder | Ponytail as a ready-made plugin on all active providers; same version/mode required when both are active, no own ladder, no double injection |
 | Context pack manifest | schema following the claude-skills frontmatter taxonomy, defined when building the injector (Stage 2) |
 | Cross-model review | symmetric provider-opposite review via our thin `cross-review`: Claude-authored → Codex, Codex-authored → authenticated isolated Claude with validated structured output, joint → both independently; required for Requirements/P6/P7 and automatic on saved concept/architecture/plan outputs; conservative default input cap, explicit diff omissions and Claude 10 MB stdin failure; any permitted model-opposite fallback is flagged, and same-model review never satisfies the gate; findings → ledger, blocking per §8 |

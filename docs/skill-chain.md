@@ -21,9 +21,7 @@ flowchart LR
   S2 -.discovery track.-> S2B[2b handoff-package]
   S2 --> S3[3 architecture]
   S3 --> S4[4 writing-plans]
-  S4 --> S4A[4a checkpoint CP1]
-  S4A --> S4B[4b setup P0]
-  S4B --> S5[5 executing]
+  S4 --> S5[5b executing-large-model: CP1 + P0 subskills, then waves]
   S5 --> S6[6 qa]
   S6 --> S7[7 documentation]
   S7 --> S8[8 delivery + CP2]
@@ -39,9 +37,9 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-Architecture (3) continues into writing-plans (4) and writing-plans into checkpoint (4a) without intermediate approval stops when their cross-reviews are clean; Checkpoint 1 is the single human approval of the planning package and cascades changes back into both. Either skill still stops on remaining Critical/High findings, open product decisions, or an explicit request to review one artifact alone. If planning exposes a PRD or architecture defect, it returns to the owning skill and its required cross-review before continuing to checkpoint.
+Architecture (3) continues into writing-plans (4) and writing-plans into Step 5 (`executing-large-model`, 5b) — which opens with Checkpoint 1 — without intermediate approval stops when their cross-reviews are clean; Checkpoint 1 is the single human approval of the planning package and cascades changes back into both. Either skill still stops on remaining Critical/High findings, open product decisions, or an explicit request to review one artifact alone. If planning exposes a PRD or architecture defect, it returns to the owning skill and its required cross-review before continuing to executing.
 
-`cross-review`, `5b_executing-large-model`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `5b_executing-large-model` is not a step of its own but a lean substitute for Step 5 on frontier models: identical gates and state contracts, procedure reduced to invariants. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_concept` as raw input.
+`cross-review`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. Step 5 has two skills with identical gates and state contracts: `5b_executing-large-model` is the default, with procedure reduced to invariants; `5_executing` is the full-procedure alternative for weaker writer models and hosts the shared subskills and scripts. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_concept` as raw input.
 
 ## Legacy PROJ Folders
 
@@ -83,23 +81,25 @@ After decomposition:
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |
 | 3 | architecture | Produce the PROJ technical architecture for developers |
 | 4 | writing-plans | Split independently verifiable stories into dependency-ordered waves; use expand–contract for wide migrations |
-| 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
-| 4b | setup | P0 once per PROJ: persistent PROJ worktree + branch/BASE_SHA, tool/auth preflight, reproducible dependency install, framework helpers synchronized from installed skills with an adaptation-protecting hash manifest |
-| 5 | executing | Delegate code/test/fix edits to workers, run TDD plus one wave-scoped Ralph pass and hard wave gates, then an integration-focused PROJ gate and direct Skill 6 handoff |
+| 5b | executing-large-model | Default Step 5: Checkpoint 1 and P0 through the subskills below, then the waves with the same state.sh, wave tag, wave-gate, Outer Ralph recovery, Quality Gate proof and Skill 6 handoff as `5_executing`; TDD choreography and persona reviews replaced by intent and invariants, workers tiered by `Complexity`, the strongest model leads |
+| 5 | executing | Full-procedure alternative for weaker writer models. Hosts the subskills: run Checkpoint 1 and P0 in subagents — `subskills/checkpoint.md` (structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved`; the user dialogue stays with the orchestrator; the same loop serves CP2 via delivery and bootstrap via intake) and `subskills/setup.md` (persistent PROJ worktree + branch/BASE_SHA, tool/auth preflight, reproducible dependency install, framework helpers synchronized from installed skills with an adaptation-protecting hash manifest) — then delegate code/test/fix edits to workers, run TDD plus one wave-scoped Ralph pass and hard wave gates, then an integration-focused PROJ gate and direct Skill 6 handoff |
 | 6 | qa | Run E2E QA, security, required six-persona opposite-provider evidence review, and simplicity review; strictly read-only finder in framework runs |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR body rendered from state.json + findings.json and declared external prerequisites in wave-gate-config.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 
 ## Framework Runs (Agent Workflow, Stage 1 + Stage 2)
 
-After `checkpoint` (4a) seals Checkpoint 1, the host-neutral phase runner
+After Step 5 seals Checkpoint 1 through the checkpoint subskill, the host-neutral phase runner
 (`runner/run-phase.sh auto <X> <theme>`) drives P0 → P5 → P6 → P7 → P8
 unattended — dual Claude + Codex lanes with a single writer-orchestrator per phase,
 `state.json`/`findings.json` as the only handoff, and a stop policy: a failed
 writer, timeout, unsealed phase, or red gate parks the run — rescue branch
 for uncommitted work, state moved to `blocked` with the exact cause, a
-rendered stop report — instead of continuing degraded. A rendered morning
-report closes every run. If the `codex` CLI is missing or unauthenticated,
+rendered stop report — instead of continuing degraded. A successful run ends
+in P8 with a one-line summary (final CI head, open PR or removed worktree, post-merge rerun command); the
+renderer is skipped there because the worktree must stay clean for post-merge
+cleanup. The cross-PROJ morning report is rendered on demand with
+`node runner/render-report.mjs morning specs`. If the `codex` CLI is missing or unauthenticated,
 the run degrades to single-provider with a model-opposite review lane —
 flagged in the morning report and PR body, never silent. See
 [runner/README.md](../runner/README.md) and CONCEPT.md for the full model.
@@ -116,8 +116,11 @@ P0 creates or resumes a persistent sibling worktree for `proj/PROJ-X`; the
 runner re-enters it before P5 and keeps it through P8. Source and dependencies
 are isolated. `.env.local` is an ignored symlink to the control checkout, while
 the development database and hosted-auth budget are explicitly shared. P8
-removes the worktree only after green final CI, an identical pushed upstream
-commit, and a clean tree; otherwise reports retain its path, cleanup reason,
+removes the worktree only once the PR is `MERGED` (authoritative `gh pr view`
+state), with green final CI on that exact head, an identical pushed upstream
+commit, and a clean tree. While the PR is open, P8 is done and waits: the
+worktree is kept for review follow-up and the summary prints the post-merge
+rerun command. Any other refusal retains its path, cleanup reason,
 and the safe P8 resume command that reseals before retrying cleanup.
 
 `worktree.sh with-shared-lock` is exclusive by default across worktrees for
@@ -158,12 +161,13 @@ Stage 2 adds the bootstrap and the full context system:
 - **`intake` (0b), once per repo:** scan → provenance-marked drafts of the
   curated docs baseline (PRODUCT, ARCHITECTURE, GUIDELINES, DESIGN-SYSTEM,
   components, security-baseline, test-conventions, root AGENTS.md) →
-  developer interview → checkpoint (4a) bootstrap reconcile → sealed
-  baseline commit (`intake-seal-check.sh`; no state.json — that is born
-  at CP1).
+  developer interview → checkpoint-subskill bootstrap reconcile → sealed
+  baseline commit (`intake-seal-check.sh`; no state.json — concept (1)
+  creates one per PROJ).
 - **Context bundles:** P0 compiles one canonical bundle per role from the
-  baseline (`compile-context-bundles.mjs`, per-role token budgets — a
-  breach FAILS P0) plus Claude/Codex projections with the same canonical
+  baseline (`compile-context-bundles.mjs`, per-role token budgets — a role
+  over budget is blocked: no bundle, recorded in `context/blocked-roles.json`,
+  never spawned, while fitting roles still compile) plus Claude/Codex projections with the same canonical
   hash. Claude subagents get their bundle via the SubagentStart hook
   (`context-injector.mjs`), codex lanes read `bundle-<role>.codex.md`;
   micro-fixer and explore spawns get nothing by design.
@@ -214,7 +218,6 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 
 | Skill | Purpose |
 |---|---|
-| 5b_executing-large-model | Drop-in Step 5 for frontier models: same state.sh, wave tag, wave-gate, Outer Ralph recovery, Quality Gate proof and Skill 6 handoff as `5_executing`, with TDD choreography and persona reviews replaced by intent and invariants (worker tiering by `Complexity` kept, strongest model leads and reviews); needs `5_executing` installed, selected in framework runs via `SKILLCHAIN_P5_SKILL` |
 | bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run at most three Ralph repair attempts, and explain why prior tests missed it; standalone evidence lives in `specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md` |
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
 | vibecoder | Freeform exploratory coding on a scratch branch with a live-appended journal, distilled at wrap-up into a `chain-input.md` feature seed for `1_concept` |

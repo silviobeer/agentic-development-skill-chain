@@ -7,9 +7,9 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 const inventory = [
-  ...["state.sh", "preflight.sh", "env-local.sh", "ponytail-check.sh", "compile-context-bundles.mjs", "context-injector.mjs", "worktree.sh", "validate-wave-plan.mjs", "migration-drift-check.sh", "sync-framework.mjs"].map(name => [`4b_setup/scripts/${name}`, `scripts/${name}`]),
-  ...["backend-implementer", "explore", "frontend-implementer", "implementer", "micro-fixer", "reviewer"].map(name => [`4b_setup/manifests/roles/${name}.md`, `templates/roles/${name}.md`]),
-  ["4a_checkpoint/templates/decisions.md.tmpl", "templates/decisions.md.tmpl"],
+  ...["state.sh", "preflight.sh", "env-local.sh", "ponytail-check.sh", "compile-context-bundles.mjs", "context-injector.mjs", "worktree.sh", "validate-wave-plan.mjs", "migration-drift-check.sh", "sync-framework.mjs"].map(name => [`5_executing/scripts/${name}`, `scripts/${name}`]),
+  ...["backend-implementer", "explore", "frontend-implementer", "implementer", "micro-fixer", "reviewer"].map(name => [`5_executing/manifests/roles/${name}.md`, `templates/roles/${name}.md`]),
+  ["5_executing/templates/decisions.md.tmpl", "templates/decisions.md.tmpl"],
   ...["cross-review.sh", "review-with-claude.sh", "review-with-codex.sh"].map(name => [`cross-review/scripts/${name}`, `scripts/${name}`]),
   ["cross-review/templates/cross-review-prompt.md.tmpl", "templates/cross-review-prompt.md.tmpl"],
   ...["ledger.mjs", "harvest-debt.sh"].map(name => [`6_qa/scripts/${name}`, `scripts/${name}`]),
@@ -33,6 +33,10 @@ function safePath(root, relative) {
   return current;
 }
 
+// Manifests written before CP1/P0 moved into 5_executing name the retired skill folders.
+const currentSource = source => String(source)
+  .replace(/^4b_setup\/(scripts|manifests)\//, "5_executing/$1/")
+  .replace(/^4a_checkpoint\/(scripts|templates)\//, "5_executing/$1/");
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const signature = file => fs.existsSync(file) ? hash(fs.readFileSync(file)) : null;
 
@@ -50,7 +54,7 @@ function main() {
       if (arg === "--skills-root") skills = path.resolve(value);
       else if (arg === "--target") target = path.resolve(value);
       else adopted.add(value);
-    } else throw new Error("Usage: node <installed>/4b_setup/scripts/sync-framework.mjs [--check] [--target REPO] [--skills-root SKILLS] [--adopt PATH]...");
+    } else throw new Error("Usage: node <installed>/5_executing/scripts/sync-framework.mjs [--check] [--target REPO] [--skills-root SKILLS] [--adopt PATH]...");
   }
   if (check && adopted.size) throw new Error("--check cannot adopt changes");
   for (const name of adopted) {
@@ -58,7 +62,7 @@ function main() {
   }
   target = fs.realpathSync(target);
   skills = fs.realpathSync(skills);
-  if (!fs.existsSync(path.join(skills, "4b_setup/scripts/sync-framework.mjs"))) throw new Error("invoke the installed synchronizer, or supply --skills-root pointing to an installed skill tree");
+  if (!fs.existsSync(path.join(skills, "5_executing/scripts/sync-framework.mjs"))) throw new Error("invoke the installed synchronizer, or supply --skills-root pointing to an installed skill tree");
   const git = (...command) => execFileSync("git", command, { cwd: target, encoding: "utf8" }).trim();
   if (fs.realpathSync(git("rev-parse", "--show-toplevel")) !== target) throw new Error("target must be the Git worktree root");
   const lock = git("rev-parse", "--path-format=absolute", "--git-path", "skillchain-helper-sync.lock");
@@ -77,7 +81,7 @@ function main() {
       if (!fs.statSync(from).isFile()) throw new Error(`installed helper missing: ${source}`);
       const bytes = fs.readFileSync(from);
       const sourceHash = hash(bytes), localHash = signature(to), old = previous.files[destination];
-      const oldIsValid = old && old.source === source && /^[a-f0-9]{64}$/.test(old.source_hash) && /^[a-f0-9]{64}$/.test(old.local_hash);
+      const oldIsValid = old && currentSource(old.source) === source && /^[a-f0-9]{64}$/.test(old.source_hash) && /^[a-f0-9]{64}$/.test(old.local_hash);
       const unchanged = oldIsValid && old.local_hash === localHash;
       const reviewed = unchanged && old.source_hash === sourceHash;
       const replaceable = localHash === null || localHash === sourceHash || (unchanged && old.local_hash === old.source_hash);

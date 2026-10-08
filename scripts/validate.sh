@@ -17,16 +17,14 @@ CORE_SKILLS=(
   2c_review-reconcile
   3_architecture
   4_writing-plans
-  4a_checkpoint
-  4b_setup
   5_executing
+  5b_executing-large-model
   6_qa
   7_documentation
   8_delivery
   cross-review
 )
 OPTIONAL_SKILLS=(
-  5b_executing-large-model
   bugfixing
   refactor-dreamer
   sonar-cli
@@ -62,6 +60,15 @@ check_skill_set() {
 check_skill_set codex
 check_skill_set claude
 
+# CP1 + P0 are subskills of executing: instruction files, not discoverable skills
+for platform in codex claude; do
+  for sub in checkpoint setup; do
+    file="$ROOT/$platform/skills/5_executing/subskills/$sub.md"
+    [ -f "$file" ] || fail "missing $file"
+    head -n 1 "$file" | grep -qx -- "---" && fail "$file must not carry skill frontmatter"
+  done
+done
+
 [ -f "$ROOT/CLAUDE.md" ] || fail "missing CLAUDE.md"
 grep -q 'AGENTS.md' "$ROOT/CLAUDE.md" || fail "CLAUDE.md must point to AGENTS.md"
 
@@ -95,26 +102,18 @@ check_identical() {
   done
 }
 check_identical "$ROOT/claude/skills/5_executing/scripts/wave-gate.sh" "$ROOT/codex/skills/5_executing/scripts/wave-gate.sh"
-check_identical "$ROOT/claude/skills/4b_setup/scripts/state.sh" \
-  "$ROOT/codex/skills/4b_setup/scripts/state.sh" \
-  "$ROOT/claude/skills/4a_checkpoint/scripts/state.sh" \
-  "$ROOT/codex/skills/4a_checkpoint/scripts/state.sh"
-check_identical "$ROOT/claude/skills/4b_setup/scripts/env-local.sh" \
-  "$ROOT/codex/skills/4b_setup/scripts/env-local.sh" \
-  "$ROOT/claude/skills/5_executing/scripts/env-local.sh" \
-  "$ROOT/codex/skills/5_executing/scripts/env-local.sh"
+check_identical "$ROOT/claude/skills/5_executing/scripts/state.sh" "$ROOT/codex/skills/5_executing/scripts/state.sh"
+check_identical "$ROOT/claude/skills/5_executing/scripts/env-local.sh" "$ROOT/codex/skills/5_executing/scripts/env-local.sh"
 check_identical "$ROOT/claude/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/7_documentation/scripts/curation-caps.sh" \
   "$ROOT/claude/skills/0b_intake/scripts/curation-caps.sh" \
   "$ROOT/codex/skills/0b_intake/scripts/curation-caps.sh"
 check_identical "$ROOT/claude/skills/4_writing-plans/scripts/validate-wave-plan.mjs" \
   "$ROOT/codex/skills/4_writing-plans/scripts/validate-wave-plan.mjs" \
-  "$ROOT/claude/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
-  "$ROOT/codex/skills/4a_checkpoint/scripts/validate-wave-plan.mjs" \
-  "$ROOT/claude/skills/4b_setup/scripts/validate-wave-plan.mjs" \
-  "$ROOT/codex/skills/4b_setup/scripts/validate-wave-plan.mjs"
-check_identical "$ROOT/claude/skills/4b_setup/scripts/worktree.sh" \
-  "$ROOT/codex/skills/4b_setup/scripts/worktree.sh" \
+  "$ROOT/claude/skills/5_executing/scripts/validate-wave-plan.mjs" \
+  "$ROOT/codex/skills/5_executing/scripts/validate-wave-plan.mjs"
+check_identical "$ROOT/claude/skills/5_executing/scripts/worktree.sh" \
+  "$ROOT/codex/skills/5_executing/scripts/worktree.sh" \
   "$ROOT/claude/skills/8_delivery/scripts/worktree.sh" \
   "$ROOT/codex/skills/8_delivery/scripts/worktree.sh"
 while IFS= read -r bugfix_file; do
@@ -125,12 +124,12 @@ check_identical "$ROOT/claude/skills/5b_executing-large-model/SKILL.md" \
   "$ROOT/codex/skills/5b_executing-large-model/SKILL.md"
 check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
-for f in 4b_setup/scripts/preflight.sh 4b_setup/scripts/sync-framework.mjs 4a_checkpoint/templates/decisions.md.tmpl \
-         4b_setup/scripts/ponytail-check.sh 4b_setup/scripts/compile-context-bundles.mjs \
-         4b_setup/scripts/context-injector.mjs 4b_setup/scripts/migration-drift-check.sh \
-         4b_setup/manifests/roles/micro-fixer.md 4b_setup/manifests/roles/implementer.md \
-         4b_setup/manifests/roles/frontend-implementer.md 4b_setup/manifests/roles/backend-implementer.md \
-         4b_setup/manifests/roles/reviewer.md 4b_setup/manifests/roles/explore.md \
+for f in 5_executing/scripts/preflight.sh 5_executing/scripts/sync-framework.mjs 5_executing/templates/decisions.md.tmpl \
+         5_executing/scripts/ponytail-check.sh 5_executing/scripts/compile-context-bundles.mjs \
+         5_executing/scripts/context-injector.mjs 5_executing/scripts/migration-drift-check.sh \
+         5_executing/manifests/roles/micro-fixer.md 5_executing/manifests/roles/implementer.md \
+         5_executing/manifests/roles/frontend-implementer.md 5_executing/manifests/roles/backend-implementer.md \
+         5_executing/manifests/roles/reviewer.md 5_executing/manifests/roles/explore.md \
          0b_intake/scripts/intake-seal-check.sh \
          cross-review/scripts/cross-review.sh cross-review/scripts/review-with-claude.sh \
          cross-review/scripts/review-with-codex.sh cross-review/templates/cross-review-prompt.md.tmpl \

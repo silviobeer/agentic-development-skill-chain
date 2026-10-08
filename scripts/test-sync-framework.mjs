@@ -15,7 +15,7 @@ try {
     const target = path.join(temp, `${provider}-project`);
     fs.mkdirSync(target);
     assert.equal(spawnSync("git", ["init", "-q", target]).status, 0);
-    const script = path.join(skills, "4b_setup/scripts/sync-framework.mjs");
+    const script = path.join(skills, "5_executing/scripts/sync-framework.mjs");
     const run = (...args) => spawnSync(process.execPath, [script, "--target", target, ...args], { encoding: "utf8" });
     const ok = (...args) => { const result = run(...args); assert.equal(result.status, 0, result.stderr); return result; };
     const bad = (pattern, ...args) => { const result = run(...args); assert.equal(result.status, 1); assert.match(result.stderr, pattern); };
@@ -30,6 +30,18 @@ try {
     fs.mkdirSync(lock); bad(/already locked/); assert.equal(fs.existsSync(lock), true); fs.rmdirSync(lock);
     const before = fs.readFileSync(manifest, "utf8");
     ok(); assert.equal(fs.readFileSync(manifest, "utf8"), before, "idempotent manifest");
+    // Manifests from before CP1/P0 moved into 5_executing must upgrade, not conflict.
+    const legacy = JSON.parse(before);
+    legacy.files["scripts/state.sh"].source = "4b_setup/scripts/state.sh";
+    legacy.files["templates/decisions.md.tmpl"].source = "4a_checkpoint/templates/decisions.md.tmpl";
+    fs.writeFileSync(manifest, JSON.stringify(legacy, null, 2) + "\n");
+    const stateSource = path.join(skills, "5_executing/scripts/state.sh");
+    const stateOriginal = fs.readFileSync(stateSource);
+    fs.appendFileSync(stateSource, "\n# upstream after the move\n");
+    ok(); assert.equal(fs.readFileSync(path.join(target, "scripts/state.sh"), "utf8"), fs.readFileSync(stateSource, "utf8"));
+    assert.equal(JSON.parse(fs.readFileSync(manifest, "utf8")).files["scripts/state.sh"].source, "5_executing/scripts/state.sh");
+    fs.writeFileSync(stateSource, stateOriginal); ok();
+    assert.equal(fs.readFileSync(manifest, "utf8"), before, "legacy manifest migrated");
     const source = path.join(skills, "5_executing/scripts/wave-gate.sh");
     const local = path.join(target, "scripts/wave-gate.sh");
     fs.appendFileSync(source, "\n# upstream v2\n");
@@ -37,7 +49,7 @@ try {
     ok(); assert.equal(fs.readFileSync(local, "utf8"), fs.readFileSync(source, "utf8"));
     fs.appendFileSync(local, "\n# project adaptation\n");
     const adapted = fs.readFileSync(local, "utf8");
-    fs.appendFileSync(path.join(skills, "4b_setup/scripts/state.sh"), "\n# new helper\n");
+    fs.appendFileSync(path.join(skills, "5_executing/scripts/state.sh"), "\n# new helper\n");
     const untouched = fs.readFileSync(path.join(target, "scripts/state.sh"), "utf8");
     bad(/no files changed/);
     assert.equal(fs.readFileSync(path.join(target, "scripts/state.sh"), "utf8"), untouched, "conflict must prevent partial updates");
@@ -61,7 +73,7 @@ try {
     const templates = path.join(target, "templates");
     fs.renameSync(templates, templates + "-real"); fs.symlinkSync(templates + "-real", templates);
     bad(/symlink/); fs.unlinkSync(templates); fs.renameSync(templates + "-real", templates);
-    fs.unlinkSync(path.join(skills, "4b_setup/scripts/state.sh"));
+    fs.unlinkSync(path.join(skills, "5_executing/scripts/state.sh"));
     bad(/ENOENT/); assert.equal(fs.existsSync(manifest), false);
     console.log(`${provider}: helper synchronization, upgrades, adaptation conflicts, adoption and path protection passed`);
   }

@@ -69,7 +69,7 @@ run_suite() {
   [[ $(wc -c <"$CASE_LOG") -eq 1 ]] || fail "$LABEL: blocked test ran or independent AC was skipped"
   expect_rc 76 run_gate
   ! grep -q 'Gate — PASSED' "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: blocked wave certified"
-  (cd "$CASE" && bash "$ROOT/$PLATFORM/skills/4b_setup/scripts/state.sh" init 1 test >/dev/null)
+  (cd "$CASE" && bash "$ROOT/$PLATFORM/skills/5_executing/scripts/state.sh" init 1 test >/dev/null)
   (cd "$CASE" && node "$ROOT/$PLATFORM/skills/8_delivery/scripts/render-pr-body.mjs" 1 test) >"$TMP/$PLATFORM-pr-body"
   (cd "$CASE" && node "$ROOT/runner/render-report.mjs" stop 1 test --reason "external prerequisite") >/dev/null
   (cd "$CASE" && node "$ROOT/runner/render-report.mjs" morning) >/dev/null

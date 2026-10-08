@@ -108,7 +108,7 @@ Use it sparingly. Good entries describe project-wide behavior that future implem
 
 Each PROJ is split into numbered waves by Step 4. Each wave contains one or more user stories. One story is one worker; the lead splits a story only when its plan header declares `Split: contract` (backend and frontend workers against `api-contracts.md`) or `Split: fan-out` (same-shaped units over disjoint files). An oversized story without such a marker is a planning defect for Step 4, not a runtime decision.
 
-On frontier models, `5b_executing-large-model` replaces this skill with the same inputs, outputs, and gates and less procedure; see [skill-chain.md](skill-chain.md#optional-skills).
+This page describes the full-procedure `5_executing`. The chain's default Step 5 is `5b_executing-large-model`, with the same inputs, outputs, and gates and less procedure; `5_executing` remains the choice for weaker writer models. See [skill-chain.md](skill-chain.md#step-roles).
 
 Before a wave starts:
 
