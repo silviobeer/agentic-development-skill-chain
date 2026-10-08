@@ -171,6 +171,9 @@ Stage 2 adds the bootstrap and the full context system:
   hash. Claude subagents get their bundle via the SubagentStart hook
   (`context-injector.mjs`), codex lanes read `bundle-<role>.codex.md`;
   micro-fixer and explore spawns get nothing by design.
+  The story itself is not in the bundle: each implementer's spawn prompt
+  embeds its section of the wave plan verbatim (`story-slice.mjs`), and the
+  lead reads only the Wave shape plus the current wave's plan.
 - **Ponytail parity:** the minimalism ladder comes from the Ponytail
   plugin on both providers — same version and mode, gated in the P0
   preflight. P0 leaves its matcher unset so generic implementation

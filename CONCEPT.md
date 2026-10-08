@@ -874,8 +874,8 @@ change what context a role receives.
 | Security baseline | — | ✅ |
 | Test conventions | ✅ | ✅ |
 | ground-file.md | ✅ | ✅ |
-| US + ACs + tasks | via spawn prompt (orchestrator, as today) ||
-| "what earlier waves built" | one-liner per US, generated from state.json ||
+| US + ACs + tasks | verbatim story slice of the own wave plan (`story-slice.mjs`) in the spawn prompt; never re-typed by the orchestrator ||
+| "what earlier waves built" | short summary by the orchestrator from progress.md ||
 | Folder agent.md | reading protocol (below), never injected ||
 | PRDs, full wave plans, architecture/* | path reference, on demand ||
 
@@ -1197,6 +1197,7 @@ response.
 | `compile-context-bundles.mjs` (5_executing) | root `AGENTS.md`, `docs/*`, `specs/PROJ-<X>-<theme>/*`, injection matrix §5 | one canonical bundle per role plus Claude/Codex projections | counts tokens and hashes both provider projections; exit ≠ 0 on budget breach or semantic drift |
 | `state.sh` (5_executing) | `get <path>` / `set <path> <value>` / `transition <phase> <status>` | state.json (validated) | sole write path to state.json; schema-validates; illegal phase transitions exit ≠ 0 |
 | `worktree.sh` (5_executing/8_delivery) | PROJ id, control checkout, state | persistent PROJ worktree lifecycle | creates/resumes safely; links ignored `.env.local`; installs from lockfile; reports conservative cleanup eligibility |
+| `story-slice.mjs` (5_executing) | wave plan + US ID | that story's `## <US-ID>` section, verbatim, to stdout | ends at the next `## ` heading outside code fences; exit ≠ 0 when the ID is missing or duplicated |
 | `validate-wave-plan.mjs` (4_writing-plans/5_executing) | wave plans + `wave-gate-config.json` | deterministic consistency verdict | validates unique AC mappings, bidirectional test files, broad regressions, auth budget, and protected-route coverage |
 | `wave-gate.sh` (5_executing, exists) | wave N, PROJ, config | gate verdict; PASSED block in progress.md; findings → ledger | runs current ACs + declared regressions, archives CodeRabbit evidence, checks cumulative blocking ledger, manages frontend readiness; red evidence → exit ≠ 0 |
 | `gen-component-registry.mjs` (5_executing) | `src/components/**`, `src/features/*/components/**` | `docs/components.md` | reads the doc block above each component export; `--check` exits ≠ 0 on a stale registry, a component without a doc block, or a component without its `id="<kebab-name>"` section on the showcase page (wave-gate step 6). The registry is never hand-written — one source, the component file |
