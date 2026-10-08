@@ -378,6 +378,8 @@ Also document the `### Simplicity Gate Results` for the PROJ:
 - Explicit statement if no release-blocking complexity was found
 - Simplification candidates that should become AGENTS.md rules if they are project-wide and repeatable
 
+Also document `### Spec vs Standards` (separate lists, no merged ranking): **Spec** = missing/partial/wrong requirements and scope creep against the PRDs, with the AC quoted; **Standards** = violations of `AGENTS.md`/documented conventions, with the rule cited. Carry over the Quality Gate's axis tags and add QA's own findings.
+
 Also document `### Sonar Quality Input`:
 - `ran` with counts by severity, or `skipped` with the exact reason from Skill 5
 - Any Sonar findings promoted to QA bugs, with BUG-IDs
@@ -425,6 +427,7 @@ Report to the user:
 - Total acceptance criteria: passed / failed
 - Bug count by severity
 - Security findings
+- Spec vs Standards: findings and worst issue per axis, reported separately
 - Simplicity gate findings and whether any release-blocking complexity remains
 - Sonar quality input: ran/skipped, blocking findings promoted to QA bugs
 - **QA persona cross-review:** provider, six persona results, degraded status, round result, and promoted findings.

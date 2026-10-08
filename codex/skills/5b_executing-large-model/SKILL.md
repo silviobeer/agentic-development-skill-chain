@@ -239,6 +239,8 @@ them and their `Status:` lines verbatim.
 
 ### Code Review
 Status: pending
+Spec: <findings, worst> — vs PRD/AC/plan
+Standards: <findings, worst> — vs AGENTS.md/conventions
 
 ### SonarCloud
 Status: pending

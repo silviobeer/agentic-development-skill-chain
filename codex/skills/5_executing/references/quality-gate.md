@@ -41,9 +41,15 @@ Review cross-wave integration across the feature diff: contracts between waves, 
    - **P2 Medium** — Code smell, maintainability concern → log for user decision
    - **P3 Low** — Style, naming, minor suggestion → log only
 
-4. Return confirmed P0/P1 to the coordinator. Wait for build, quality tests and Sonar results before the combined recovery round below; reviewers do not start an independent fix loop. Re-review the combined fix diff afterward.
+4. Tag every finding with one axis and report the two axes separately, never merged or reranked:
+   - **Spec** — diff vs. PRD/AC/wave plan: missing or partial requirement, wrong implementation, behavior nobody asked for (scope creep). Cite the PRD/AC line.
+   - **Standards** — diff vs. `AGENTS.md`, `docs/ARCHITECTURE.md` and other documented conventions; code smells are judgement calls. Cite the rule. Skip what tooling enforces.
 
-5. Log P2/P3 to `5_progress/PROJ-<X>-progress.md` under the Quality Gate section.
+   A change can pass one axis and fail the other; neither masks the other.
+
+5. Return confirmed P0/P1 to the coordinator. Wait for build, quality tests and Sonar results before the combined recovery round below; reviewers do not start an independent fix loop. Re-review the combined fix diff afterward.
+
+6. Log P2/P3 to `5_progress/PROJ-<X>-progress.md` under the Quality Gate section.
 
 ---
 
@@ -152,6 +158,8 @@ Update `5_progress/PROJ-<X>-progress.md` with a Quality Gate section after runni
 
 ### Code Review
 Status: passed
+Spec: 1 finding (worst: P1 AC-3 only partly implemented)
+Standards: 2 findings (worst: P2 data clump)
 | Severity | Found | Fixed | Deferred |
 |----------|:-----:|:-----:|:--------:|
 | P0 Critical | 0 | 0 | 0 |
