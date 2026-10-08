@@ -1,9 +1,9 @@
 ---
-name: ui-mockup
+name: prototyping
 description: "Create component-based or standalone HTML mockups, a visual sitemap, and a UI implementation handoff before requirements. Use after visual-companion and optional frontend-design when: (1) UI flows need to be visualized before requirements and architecture, (2) a page/screen sitemap is needed, (3) stakeholders need visual feedback before user stories are finalized. Not for: requirements, component libraries, technical architecture, or production UI code."
 ---
 
-# UI Mockup And Sitemap Generator
+# Prototyping: Mockups, Sitemap And Findings
 
 Create component-based or standalone HTML mockups and a visual sitemap from the concept and the approved Visual Companion decision. This skill is visual and structural only: no technical architecture and no acceptance criteria.
 
@@ -26,6 +26,7 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 - **Reuse:** Import existing components, patterns, tokens, styles, and the app shell when a usable app runtime exists. Mark new UI pieces as candidates.
 - **Lightweight:** Reuse the existing stack and preview tooling; no new dependencies, per-PROJ package installation, or mockup platform.
 - **Interactive when useful:** Demonstrate navigation, overlays, forms, and state changes with small local fixtures, not production business logic.
+- **Question-driven:** Name the open question each mockup round must answer (e.g. "Does the review state fit in the list row?") before building or iterating, and record the answer as a finding. Mockups are disposable decision aids: record what was learned, never port mockup code into production.
 - **Show states:** Include normal, empty, loading, error, and success states where relevant.
 - **Review annotations:** Put component reuse and source labels in a separate review area, not inside product buttons, fields, or other product copy.
 
@@ -33,12 +34,12 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 
 Choose and announce the execution mode separately from visual fidelity:
 
-- **Components (default with a usable app runtime):** Keep mockup screens, fixtures, and simulated interactions in `specs/PROJ-<X>-<theme>/1d_mockups/`, using the existing stack's source format (not necessarily React). Import real components and their styles/tokens. Reuse required UI providers, but do not mount providers or shells that trigger real authentication, data fetching, or writes; use existing presentation components and fixture seams instead.
+- **Components (default with a usable app runtime):** Keep mockup screens, fixtures, and simulated interactions in `specs/PROJ-<X>-<theme>/1d_prototypes/`, using the existing stack's source format (not necessarily React). Import real components and their styles/tokens. Reuse required UI providers, but do not mount providers or shells that trigger real authentication, data fetching, or writes; use existing presentation components and fixture seams instead.
 - **Standalone HTML (without a usable app runtime):** One self-contained HTML file per screen, inline CSS and small vanilla JavaScript, no external dependencies or build step. Reproduce documented visual patterns and label intended component reuse. This includes discovery with screenshots/design references but no source code.
 
 Inspect the existing start commands, routing, preview setup, imports, and provider requirements before choosing. Use an existing dev preview or Storybook when suitable; do not introduce Storybook. Reuse a running project dev server when available, otherwise start it with the existing project command and confirm the actual local URL. Never stop or replace a server owned by someone else.
 
-Keep only framework-required development entrypoints and minimal integration configuration outside the PROJ folder. For example, a development route at `/dev/mockups/proj-42` can import a screen from `1d_mockups/`. Use the framework's development-only mechanism and verify the mockup entry is inaccessible in production; hiding a navigation link is insufficient. Check imports, styles, and refresh/deep links through the real preview. If the toolchain excludes the PROJ folder, first try the smallest supported source/include or filesystem-access configuration change. If importing from that location still requires a second runtime or broad refactor, keep the sources in the PROJ folder and use the documented HTML fallback below; do not relocate them into production source directories.
+Keep only framework-required development entrypoints and minimal integration configuration outside the PROJ folder. For example, a development route at `/dev/mockups/proj-42` can import a screen from `1d_prototypes/`. Use the framework's development-only mechanism and verify the mockup entry is inaccessible in production; hiding a navigation link is insufficient. Check imports, styles, and refresh/deep links through the real preview. If the toolchain excludes the PROJ folder, first try the smallest supported source/include or filesystem-access configuration change. If importing from that location still requires a second runtime or broad refactor, keep the sources in the PROJ folder and use the documented HTML fallback below; do not relocate them into production source directories.
 
 Do not scaffold a second app or broadly refactor production components to make a mockup work. Diagnose startup failures and make bounded fixes within the existing preview setup. If no usable runtime remains, or component isolation/source placement requires a broad refactor, announce standalone HTML fallback and record the specific blocker, attempted remedy, and approximated components in the handoff. The fallback permits mockup review and subsequent requirements work, but does not count as a verified component preview. Existing HTML mockups need no automatic conversion.
 
@@ -145,7 +146,7 @@ If an app shell exists, use its presentation layout for every applicable mockup 
 
 ### 2. Create The Sitemap
 
-Create `specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html`.
+Create `specs/PROJ-<X>-<theme>/1d_prototypes/sitemap.html`.
 
 The sitemap must show:
 
@@ -159,7 +160,7 @@ Use plain HTML/CSS boxes and links. Each sitemap box links to its HTML screen fi
 
 ### 3. Create Screen Mockups
 
-Create the screen sources in `specs/PROJ-<X>-<theme>/1d_mockups/` using the selected execution mode. Reuse shared compositions rather than duplicating an app shell per screen.
+Create the screen sources in `specs/PROJ-<X>-<theme>/1d_prototypes/` using the selected execution mode. Reuse shared compositions rather than duplicating an app shell per screen.
 
 Each mockup includes:
 
@@ -202,12 +203,14 @@ Open the mockups in a browser, verify the linked screens and relevant states/int
 
 Stakeholders typically iterate here by prompting changes directly into the mockups until everyone agrees. Treat this as the primary working loop, not a single pass. Apply requested changes, present the updated mockups, and repeat until the user signals agreement.
 
-**Track every change** so the agreed result can later flow back into the concept. Maintain `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md` and append an entry per iteration round:
+**Track every change** so the agreed result can later flow back into the concept. Maintain `specs/PROJ-<X>-<theme>/1d_prototypes/iteration-log.md` and append an entry per iteration round:
 
 ```markdown
 # Mockup Iteration Log — PROJ-<X> <theme>
 
 ## Iteration <N> — <date>
+- Question: <what this round had to answer>
+- Finding: <the answer and deciding reason>
 - Change: <what changed in the mockup>
 - Driver: <stakeholder feedback | own decision | open question resolved>
 - Affects concept: yes (scope) | yes (behavior) | no (presentation-only)
@@ -218,14 +221,14 @@ Classify each change's `Affects concept` field honestly: only scope or behavior 
 
 Do not edit the concept doc from this skill. Capture changes in the log; reconciliation happens in `concept-sync`.
 
-For external handoff of component mockups, capture the approved screens and relevant states under `1d_mockups/screenshots/` and describe their flows in the implementation handoff. Map captures to screens/states and refresh affected captures after iterations. If browser capture is unavailable, record the missing evidence; do not claim the external package is ready. Do not write a second HTML implementation for export. Only `handoff-package` creates a new dated package from these source artifacts.
+For external handoff of component mockups, capture the approved screens and relevant states under `1d_prototypes/screenshots/` and describe their flows in the implementation handoff. Map captures to screens/states and refresh affected captures after iterations. If browser capture is unavailable, record the missing evidence; do not claim the external package is ready. Do not write a second HTML implementation for export. Only `handoff-package` creates a new dated package from these source artifacts.
 
 ### 5. Create The Implementation Handoff
 
 Create:
 
 ```text
-specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md
+specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md
 ```
 
 Required structure:
@@ -353,7 +356,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

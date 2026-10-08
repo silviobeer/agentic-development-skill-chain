@@ -14,7 +14,7 @@ DRY. YAGNI. TDD. Frequent commits.
 Read both sources:
 - Architecture: `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` (cross-PRD tech design)
 - All PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (requirements per feature)
-- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+- For UI PROJs, UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
 - If present, `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md` (DDL/trigger/validation detail behind a data-migration decision)
 
 The architecture is the source of cross-cutting decisions (data model, tech decisions, dependencies). Each PRD is the source of its user stories and acceptance criteria. The UI implementation handoff is the source for project mode, component reuse, new component candidates, design tokens, interaction contract, and mockup tolerance. The migration-design note, if present, is the source of migration-level SQL/trigger detail — cite it by decision, do not copy it.
@@ -35,7 +35,7 @@ Plans are written one PROJ at a time. If the architecture or concept references 
 
 - Read architecture file
 - Read every PRD in `2_PRDs/`
-- If UI work exists, read `1d_mockups/implementation-handoff.md` and extract the implementation-facing UI constraints.
+- If UI work exists, read `1d_prototypes/implementation-handoff.md` and extract the implementation-facing UI constraints.
 - Extract **all** user stories and acceptance criteria verbatim. Give every story
   the canonical ID `PROJ-<X>-PRD-<Y>-US-<Z>` and every criterion the globally
   unique ID `PROJ-<X>-PRD-<Y>-US-<Z>-AC-<N>`; the text remains verbatim.
@@ -53,18 +53,18 @@ Plans are written one PROJ at a time. If the architecture or concept references 
 
 User stories from **all PRDs** go into one dependency graph. Cross-PRD dependencies are allowed (e.g. `PROJ-1-PRD-2-US-1` depends on `PROJ-1-PRD-1-US-1`).
 
+Before placing a story, check that completing it produces one independently verifiable outcome through every layer it needs. Do not turn one user behaviour into separate schema, API, and UI stories just to create parallel work; those are tasks within the story. Backend-only and enabling stories can qualify when their observable contract is testable. If a PRD story has no outcome that can be verified on its own, return it to `requirements-engineer` for revision and its required PRD cross-review, then re-check any affected architecture before resuming the plan. Do not silently change binding PRD text here.
+
 Determine **waves** — groups of user stories that can run in parallel because none of them depend on each other and all their prerequisites are complete.
 
 ```
-Wave 1: PROJ-<X>-PRD-1-US-1 (backend), PROJ-<X>-PRD-2-US-1 (backend)
-  → parallel, no dependencies
-Wave 2: PROJ-<X>-PRD-1-US-2 (frontend), PROJ-<X>-PRD-2-US-2 (frontend)
-  → depend on Wave 1
-Wave 3: PROJ-<X>-PRD-1-US-3 (full-stack)
-  → depends on Wave 2
+Wave 1: PROJ-<X>-PRD-1-US-1 — list orders end to end (verifiable on its own)
+Wave 2: PROJ-<X>-PRD-1-US-2 — cancel a listed order end to end (depends on Wave 1)
 ```
 
 Record the dependency analysis — you will put it into the first wave plan as a reference.
+
+**Wide migration exception:** A mechanical change spanning many callers may not have a useful vertical slice. When the architecture calls for such a migration, plan `expand → migrate → contract`: add the new form alongside the old, migrate callers in bounded batches with explicit blocking edges, then remove the old form only after every batch is complete. If these stages lack PRD stories and ACs, return to `requirements-engineer` and its required cross-review; do not invent plan-only stories. Each wave must still pass its AC and regression gates. If intermediate waves cannot stay green, return to `architecture` to revise the migration design and repeat its cross-review before replanning; do not waive the wave gate.
 
 **Append the wave shape to the architecture delta.** Other stories' wave plans are
 never injected into an implementer's context bundle (by design — see
@@ -157,7 +157,7 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 **UI Implementation Notes:** (only for frontend or full-stack scope)
 - Project mode: greenfield | brownfield | hybrid
-- Mockup reference: screen/source and preview location from `1d_mockups/implementation-handoff.md` (legacy HTML file references remain valid)
+- Mockup reference: screen/source and preview location from `1d_prototypes/implementation-handoff.md` (legacy HTML file references remain valid)
 - Selected direction: [from Visual Companion / implementation handoff]
 - Reuse: [existing components from handoff and `docs/components.md`]
 - Create new: [component candidates + one-line justification]
@@ -459,20 +459,20 @@ regressions and identifying auth consumption require planning judgment.
 After writing all wave files, review them with fresh eyes:
 
 1. **Placeholder scan:** Any "TBD", "TODO", incomplete descriptions, vague behaviour?
-2. **AC coverage:** Every AC from every PRD is covered by at least one task across the waves?
+2. **AC coverage and story outcome:** Is every AC covered by a task, and does each story deliver an independently verifiable behaviour or contract rather than only one technical layer? For a wide migration, are expand, migrate, and contract ordered so every intermediate wave stays green?
 3. **Task decomposition:** Each task completable in under an hour? A task whose "What to build" needs more than a short paragraph, or that quotes literal SQL/DDL/trigger bodies instead of describing the resulting behaviour, is over-specified — split it or move the detail to `migration-design.md` and cite it ("per migration-design.md Decision 3") instead of restating it.
-3a. **Story size:** One story is one worker, and its tasks may share files, so they never run in parallel — by design. A story that would dominate its wave (roughly twice the work of its siblings, or more than about six tasks) is a planning defect, not an execution problem: cut it into two stories with an explicit dependency so the wave mechanism parallelizes them with ownership and gates intact. Runtime splitting is allowed only where the story header says `Split: contract` (full-stack, contract in `api-contracts.md`) or `Split: fan-out` (same-shaped units over disjoint files); everything else stays one worker.
+3a. **Story size:** One story is one worker, and its tasks may share files, so they never run in parallel — by design. If a story would dominate its wave (roughly twice the work of its siblings, or more than about six tasks), first place it in its own wave or use a declared split where ownership is genuinely disjoint. `Split: contract` requires the full-stack contract in `api-contracts.md`; `Split: fan-out` requires same-shaped units over named disjoint file sets. Otherwise the story stays with one worker. If it still exceeds one worker's scope, return it to `requirements-engineer` to split the PRD story and ACs and complete the required PRD cross-review before replanning.
 4. **Type consistency:** File paths match the project structure?
 5. **Dependency check:** Can each wave actually run after its predecessors?
 6. **No vague instructions:** Every "What to build" has concrete inputs/outputs?
 7. **Cross-PRD consistency:** If two user stories in the same wave touch the same file/module, is that flagged?
 8. **Post-Wave Notes placeholder:** Every US has the empty `### Post-Wave Notes` block for Skill 7's documentation harvest.
 9. **Components-section complete:** every UI task declares `Reuse:` and `Create new:`. Registry `docs/components.md` is freshly generated (`node scripts/gen-component-registry.mjs`), and every `Create new:` names the semantic neighbours checked against it (Badge/Chip/Tag, Card/Panel, Drawer/Sheet) and why none fit. A new component without that comparison is an unreviewed duplicate risk — the cheapest place to catch it is here, before anyone writes code.
-10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `1d_mockups/implementation-handoff.md`; every UI task carries the relevant constraints.
+10. **UI handoff propagated:** every frontend/full-stack US includes UI Implementation Notes from `1d_prototypes/implementation-handoff.md`; every UI task carries the relevant constraints.
 11. **No narrated-diff scaffolding:** no "Post-cross-review addition," "Post-cross-review correction," "an earlier draft," or similar language in any task. Feedback is reconciled by rewriting the task as if correct the first time; review-round history stays in the cross-review output, not the plan.
 12. **Wave shape appended to the delta:** `architecture-delta.md` has a `## Wave shape` section covering every wave in this PROJ.
 
-Fix issues inline. Move on.
+Fix plan-only issues inline. Return PRD or architecture defects to their owning skill and repeat its required cross-review before regenerating plans.
 
 **Config consistency check:** every wave plan has an `Execution` block;
 `wave-gate-config.json` has one entry per wave; every AC ID occurs exactly once;
@@ -536,7 +536,8 @@ approved together at Checkpoint 1 (4a), which auto-approves when both
 cross-reviews are already clean and otherwise walks the package point by point.
 Then invoke **checkpoint** (4a) in the same session. Stop here only when
 Critical/High cross-review findings remain after round 3, a product decision is
-still open, or the user asked to review the plans on their own first.
+still open, a required PRD/architecture handback is unresolved, or the user
+asked to review the plans on their own first.
 
 Present the automatic cross-review result with the wave plans. Re-run the deterministic validator after user-requested changes before handoff.
 
@@ -550,7 +551,7 @@ Present the automatic cross-review result with the wave plans. Re-run the determ
 - Every frontend or full-stack US must include a **Smoke Test** section with route + verification. Backend-only US omit this.
 - ACs must be deterministically verifiable — Ralph loop checks each AC with actual test commands.
 - Every task must map to at least one AC.
-- One story, one worker. Split oversized stories in the plan, not at runtime; the only runtime splits are those declared via `Split: contract` / `Split: fan-out` in the story header.
+- One story, one worker. Move a large story to its own wave or use a declared `Split: contract` / `Split: fan-out` where valid; return it to `requirements-engineer` only when it still exceeds one worker's scope.
 - Waves must respect the dependency graph: no US in wave N+1 depends on a US in wave N that hasn't completed.
 - Cross-PROJ prerequisites must be satisfied before scheduling dependent current-PROJ stories.
 - Frontend/full-stack tasks must not rely on raw mockup source interpretation alone; they must include the explicit UI handoff constraints.
@@ -592,7 +593,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

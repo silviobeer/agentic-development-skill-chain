@@ -33,7 +33,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 1 | `brainstorming` | Clarify the problem (or use a supplied brief), then compare directions, allocate PROJ-X, and write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
-| 1d | `ui-mockup` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |
+| 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |
 | 1e | `concept-sync` (opt) | Reconcile iterated mockups back into the concept |
 | 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases, required opposite-provider review before handoff |
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |

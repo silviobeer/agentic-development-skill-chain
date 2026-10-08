@@ -11,7 +11,7 @@ CORE_SKILLS=(
   1b_visual-companion
   2_requirements-engineer
   1c_frontend-design
-  1d_ui-mockup
+  1d_prototyping
   1e_concept-sync
   2b_handoff-package
   2c_review-reconcile

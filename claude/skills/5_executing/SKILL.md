@@ -253,9 +253,9 @@ Read the following before starting each PROJ:
 **Wave plans** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
 - The user stories in that wave (may span multiple PRDs)
 - Tasks per US with TDD cycle descriptions and file paths
-- For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `1d_mockups/implementation-handoff.md`
+- For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `1d_prototypes/implementation-handoff.md`
 
-**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
+**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
 
 The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating mockups as pixel-perfect production specs. Resolve screen sources and preview instructions from the handoff (legacy HTML references remain valid). Component mockup code does not replace production implementation or required tests.
 
@@ -397,7 +397,7 @@ Pass to each teammate (via `references/implementer.md` template):
 - Codebase context + conventions
 - What previous waves implemented
 - Relevant sections from `agent.md`
-- **If the US touches UI:** include the relevant `UI Implementation Notes` from the wave plan and the matching sections from `1d_mockups/implementation-handoff.md`:
+- **If the US touches UI:** include the relevant `UI Implementation Notes` from the wave plan and the matching sections from `1d_prototypes/implementation-handoff.md`:
   - Project mode (`greenfield`, `brownfield`, `hybrid`)
   - Mockup file reference and selected UI direction
   - Existing components/tokens to reuse
@@ -759,7 +759,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

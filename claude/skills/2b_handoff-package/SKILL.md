@@ -38,8 +38,8 @@ Read these inputs (the same PROJ locations on both delivery tracks):
 2. PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`
 3. Review changelog (if present): `specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
 4. Review decision records (if present): `specs/PROJ-<X>-<theme>/2_PRDs/*-review-decisions.md`
-5. Mockups + sitemap + UI handoff: read `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md` for execution mode and screen/source references, plus `sitemap.html`. Legacy handoffs without runtime metadata use the existing screen HTML files. For component mode, also read the mapped screenshots and flow descriptions.
-6. Iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
+5. Mockups + sitemap + UI handoff: read `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md` for execution mode and screen/source references, plus `sitemap.html`. Legacy handoffs without runtime metadata use the existing screen HTML files. For component mode, also read the mapped screenshots and flow descriptions.
+6. Iteration log: `specs/PROJ-<X>-<theme>/1d_prototypes/iteration-log.md`
 7. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 8. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 9. Optional brownfield as-is reference: `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
@@ -83,7 +83,7 @@ Use the local current date for `YYYY-MM-DD`. If `YYYY-MM-DD-handoff/` already ex
 
 Copy the mode-appropriate visual references described below, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `2_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `2_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
 
-**Component mockups:** The original interactive preview requires the project runtime; the package does not promise a runnable demo. Package the current approved screen/state screenshots and the implementation handoff’s `Flow Descriptions` instead. Do not copy component source files, fixtures, or the application into the package, install dependencies, or rebuild the UI as HTML. If captures or flow coverage are missing/stale, have `ui-mockup` refresh those source artifacts before completing the package. Only this skill writes the dated package run.
+**Component mockups:** The original interactive preview requires the project runtime; the package does not promise a runnable demo. Package the current approved screen/state screenshots and the implementation handoff’s `Flow Descriptions` instead. Do not copy component source files, fixtures, or the application into the package, install dependencies, or rebuild the UI as HTML. If captures or flow coverage are missing/stale, have `prototyping` refresh those source artifacts before completing the package. Only this skill writes the dated package run.
 
 In the packaged sitemap and handoff, replace required localhost/repository links with relative links to the captured screens and flow descriptions. Keep original source paths, start instructions, and preview URLs only as clearly labeled provenance text requiring the original project, not as package navigation. Preserve screen/state mapping and explicitly label the exported references as static. HTML-mode mockups remain copied as standalone interactive files. Verify each packaged screen reference is usable offline.
 
@@ -291,7 +291,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

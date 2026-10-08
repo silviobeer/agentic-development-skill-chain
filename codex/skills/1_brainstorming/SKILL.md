@@ -47,7 +47,7 @@ Later skills consume this artifact:
 
 - `visual-companion` uses it to explore UI layout shape.
 - `frontend-design` uses the selected UI direction when design language is needed.
-- `ui-mockup` uses it plus visual/design decisions to create component-based or standalone HTML mockups and implementation handoff.
+- `prototyping` uses it plus visual/design decisions to create component-based or standalone HTML mockups and implementation handoff.
 - `requirements-engineer` uses it to write PRDs, user stories, acceptance criteria, and edge cases.
 - `architecture` uses it with PRDs to write PROJ-level technical design.
 - `writing-plans`, `executing`, `qa`, and `documentation` rely on its scope boundaries and project identity.
@@ -97,7 +97,7 @@ The concept document must provide enough product-level input for downstream skil
 
 ### Mockup-Relevant Inputs
 
-For UI features, brainstorming may record product vocabulary, required high-level states, content examples, and existing behavior to preserve. It must not create screen lists, sitemaps, component reuse decisions, visual styling, or UI implementation handoff; those belong to `visual-companion`, `frontend-design`, and `ui-mockup`.
+For UI features, brainstorming may record product vocabulary, required high-level states, content examples, and existing behavior to preserve. It must not create screen lists, sitemaps, component reuse decisions, visual styling, or UI implementation handoff; those belong to `visual-companion`, `frontend-design`, and `prototyping`.
 
 ## Downstream Boundary
 
@@ -120,7 +120,7 @@ Brainstorming must produce the inputs later skills need without doing their work
 
 - UI container decisions such as sidepanel, modal, drawer, split view, wizard, or dedicated page. That belongs to `visual-companion`.
 - Visual design language, colors, typography, spacing, or style direction. That belongs to `frontend-design`.
-- Screen-by-screen mockups, sitemap, detailed states, component reuse labels, or UI implementation handoff. That belongs to `ui-mockup`.
+- Screen-by-screen mockups, sitemap, detailed states, component reuse labels, or UI implementation handoff. That belongs to `prototyping`.
 - User stories, acceptance criteria, or detailed edge-case matrices. That belongs to `requirements-engineer`.
 - Technical architecture, data model design, API design, package choices, or implementation strategy. That belongs to `architecture` and later planning.
 - Wave plans, tasks, tests, file ownership, or production code. That belongs to `writing-plans` and `executing`.
@@ -174,7 +174,7 @@ specs/PROJ-<X>-<theme>/0_context/references/        # screenshots, exported styl
 Downstream consumers:
 
 - `visual-companion` uses it to ground layout exploration in the existing shell.
-- `ui-mockup` uses it in **design-system mode** to adopt existing tokens, components, and patterns (there is no `tailwind.config` to scan on this track).
+- `prototyping` uses it in **design-system mode** to adopt existing tokens, components, and patterns (there is no `tailwind.config` to scan on this track).
 - `handoff-package` folds it into the standalone package so external readers see the as-is starting point.
 
 Record in the concept's `Project Context` that `0_context/existing-state.md` exists and is the source of as-is truth.

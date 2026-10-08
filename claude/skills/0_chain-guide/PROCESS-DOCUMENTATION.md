@@ -9,7 +9,7 @@ This document is the expanded process reference for `chain-guide`. The executabl
 1   brainstorming            Create the approved feature concept
 1b  visual-companion         Explore UI shape for UI features
 1c  frontend-design          Define or extend the design language when needed
-1d  ui-mockup                Create sitemap, mockups, and UI implementation handoff
+1d  prototyping                Create sitemap, mockups, and UI implementation handoff
 2   requirements-engineer    Write PRDs, user stories, acceptance criteria, and edge cases
 3   architecture             Produce PROJ-level technical architecture
 4   writing-plans            Split implementation into waves
@@ -30,7 +30,7 @@ specs/PROJ-<X>-<theme>/
   1_brainstorm/         Step 1  concept
   1b_visual-companion/  Step 1b layout exploration and decision
   1c_design/            Step 1c design language or design delta
-  1d_mockups/           Step 1d sitemap, mockups, implementation handoff
+  1d_prototypes/           Step 1d sitemap, mockups, implementation handoff
   2_PRDs/               Step 2  PRDs
   2b_handoff/           Step 2b standalone handoff package runs
   3-4_plan/             Steps 3+4 architecture and wave plans
@@ -53,7 +53,7 @@ together. Product-level artifacts live outside the PROJ folder —
 | 1 | `brainstorming` | Required | `1_brainstorm/PROJ-<X>-concept.md` |
 | 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
-| 1d | `ui-mockup` | UI only | `1d_mockups/sitemap.html`, component or standalone HTML screen sources, `implementation-handoff.md` (runtime + screen references) |
+| 1d | `prototyping` | UI only | `1d_prototypes/sitemap.html`, component or standalone HTML screen sources, `implementation-handoff.md` (runtime + screen references) |
 | 1e | `concept-sync` | After mockup iterations | reconciled `1_brainstorm/PROJ-<X>-concept.md` |
 | 2 | `requirements-engineer` | Required, including opposite-provider PRD review | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
 | 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
@@ -75,11 +75,11 @@ architecture, and plans; it is not a step anyone routes to.
 
 `visual-companion` decides the UI shape and project mode:
 
-- `greenfield`: run `frontend-design`, then `ui-mockup`
-- `hybrid` with design/component gaps: run `frontend-design` lightly, then `ui-mockup`
-- `brownfield`: skip `frontend-design` and run `ui-mockup`
+- `greenfield`: run `frontend-design`, then `prototyping`
+- `hybrid` with design/component gaps: run `frontend-design` lightly, then `prototyping`
+- `brownfield`: skip `frontend-design` and run `prototyping`
 
-`ui-mockup` produces the handoff required by requirements, architecture, planning, and execution. It must identify component reuse, new component candidates, design tokens, interaction contract, demo-only mockup parts, and implementation tolerance.
+`prototyping` produces the handoff required by requirements, architecture, planning, and execution. It must identify component reuse, new component candidates, design tokens, interaction contract, demo-only mockup parts, and implementation tolerance.
 
 ## Decomposed PROJs
 

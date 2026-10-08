@@ -46,7 +46,7 @@ Artifact handling:
 
 - Write the canonical design language to the first/current UI PROJ's `specs/PROJ-<X>-<theme>/1c_design/design-language.md`.
 - In the document, include a `## Applies To` section listing sibling PROJs that should consume it.
-- Later sibling PROJs should reference this canonical file from their Visual Companion, UI Mockup, PRD, architecture, and plan artifacts.
+- Later sibling PROJs should reference this canonical file from their Visual Companion, Prototyping, PRD, architecture, and plan artifacts.
 - If a sibling needs a local deviation, write a short local `1c_design/design-delta.md` instead of creating a competing full design language.
 
 ## Input
@@ -300,7 +300,7 @@ Structure — three sections, in this order:
 
 1. **`#tokens` — Foundations.** `#colors` (swatch grid: token · class · hex, light and dark **side by side** — contrast breaks are only visible in comparison), `#typography` (every step rendered at size with its class next to it), `#spacing`, `#radius`, `#shadow`.
 2. **Components.** One section per registry entry, in **registry order (alphabetical)**, so a missing component is a visual diff and not a search. Each section carries: the purpose line verbatim from the doc block · the import line · one row per variant · one row per size · one row per state (incl. disabled, loading, error) · a `Don't:` example only where a real trap exists.
-3. **Patterns.** One section per entry under `## Patterns` in `docs/DESIGN-SYSTEM.md` — no more, no less, so the list stays self-limiting. Anchors `#pattern-<name>`. A one-line rule ("label above field, error below, submit bottom-right") does not produce identical screens; the rendered composition does. This is what stops `1d_ui-mockup` and P5 from inventing their own form layout per screen.
+3. **Patterns.** One section per entry under `## Patterns` in `docs/DESIGN-SYSTEM.md` — no more, no less, so the list stays self-limiting. Anchors `#pattern-<name>`. A one-line rule ("label above field, error below, submit bottom-right") does not produce identical screens; the rendered composition does. This is what stops `1d_prototyping` and P5 from inventing their own form layout per screen.
 
 **Anchors are the contract:** `id` = kebab-case of the registry name (`BulkBar` → `#bulk-bar`; patterns `#pattern-form`). Mockups, PRDs, and wave plans link straight to `/dev/components#bulk-bar`, so the registry needs no link column. `gen-component-registry.mjs --check` fails when a registered component has no section on the page — the showcase is the only one of the three artifacts that could otherwise rot in silence.
 
@@ -331,19 +331,19 @@ The design system is not sealed after this skill. When a later step needs a UI p
 4. Implement it with its doc block, regenerate `docs/components.md`, and add its showcase section under `id="<kebab-name>"` — the registry check fails without it. Touch `docs/DESIGN-SYSTEM.md` only if a *rule* changed — a new component is not a rule change; a new pattern is, and then it also needs its `#pattern-<name>` section.
 5. Only then use it in the mockup, plan, or implementation.
 
-Callers: `1d_ui-mockup` when a screen needs a `New candidate:` piece, and `5_executing` when a user story needs a component that does not exist. Both must extend the system rather than work around it.
+Callers: `1d_prototyping` when a screen needs a `New candidate:` piece, and `5_executing` when a user story needs a component that does not exist. Both must extend the system rather than work around it.
 
 ## Output
 
 The design language document at `specs/PROJ-<X>-<theme>/1c_design/design-language.md` (the rationale), `docs/DESIGN-SYSTEM.md` (the rules), `docs/components.md` (the inventory), the implemented components, and the showcase page (the proof). These become the reference for:
-- **Step 1d (UI Mockup):** Mockups use the defined colors, fonts, spacing, and reference catalog components by name
+- **Step 1d (Prototyping):** Mockups use the defined colors, fonts, spacing, and reference catalog components by name
 - **Step 3 (Architecture):** Tech design documents the inherited UI stack and references the design tokens
 - **Step 5 (Executing):** frontend-implementer composes catalog components instead of writing new UI
 - **Step 6 (QA):** ui-auditor checks compliance against the catalog, the registry, and the showcase route
 
 ## Handoff
 
-After the design language is approved, invoke `ui-mockup`. Do not invoke `requirements-engineer` directly from this skill; requirements must consume the approved mockups.
+After the design language is approved, invoke `prototyping`. Do not invoke `requirements-engineer` directly from this skill; requirements must consume the approved mockups.
 
 ## Rules
 
@@ -363,7 +363,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

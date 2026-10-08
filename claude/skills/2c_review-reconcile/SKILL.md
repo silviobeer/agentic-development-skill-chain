@@ -25,7 +25,7 @@ It produces a durable decision record, an explicit agenda of items that still ne
 
 - No PRDs exist yet — write them first with `requirements-engineer` (2).
 - The feedback is pure copyediting with no scope/behavior decisions (just edit the PRD directly).
-- The change is a fresh mockup iteration, not a PRD review — use `ui-mockup` (1d) + `concept-sync` (1e).
+- The change is a fresh mockup iteration, not a PRD review — use `prototyping` (1d) + `concept-sync` (1e).
 
 ## Core Principle
 
@@ -33,7 +33,7 @@ Decide before you edit. Capture every decision in a record **before** touching t
 
 Not every gap is the product owner's to decide. Some require engineering input (architecture, feasibility, effort, security). Those are **deferred to a developer meeting**, not force-decided — they stay open with a clear status and land on an agenda.
 
-`specs/PROJ-<X>-<theme>/2b_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `2_PRDs/`, `1d_mockups/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
+`specs/PROJ-<X>-<theme>/2b_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `2_PRDs/`, `1d_prototypes/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
 
 ## Decomposed PROJ Handling
 
@@ -47,7 +47,7 @@ Read these inputs:
 2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md`.
 3. The canonical scope/decisions source if one exists (e.g. the concept's decisions register or an explicitly supplied source document) — **read it first** so no decision contradicts a canonical rule.
 4. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (if it exists).
-5. Mockups: screen/source references in `1d_mockups/implementation-handoff.md` + `iteration-log.md`. Legacy handoffs without screen references use the existing screen HTML files.
+5. Mockups: screen/source references in `1d_prototypes/implementation-handoff.md` + `iteration-log.md`. Legacy handoffs without screen references use the existing screen HTML files.
 
 If the review references decision IDs, rules, or sections, resolve them in the source documents before interpreting the gap — an answer that violates a canonical rule is wrong even if it closes the gap.
 
@@ -93,7 +93,7 @@ Apply only **decided** items (deferred ones change nothing yet):
 
 - **PRDs are binding** — make the agreed edits precisely; align any contradicting lines (rules, open-decisions registers) in the same pass.
 - **Concept** — if one exists, reconcile scope/behavior changes (do not invent a concept if none exists; note that the future concept should carry the decision).
-- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `1d_mockups/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only. Keep screen references and flow descriptions current; refresh affected source screenshots when an external component handoff is maintained. Use the runtime and isolation rules from `ui-mockup` when reviewing changed component screens.
+- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `1d_prototypes/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only. Keep screen references and flow descriptions current; refresh affected source screenshots when an external component handoff is maintained. Use the runtime and isolation rules from `prototyping` when reviewing changed component screens.
 
 ### 5. Maintain The Handoff-Facing Changelog
 
@@ -160,7 +160,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

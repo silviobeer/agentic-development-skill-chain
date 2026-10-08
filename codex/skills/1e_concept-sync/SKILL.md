@@ -1,18 +1,18 @@
 ---
 name: concept-sync
-description: "Reconcile mockup iteration changes back into the concept before requirements. Use after ui-mockup when stakeholders have iterated on the mockups (changes prompted directly into the mockups) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-8 chain."
+description: "Reconcile mockup iteration changes back into the concept before requirements. Use after prototyping when stakeholders have iterated on the mockups (changes prompted directly into the mockups) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-8 chain."
 ---
 
 # Concept Sync — Reconcile Mockup Iterations Into The Concept
 
 During mockup review, stakeholders iterate by prompting changes directly into the mockups until everyone agrees. Those agreed changes drift away from the original concept. This skill closes that loop: it reads the tracked changes and updates the concept so the concept again reflects what was actually decided — before requirements are written.
 
-This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → ui-mockup ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
+This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → prototyping ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
 
 ## When To Use
 
-- Mockups in `1d_mockups/` were changed after the concept was approved.
-- `1d_mockups/iteration-log.md` exists with logged change entries.
+- Mockups in `1d_prototypes/` were changed after the concept was approved.
+- `1d_prototypes/iteration-log.md` exists with logged change entries.
 - The team has reached agreement on the mockups and wants the concept to match.
 - Requirements should be written next, and they must consume an up-to-date concept.
 
@@ -20,7 +20,7 @@ This is the bridge between visual iteration and `requirements-engineer`. It is t
 
 - The concept and mockups never diverged (no iteration happened).
 - The change log is empty.
-- You are still mid-iteration — keep iterating in `ui-mockup` first.
+- You are still mid-iteration — keep iterating in `prototyping` first.
 
 ## Decomposed PROJ Handling
 
@@ -35,9 +35,9 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. Mockup iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
-3. Current mockups: follow the screen/source references in `1d_mockups/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_mockups/`.
-4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+2. Mockup iteration log: `specs/PROJ-<X>-<theme>/1d_prototypes/iteration-log.md`
+3. Current mockups: follow the screen/source references in `1d_prototypes/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_prototypes/`.
+4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 
 If `iteration-log.md` does not exist but mockups clearly changed, reconstruct the change set by comparing the current mockups against the concept and ask the user to confirm what was decided. Then write the missing log so the trail is not lost.
@@ -146,7 +146,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

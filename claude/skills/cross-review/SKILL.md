@@ -56,7 +56,7 @@ layout decision, and design language over embedding every mockup HTML file:
 bash scripts/cross-review.sh requirements <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/2_PRDs/*.md \
   --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
-    specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md \
+    specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md \
   --author-provider <current-writer> --round 1
 ```
 

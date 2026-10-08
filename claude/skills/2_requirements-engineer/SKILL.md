@@ -1,6 +1,6 @@
 ---
 name: requirements-engineer
-description: "Create detailed feature PRDs with user stories, acceptance criteria, and edge cases after Visual Companion, optional Frontend Design, and UI Mockup. Use when: (1) an approved concept and optional UI mockups need to become structured PRDs, (2) user stories and acceptance criteria must be written, (3) edge cases must be identified. Not for: UI mockups, writing code, technical design, or debugging."
+description: "Create detailed feature PRDs with user stories, acceptance criteria, and edge cases after Visual Companion, optional Frontend Design, and Prototyping. Use when: (1) an approved concept and optional UI mockups need to become structured PRDs, (2) user stories and acceptance criteria must be written, (3) edge cases must be identified. Not for: UI mockups, writing code, technical design, or debugging."
 ---
 
 # Requirements Engineer
@@ -61,16 +61,16 @@ Requirements run one PROJ at a time. If the concept contains `Decomposition Cont
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. UI mockups: follow the screen/source references in `1d_mockups/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_mockups/`.
-3. Sitemap: `specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html`
-4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
+2. UI mockups: follow the screen/source references in `1d_prototypes/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_prototypes/`.
+3. Sitemap: `specs/PROJ-<X>-<theme>/1d_prototypes/sitemap.html`
+4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 6. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 7. Optional shared sibling design language referenced by the concept, layout decision, or mockup handoff
 
 For UI features, mockups and `implementation-handoff.md` are required inputs. They define screens, flows, states, component reuse, new component candidates, design tokens, the interaction contract, and implementation tolerance.
 
-If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `ui-mockup` first. Pure backend/API features may proceed directly from the concept.
+If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `prototyping` first. Pure backend/API features may proceed directly from the concept.
 
 ## Workflow
 
@@ -188,8 +188,8 @@ source file unless a disputed detail requires it:
 BASE="specs/PROJ-<X>-<theme>"
 GROUND_TRUTH=("$BASE/1_brainstorm/PROJ-<X>-concept.md")
 for candidate in \
-  "$BASE/1d_mockups/implementation-handoff.md" \
-  "$BASE/1d_mockups/sitemap.html" \
+  "$BASE/1d_prototypes/implementation-handoff.md" \
+  "$BASE/1d_prototypes/sitemap.html" \
   "$BASE/1b_visual-companion/layout-decision.md" \
   "$BASE/1c_design/design-language.md"; do
   [ ! -f "$candidate" ] || GROUND_TRUTH+=("$candidate")
@@ -249,7 +249,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

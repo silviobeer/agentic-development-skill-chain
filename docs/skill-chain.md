@@ -13,7 +13,7 @@ flowchart LR
   S1 --> S1B[1b visual-companion]
   S1 --> S2[2 requirements-engineer]
   S1B --> S1C[1c frontend-design]
-  S1C --> S1D[1d ui-mockup]
+  S1C --> S1D[1d prototyping]
   S1B --> S1D
   S1D -->|iterated| S1E[1e concept-sync]
   S1D --> S2
@@ -39,7 +39,7 @@ the discovery track skips 0c because there is no codebase.
 
 The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a **product discovery** track that stops at Step 2 and hands a PRD to a developer via Linear. See [PM / Product Discovery Chain](pm-chain.md).
 
-Architecture (3) continues into writing-plans (4) and writing-plans into checkpoint (4a) without intermediate approval stops when their cross-reviews are clean; Checkpoint 1 is the single human approval of the planning package and cascades changes back into both. Either skill still stops on remaining Critical/High findings, open product decisions, or an explicit request to review one artifact alone.
+Architecture (3) continues into writing-plans (4) and writing-plans into checkpoint (4a) without intermediate approval stops when their cross-reviews are clean; Checkpoint 1 is the single human approval of the planning package and cascades changes back into both. Either skill still stops on remaining Critical/High findings, open product decisions, or an explicit request to review one artifact alone. If planning exposes a PRD or architecture defect, it returns to the owning skill and its required cross-review before continuing to checkpoint.
 
 `cross-review`, `5b_executing-large-model`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `5b_executing-large-model` is not a step of its own but a lean substitute for Step 5 on frontier models: identical gates and state contracts, procedure reduced to invariants. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_brainstorming` as raw input.
 
@@ -47,7 +47,7 @@ Architecture (3) continues into writing-plans (4) and writing-plans into checkpo
 
 PROJ folders created before the layout rename use the old subfolder names
 (`2_visual-companion/` → `1b_visual-companion/`, `4_design/` → `1c_design/`,
-`5_mockups/` → `1d_mockups/`, `3_PRDs/` → `2_PRDs/`, `8_handoff/` →
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/`, `3_PRDs/` → `2_PRDs/`, `8_handoff/` →
 `2b_handoff/`, `6_plan/` → `3-4_plan/`, `7_progress/` → `5_progress/`).
 Every skill reads the legacy name when the current one is missing, keeps
 writing where the files already are, and offers the rename once. Nothing
@@ -63,7 +63,7 @@ After decomposition:
 - Each PROJ gets its own concept, PRDs, architecture, plans, execution, QA, and docs.
 - Downstream skills work one PROJ at a time and treat sibling PROJs as dependencies, context, or future scope.
 - `frontend-design` may be shared across tightly linked UI PROJs through one canonical `1c_design/design-language.md` with an `Applies To` section.
-- `visual-companion` and `ui-mockup` stay scoped to the current PROJ unless the user explicitly requests a combined UI review.
+- `visual-companion` and `prototyping` stay scoped to the current PROJ unless the user explicitly requests a combined UI review.
 
 ## Step Roles
 
@@ -76,13 +76,13 @@ After decomposition:
 | 1 | brainstorming | Clarify the problem or use a supplied brief, then compare directions and write a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
-| 1d | ui-mockup | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |
+| 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |
 | 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery endpoint or requested full-chain export) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |
 | 3 | architecture | Produce PM-friendly technical architecture |
-| 4 | writing-plans | Split work into wave-based implementation plans |
+| 4 | writing-plans | Split independently verifiable stories into dependency-ordered waves; use expand–contract for wide migrations |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |
 | 4b | setup | P0 once per PROJ: persistent PROJ worktree + branch/BASE_SHA, tool/auth preflight, reproducible dependency install, framework helpers synchronized from installed skills with an adaptation-protecting hash manifest |
 | 5 | executing | Delegate code/test/fix edits to workers, run TDD plus one wave-scoped Ralph pass and hard wave gates, then an integration-focused PROJ gate and direct Skill 6 handoff |

@@ -21,7 +21,7 @@ Inputs:
 - Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
 - Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`
 - Gate config in `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`
-- UI handoff in `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`, when the PROJ has UI work
+- UI handoff in `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`, when the PROJ has UI work
 
 Outputs:
 

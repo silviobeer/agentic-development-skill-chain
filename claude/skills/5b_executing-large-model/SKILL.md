@@ -99,7 +99,7 @@ expected to choose the concrete steps.
 - **Worker briefs.** A brief carries the story text, its acceptance criteria
   (verified by the lead, not the worker), the task list, the ownership set,
   the shared-resource rule, prior-wave summary, a pointer to `agent.md`, and
-  for UI stories a pointer to `1d_mockups/implementation-handoff.md` plus the
+  for UI stories a pointer to `1d_prototypes/implementation-handoff.md` plus the
   design-system baseline (`docs/DESIGN-SYSTEM.md`, `docs/components.md`) when
   no context bundle injects it. Do not paste framework skill files
   (Tailwind, Next.js) or generic checklists; the model knows the stack.
@@ -145,7 +145,7 @@ You own: <files/dirs>. Touch nothing else; escalate if you must.
 Shared resources: wrap every migration and auth-consuming command as
   scripts/worktree.sh with-shared-lock -- <cmd>. Do not start or stop a dev server.
 Prior waves: <one paragraph>. Notes: <path>/agent.md (read first, append walls).
-UI (if any): 1d_mockups/implementation-handoff.md; follow screen/source references
+UI (if any): 1d_prototypes/implementation-handoff.md; follow screen/source references
 and reuse registered components. Component mockups do not replace production
 implementation or required tests.
 

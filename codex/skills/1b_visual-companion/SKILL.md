@@ -32,7 +32,7 @@ Visual Companion normally runs for one PROJ at a time. If the concept says the s
 - Mention sibling PROJs only as context, dependencies, or future navigation/entry points.
 - Do not design screens or flows that belong to sibling PROJs unless the user explicitly asks for a combined UI review.
 - If several sibling PROJs are tightly linked in the same UI, the shared **design language** may be handled once by `frontend-design` for the PROJ family; this skill still records the current PROJ's layout decision.
-- Record any cross-PROJ UI dependency in `layout-decision.md` so `ui-mockup` and `requirements-engineer` do not accidentally absorb sibling scope.
+- Record any cross-PROJ UI dependency in `layout-decision.md` so `prototyping` and `requirements-engineer` do not accidentally absorb sibling scope.
 
 ## Required Outputs
 
@@ -100,7 +100,7 @@ decision here rather than assuming:
 
 > "This chain expects `docs/DESIGN-SYSTEM.md` (design rules, ≤80 lines) plus a
 > generated component registry — this repo has neither. Build the design system
-> in `1c_frontend-design`, or skip and let `ui-mockup` use greyscale wireframes?"
+> in `1c_frontend-design`, or skip and let `prototyping` use greyscale wireframes?"
 
 Skipping is a valid answer for a repo that predates the design system or hands
 the visual design to someone else. Record the answer under `## Design System
@@ -138,6 +138,8 @@ Examples:
 - "Does the feature belong in the existing dashboard shell or a focused workspace?"
 
 Document assumptions from the conversation in `layout-decision.md`.
+
+Phrase each decision as a **Decision Question the exploration must answer**, in one sentence, ending in a question mark and answerable by choosing among the approaches (e.g. "Does object detail open in a sidepanel, modal, or full page?"). Every approach, and every interactive element in the HTML, must help answer that question; drop variants and interactions that do not. State the question at the top of `layout-exploration.html` and in `layout-decision.md`.
 
 ### 4. Generate 3-4 Approaches
 
@@ -207,6 +209,9 @@ Use this structure:
 - Decision: build it in `1c_frontend-design` | skip knowingly (<one-line reason>) | already exists
 - Decided with the user on: <date>
 
+## Decision Question
+- <the question(s) this exploration answers>
+
 ## Layout Decision To Make
 - ...
 
@@ -243,6 +248,9 @@ Use this structure:
 - User answers:
 - Assumptions:
 
+## Finding
+<filled after the user chooses: the answer to the Decision Question, the deciding reason, and the variants rejected and why>
+
 ## Open Decisions For User
 - ...
 ```
@@ -268,11 +276,11 @@ Iterate by editing the same files. Do not create many `v2` files unless the user
 
 After the user chooses a direction:
 
-- Update `layout-decision.md` with `## Selected Direction`.
+- Update `layout-decision.md` with `## Selected Direction` and fill `## Finding` (answer to the Decision Question, deciding reason, rejected variants).
 - Then invoke `frontend-design` if the recorded `## Design System State` decision says to build it — the default for `greenfield`, and for `hybrid` with meaningful design-language gaps.
-- If the user chose to skip knowingly, go to `ui-mockup` directly and tell it to use greyscale wireframes.
-- Otherwise invoke `ui-mockup` directly for `brownfield`.
-- The selected layout direction is the required input for `ui-mockup`.
+- If the user chose to skip knowingly, go to `prototyping` directly and tell it to use greyscale wireframes.
+- Otherwise invoke `prototyping` directly for `brownfield`.
+- The selected layout direction is the required input for `prototyping`.
 
 Do NOT invoke `requirements-engineer`, `architecture`, or implementation directly from this skill.
 
@@ -285,15 +293,16 @@ Do not transition until the user has explicitly selected or approved a direction
 - **Return after generating.** The generated HTML is the start of the decision conversation, not the end of the skill.
 - **Interactive beats static.** Demonstrate panels, popups, drawers, tabs, and flow transitions with clickable HTML.
 - **Grounded in the app.** Existing routes, components, and navigation patterns are constraints, not afterthoughts.
-- **Coarse before detailed.** Decide containers, flow, and information hierarchy; leave detailed UI to `ui-mockup` and design language to `frontend-design`.
+- **Coarse before detailed.** Decide containers, flow, and information hierarchy; leave detailed UI to `prototyping` and design language to `frontend-design`.
 - **Decision-oriented.** The artifact should help the user pick a direction quickly.
+- **Question first, finding last.** The exploration exists to answer a stated Decision Question; the documented Finding is the output that survives. The HTML itself is discarded, never carried into production code.
 
 ## What This Step Does NOT Do
 
 | Concern | Handled by |
 |---|---|
 | Colors, typography, visual identity | `frontend-design` |
-| Detailed component-based or standalone HTML mockups | `ui-mockup` |
+| Detailed component-based or standalone HTML mockups | `prototyping` |
 | User stories and acceptance criteria | `requirements-engineer` |
 | Technical architecture | `architecture` |
 | Production implementation | `executing` |
@@ -304,7 +313,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/` → `1d_mockups/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 

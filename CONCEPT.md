@@ -229,7 +229,7 @@ rather than decided. Exactly one of the two paths.
 The repository's existing pre-PRD flow is preserved unchanged. A PROJ
 starts with `1_brainstorming`, optionally follows the UI branch
 (`1b_visual-companion` → optional `1c_frontend-design` →
-`1d_ui-mockup` → optional `1e_concept-sync`), and then runs
+`1d_prototyping` → optional `1e_concept-sync`), and then runs
 `2_requirements-engineer`. On the product-discovery track it may continue
 through `2b_handoff-package` and `2c_review-reconcile`, then stops; P3–P8
 never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
@@ -810,7 +810,7 @@ specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 1b_visual-companion/        ← UI structure exploration when applicable
 ├── 2_PRDs/                    ← requirements snapshot
 ├── 1c_design/                  ← optional design language
-├── 1d_mockups/                 ← mockups + implementation handoff when applicable
+├── 1d_prototypes/                 ← mockups + implementation handoff when applicable
 ├── 3-4_plan/                    ← architecture + wave plans + gate config
 ├── 5_progress/                ← progress, stop reports, autonomous log
 ├── 2b_handoff/                 ← generated discovery packages; immutable runs
