@@ -257,7 +257,7 @@ Read the following before starting each PROJ:
 
 **UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
 
-The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating HTML mockups as pixel-perfect production specs.
+The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating mockups as pixel-perfect production specs. Resolve screen sources and preview instructions from the handoff (legacy HTML references remain valid). Component mockup code does not replace production implementation or required tests.
 
 **When multiple PROJ plans are provided:** Execute one PROJ fully (all waves → Quality Gate → QA) before starting the next. Each PROJ has its own `5_progress/PROJ-<X>-progress.md`.
 
@@ -409,7 +409,7 @@ Pass to each teammate (via `references/implementer.md` template):
 - **If the US touches Tailwind CSS styling:** Include the contents of `~/.claude/skills/tailwind-css/SKILL.md`. Pass the relevant sections (responsive patterns, dark mode, class organisation, component patterns) so the teammate uses consistent utility classes and avoids conflicts.
 - **If the US involves Next.js App Router:** Include the contents of `~/.claude/skills/nextjs-app-router-patterns/SKILL.md`. Pass the relevant sections (Server vs. Client Components, data fetching, routing, caching) so the teammate follows App Router conventions and avoids common pitfalls (e.g. accidentally marking a Server Component as `'use client'`).
 
-**UI implementation rule:** Existing React components and design tokens take precedence over exact HTML mockup CSS. Preserve the selected layout direction and interaction contract; do not replace a sidepanel with a modal, a wizard with a single page, or a brownfield component with a one-off styled element unless the user explicitly approved that change.
+**UI implementation rule:** Existing app components and design tokens take precedence over standalone mockup approximations. Preserve the selected layout direction and interaction contract; do not replace a sidepanel with a modal, a wizard with a single page, or a brownfield component with a one-off styled element unless the user explicitly approved that change.
 
 Wait for all teammates in the wave to complete before running Outer Ralph. If integration or verification exposes a correction, dispatch it to a follow-up worker; do not absorb the edit into the lead. Clean up the team after each wave.
 

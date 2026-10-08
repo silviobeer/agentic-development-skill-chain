@@ -293,7 +293,7 @@ Do not transition until the user has explicitly selected or approved a direction
 | Concern | Handled by |
 |---|---|
 | Colors, typography, visual identity | `frontend-design` |
-| Detailed HTML mockups with polished styling | `ui-mockup` |
+| Detailed component-based or standalone HTML mockups | `ui-mockup` |
 | User stories and acceptance criteria | `requirements-engineer` |
 | Technical architecture | `architecture` |
 | Production implementation | `executing` |

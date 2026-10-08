@@ -157,13 +157,13 @@ When in doubt: **sonnet**. Only escalate to opus with a visible reason (name the
 
 **UI Implementation Notes:** (only for frontend or full-stack scope)
 - Project mode: greenfield | brownfield | hybrid
-- Mockup reference: `1d_mockups/<file>.html`
+- Mockup reference: screen/source and preview location from `1d_mockups/implementation-handoff.md` (legacy HTML file references remain valid)
 - Selected direction: [from Visual Companion / implementation handoff]
 - Reuse: [existing components from handoff and `docs/components.md`]
 - Create new: [component candidates + one-line justification]
 - Design tokens: [tokens/fonts/spacing to preserve]
 - Interaction contract: [required panels/modals/drawers/tabs/states/responsive behavior]
-- Implementation tolerance: existing React components and design tokens take precedence over exact HTML mockup CSS; preserve selected layout direction.
+- Implementation tolerance: existing app components and design tokens take precedence over standalone mockup approximations; preserve selected layout direction.
 
 ### Task PROJ-<X>-PRD-1-US-1-T1: [Component Name]
 **Fulfills:** PROJ-<X>-PRD-1-US-1-AC-1
@@ -553,7 +553,7 @@ Present the automatic cross-review result with the wave plans. Re-run the determ
 - One story, one worker. Split oversized stories in the plan, not at runtime; the only runtime splits are those declared via `Split: contract` / `Split: fan-out` in the story header.
 - Waves must respect the dependency graph: no US in wave N+1 depends on a US in wave N that hasn't completed.
 - Cross-PROJ prerequisites must be satisfied before scheduling dependent current-PROJ stories.
-- Frontend/full-stack tasks must not rely on raw HTML mockup interpretation alone; they must include the explicit UI handoff constraints.
+- Frontend/full-stack tasks must not rely on raw mockup source interpretation alone; they must include the explicit UI handoff constraints.
 
 ## Execution Handoff
 

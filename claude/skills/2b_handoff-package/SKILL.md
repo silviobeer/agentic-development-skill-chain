@@ -1,23 +1,23 @@
 ---
 name: handoff-package
-description: "Assemble a standalone, distributable handoff package from discovery artifacts for downstream UI/UX experts and developers. Use after requirements-engineer on the product discovery track when the concept, mockups, and PRDs must be packaged into one self-contained dated run folder (and ZIP) that external readers can consume without access to the rest of the repo. Produces a delta since the previous handoff, README index, manifest, single-source-of-truth scope/decisions doc, role-split UI and developer handoffs, copied mockups, and a paste-ready Linear import."
+description: "Assemble a standalone, distributable handoff package from discovery artifacts for downstream UI/UX experts and developers. Use after requirements-engineer when the concept, mockups, and PRDs must be packaged into one self-contained dated run folder (and ZIP) that external readers can consume without access to the rest of the repo. Produces a delta since the previous handoff, README index, manifest, single-source-of-truth scope/decisions doc, role-split UI and developer handoffs, mode-appropriate visual references."
 ---
 
-# Handoff Package — Standalone Discovery Deliverable
+# Handoff Package — Standalone External Deliverable
 
 Assemble everything decided during discovery — concept, mockups, iterations, PRDs — into one **standalone, self-contained package** that external readers can consume without access to the rest of the repository. The package serves two downstream audiences: an external **UI/UX expert** (e.g. a Figma design assignment) and **developers** (e.g. work imported into Linear).
 
-This is the terminal step of the product discovery track. It does not invent product decisions; it curates, deduplicates, and reframes existing artifacts so an outside reader can act on them.
+This is the terminal step of the product discovery track. It can also produce a requested external review package during the full chain without changing that delivery track or skipping subsequent steps. It does not invent product decisions; it curates, deduplicates, and reframes existing artifacts so an outside reader can act on them.
 
 ## When To Use
 
-- The discovery track reached approved PRDs (`requirements-engineer` is done).
+- Approved PRDs exist (`requirements-engineer` is done), on either delivery track.
 - The work will be handed to people outside this repo: a UI/UX designer, an external dev team, or a Linear board.
 - A single distributable folder/ZIP is needed, not scattered `specs/` files.
 
 ## When To Skip
 
-- The team continues into the full in-repo build (Steps 3–7) — the in-repo artifacts already suffice.
+- The team continues into the full in-repo build (Steps 3–7) and needs no external package — the in-repo artifacts already suffice.
 
 ## Design Principles
 
@@ -32,20 +32,20 @@ This is the terminal step of the product discovery track. It does not invent pro
 
 ## Input
 
-Read these inputs (discovery-track locations):
+Read these inputs (the same PROJ locations on both delivery tracks):
 
 1. Reconciled concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (with `Concept Sync Log` / `Handoff Readiness`)
 2. PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`
-4. Review changelog (if present): `specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
-5. Review decision records (if present): `specs/PROJ-<X>-<theme>/2_PRDs/*-review-decisions.md`
-6. Mockups + sitemap + UI handoff: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`, `sitemap.html`, `implementation-handoff.md`
-7. Iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
-8. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
-9. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
-10. Optional brownfield as-is reference: `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
-11. Previous handoff runs, if any: `specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/`
+3. Review changelog (if present): `specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
+4. Review decision records (if present): `specs/PROJ-<X>-<theme>/2_PRDs/*-review-decisions.md`
+5. Mockups + sitemap + UI handoff: read `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md` for execution mode and screen/source references, plus `sitemap.html`. Legacy handoffs without runtime metadata use the existing screen HTML files. For component mode, also read the mapped screenshots and flow descriptions.
+6. Iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
+7. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
+8. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
+9. Optional brownfield as-is reference: `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
+10. Previous handoff runs, if any: `specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/`
 
-If the concept lacks a `Handoff Readiness` section, run `concept-sync` (1e) first so the package is built from a reconciled concept.
+Check the iteration log against the concept before packaging. If scope/behavior iterations remain unreconciled, run `concept-sync` (1e) first. If there were no concept-affecting iterations, an approved concept and approved PRDs suffice; a missing `Handoff Readiness` section alone does not require concept-sync or block packaging. Record the basis for readiness in the package manifest without changing the delivery track.
 
 ## Workflow
 
@@ -74,14 +74,18 @@ specs/PROJ-<X>-<theme>/2b_handoff/
     03-requirements/            # the PRDs, copied in, one file per PRD
     04-ui-handoff.md            # UI/UX expert: personas, screen families, workflow contracts, red lines vs latitude, mockup caveats
     05-developer-handoff.md     # developers: functional domain rules, server-enforced invariants, explicit out-of-scope
-    06-mockups/                 # standalone copy of mockups, design-language, sitemap, implementation-handoff, iteration-log
+    06-mockups/                 # offline mockup references, design-language, sitemap, implementation-handoff, iteration-log
     07-review-changelog.md      # what changed across review rounds (only when review-reconcile has run)
     08-review-decisions/        # internal/audit appendix: copied *-review-decisions.md files, if present
 ```
 
 Use the local current date for `YYYY-MM-DD`. If `YYYY-MM-DD-handoff/` already exists, create the next unused suffix (`YYYY-MM-DD-handoff-02/`, then `-03/`, etc.) so each handoff run remains independently reviewable and shareable.
 
-Copy mockups, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `2_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `2_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
+Copy the mode-appropriate visual references described below, design language, sitemap, implementation handoff, and iteration log into the run folder's `06-mockups/` so the package is self-contained. Rewrite any links to use package-relative paths within that run folder. If `2_PRDs/review-changelog.md` exists (a `review-reconcile` round ran), copy it in as `07-review-changelog.md` so downstream readers see what changed since the version they reviewed. If any `2_PRDs/*-review-decisions.md` files exist, copy them into `08-review-decisions/` as an audit appendix; do not put them in the primary reading path. Omit `04-ui-handoff.md` if UI experts are not an audience; omit `05-developer-handoff.md` if developers are not.
+
+**Component mockups:** The original interactive preview requires the project runtime; the package does not promise a runnable demo. Package the current approved screen/state screenshots and the implementation handoff’s `Flow Descriptions` instead. Do not copy component source files, fixtures, or the application into the package, install dependencies, or rebuild the UI as HTML. If captures or flow coverage are missing/stale, have `ui-mockup` refresh those source artifacts before completing the package. Only this skill writes the dated package run.
+
+In the packaged sitemap and handoff, replace required localhost/repository links with relative links to the captured screens and flow descriptions. Keep original source paths, start instructions, and preview URLs only as clearly labeled provenance text requiring the original project, not as package navigation. Preserve screen/state mapping and explicitly label the exported references as static. HTML-mode mockups remain copied as standalone interactive files. Verify each packaged screen reference is usable offline.
 
 ### 3. Write `00-what-changed-since-last-handoff.md`
 
@@ -92,7 +96,7 @@ If a previous run exists, compare the current source artifacts against that run'
 ```markdown
 # What Changed Since Last Handoff
 
-Previous handoff: `../YYYY-MM-DD-handoff/` (or "none — first handoff")
+Previous handoff: `YYYY-MM-DD-handoff` (identifier only; not a link) (or "none — first handoff")
 Current handoff: `YYYY-MM-DD-handoff/`
 Generated: YYYY-MM-DD
 
@@ -128,8 +132,9 @@ Record enough metadata for the next run to build a reliable delta:
 
 Run folder: `YYYY-MM-DD-handoff/`
 Generated: YYYY-MM-DD
-Previous handoff: `../YYYY-MM-DD-handoff/` or `none`
+Previous handoff: `YYYY-MM-DD-handoff` (identifier only; not a link) or `none`
 Git commit: `<sha>` or `not available`
+Readiness basis: approved concept + PRDs; no unreconciled scope/behavior iterations (cite the checked log or state no iterations)
 Audiences: UI/UX expert | developers | both
 
 ## Included Artifacts
@@ -165,7 +170,7 @@ This is the entry point. It must let an outside reader orient in one read:
 4. `03-requirements/` — binding PRDs
 5. `04-ui-handoff.md` — for the UI/UX expert
 6. `05-developer-handoff.md` — for developers
-7. `06-mockups/` — reference prototype only
+7. `06-mockups/` — reference only: standalone interactive HTML, or static component screenshots and flow descriptions; state the actual mode
 8. `07-review-changelog.md` — full review changelog, if present
 9. `08-review-decisions/` — audit appendix for detailed review rationale, if present
 
@@ -232,7 +237,7 @@ Verify the package stands alone:
 - No link points outside the dated run folder.
 - `00-what-changed-since-last-handoff.md` exists and clearly states previous handoff baseline or first-handoff status.
 - `handoff-manifest.md` exists and records run metadata, previous handoff, included artifacts, and open items.
-- Every referenced mockup, image, and design file is copied into `06-mockups/`.
+- Every required visual reference resolves within `06-mockups/`: interactive HTML files in standalone mode, or current screenshots and flow descriptions in component mode. No required navigation depends on localhost or the source repository.
 - `07-review-changelog.md` is included when `2_PRDs/review-changelog.md` exists.
 - `08-review-decisions/` is included when any `2_PRDs/*-review-decisions.md` files exist, and the `README.md` labels it as audit appendix.
 - Cross-cutting facts appear once (in `02`) and are referenced elsewhere, not duplicated.
@@ -266,7 +271,7 @@ Ask the user to spot-check that an outside reader could act on it without furthe
 - [ ] PRDs copied into `03-requirements/`
 - [ ] `04-ui-handoff.md` present when UI experts are an audience, with red lines vs. latitude
 - [ ] `05-developer-handoff.md` present when developers are an audience, with explicit out-of-scope
-- [ ] Mockups, design language, sitemap, and iteration log copied into `06-mockups/`
+- [ ] Mode-appropriate references copied into `06-mockups/`: standalone HTML screens, or current component screen/state screenshots and the handoff’s Flow Descriptions; include design language, sitemap, implementation handoff, and iteration log
 - [ ] Review changelog copied to `07-review-changelog.md` when present
 - [ ] Review decision records copied to `08-review-decisions/` when present and summarized into `02`
 - [ ] Self-contained check passed (no external links)

@@ -45,9 +45,9 @@ Read these inputs:
 
 1. The review itself — pasted text or a file the user provides (gaps, questions, suggested updates).
 2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md`.
-3. The canonical scope/decisions source if one exists (e.g. `2_scope-open-decisions.md` or the concept's decisions register) — **read it first** so no decision contradicts a canonical rule.
+3. The canonical scope/decisions source if one exists (e.g. the concept's decisions register or an explicitly supplied source document) — **read it first** so no decision contradicts a canonical rule.
 4. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (if it exists).
-5. Mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html` + `iteration-log.md`.
+5. Mockups: screen/source references in `1d_mockups/implementation-handoff.md` + `iteration-log.md`. Legacy handoffs without screen references use the existing screen HTML files.
 
 If the review references decision IDs, rules, or sections, resolve them in the source documents before interpreting the gap — an answer that violates a canonical rule is wrong even if it closes the gap.
 
@@ -93,7 +93,7 @@ Apply only **decided** items (deferred ones change nothing yet):
 
 - **PRDs are binding** — make the agreed edits precisely; align any contradicting lines (rules, open-decisions registers) in the same pass.
 - **Concept** — if one exists, reconcile scope/behavior changes (do not invent a concept if none exists; note that the future concept should carry the decision).
-- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `1d_mockups/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only.
+- **Mockups are wireframe / workflow references, not the binding design.** Change a mockup only where it now *contradicts* the decided PRD. Do not invent screens or fake elements to "demonstrate" a rule; prefer encoding the mechanism plus a documented note. Log every mockup change in `1d_mockups/iteration-log.md` (one entry per review round), classified scope / behavior / presentation-only. Keep screen references and flow descriptions current; refresh affected source screenshots when an external component handoff is maintained. Use the runtime and isolation rules from `ui-mockup` when reviewing changed component screens.
 
 ### 5. Maintain The Handoff-Facing Changelog
 

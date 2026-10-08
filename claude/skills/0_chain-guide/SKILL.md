@@ -21,7 +21,7 @@ Step  Skill                  Output
  1d   ui-mockup (UI req.)    specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
  1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
   2   requirements-engineer  specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md
- 2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/ standalone package (+ zip) — discovery track only
+ 2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/ standalone package (+ zip) — discovery endpoint or requested full-chain export
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/2_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
   3   architecture           specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md
   4   writing-plans          specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md (per wave)
@@ -93,6 +93,8 @@ The same chain serves two delivery tracks. Detect which one applies before recom
 - **Full chain (in-repo build):** brainstorm → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
 - **Product discovery (Linear handoff):** brainstorm → visual-companion → ui-mockup (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — brainstorming, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
 
+A requested external `handoff-package` is also available after approved PRDs in the full chain. Component mockups are exported as screenshots and flow descriptions; packaging does not switch tracks or replace subsequent implementation steps.
+
 Detect the discovery track when any of these hold:
 
 - The concept's `Handoff Readiness` sets `Delivery track: discovery (Linear handoff)`.
@@ -124,8 +126,8 @@ the baseline for the P0 context bundles. Run one baseline path, not both.
 **Legacy layout rule:** PROJ folders created before the layout rename carry
 the old subfolder names (`2_visual-companion/`, `4_design/`, `5_mockups/`,
 `3_PRDs/`, `8_handoff/`, `6_plan/`, `7_progress/`). Detect them as their
-current equivalents — an old `5_mockups/sitemap.html` means step 1d is done,
-exactly like `1d_mockups/sitemap.html` would. Never report such a PROJ as
+current equivalents — check an old `5_mockups/` with the same completion
+criteria as `1d_mockups/` below. Never report such a PROJ as
 "step missing". Mention the old layout once and offer the rename as an
 option, never as a precondition:
 
@@ -146,7 +148,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 2. `1b_visual-companion/layout-decision.md` + `layout-exploration.html` — visual companion present? → step 1b done
 3. Project-mode detection: prefer `1b_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
 4. `1c_design/design-language.md` exists → step 1c done
-5. `1d_mockups/*.html` + `1d_mockups/implementation-handoff.md` — mockups and UI handoff present? → step 1d done
+5. `1d_mockups/sitemap.html` + `1d_mockups/implementation-handoff.md` + the screen sources referenced by the handoff — mockups and UI handoff present? → step 1d done. For legacy handoffs without screen references, check the screen HTML files (the sitemap alone is not a screen). Do not require HTML screens for component mode or a currently running server to recognize completed artifacts.
    - `1d_mockups/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
    - Concept contains `Concept Sync Log` / `Handoff Readiness` → step 1e done.
 6. `2_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
@@ -260,7 +262,7 @@ If the user asks "what does each step do?":
 | 1 | brainstorming | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
-| 1d | ui-mockup (UI required) | HTML sitemap + per-screen mockups + `implementation-handoff.md` + `iteration-log.md`; greyscale-wireframe or design-system fidelity |
+| 1d | ui-mockup (UI required) | HTML sitemap + component or standalone HTML mockups + `implementation-handoff.md` (runtime, screen references, flows) + `iteration-log.md`; execution mode is independent of visual fidelity |
 | 1e | concept-sync (optional) | Reconcile iterated mockup changes back into the concept; set delivery track (full chain vs. Linear handoff) |
 | 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces developer-ready PRDs |
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |

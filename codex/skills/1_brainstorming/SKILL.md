@@ -45,7 +45,7 @@ Later skills consume this artifact:
 
 - `visual-companion` uses it to explore UI layout shape.
 - `frontend-design` uses the selected UI direction when design language is needed.
-- `ui-mockup` uses it plus visual/design decisions to create HTML mockups and implementation handoff.
+- `ui-mockup` uses it plus visual/design decisions to create component-based or standalone HTML mockups and implementation handoff.
 - `requirements-engineer` uses it to write PRDs, user stories, acceptance criteria, and edge cases.
 - `architecture` uses it with PRDs to write PROJ-level technical design.
 - `writing-plans`, `executing`, `qa`, and `documentation` rely on its scope boundaries and project identity.

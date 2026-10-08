@@ -55,7 +55,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 1 | brainstorming | Turn stakeholder input and requirements into a first concept; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
-| 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the HTML; every concept-affecting change is recorded in `iteration-log.md` |
+| 1d | ui-mockup | Build mockups, then iterate by prompting changes directly into the mockups; every concept-affecting change is recorded in `iteration-log.md` |
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
 | 2 | requirements-engineer | Produce developer-ready PRDs and pass the required opposite-provider review before handoff |
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
@@ -96,7 +96,9 @@ This becomes the design source where config files would normally be: `visual-com
 
 ## The iteration loop
 
-Stakeholder agreement is reached *on the mockups*. Because changes are prompted directly into the HTML, they would otherwise be lost. `ui-mockup` therefore maintains `1d_mockups/iteration-log.md`, one entry per round, each classified as scope, behavior, or presentation-only. Only scope/behavior changes flow back into the concept.
+On this code-free discovery track, mockups remain standalone HTML. With a usable app runtime in the full chain, `ui-mockup` instead imports real components and keeps screen sources in the PROJ folder; only required development entrypoints live outside it. Execution mode is independent of visual fidelity. The implementation handoff records screen sources, preview locations, and startup instructions. External component handoffs use screenshots and flow descriptions, not a portable application.
+
+Stakeholder agreement is reached *on the mockups*. Because changes are prompted directly into the mockups, they would otherwise be lost. `ui-mockup` therefore maintains `1d_mockups/iteration-log.md`, one entry per round, each classified as scope, behavior, or presentation-only. Only scope/behavior changes flow back into the concept.
 
 `concept-sync` (1e) then reads the log, updates `1_brainstorm/PROJ-<X>-concept.md`, records superseded decisions, and writes a `Handoff Readiness` section with `Delivery track: discovery (Linear handoff)`. This closes the loop so requirements are written against an accurate concept.
 
@@ -116,7 +118,7 @@ When the work goes to people outside the repo — an external UI/UX expert (e.g.
 - `03-requirements/` — the binding PRDs, copied in.
 - `04-ui-handoff.md` — for the UI/UX expert: personas, screen families, workflow contracts, and **red lines vs. design latitude** (what must not drift vs. what the expert owns).
 - `05-developer-handoff.md` — for developers: functional domain rules, server-enforced invariants, and an explicit out-of-scope list.
-- `06-mockups/` — a standalone copy of the mockups, design language, sitemap, and iteration log (reference only).
+- `06-mockups/` — standalone HTML mockups, or screenshots and flow descriptions for component mockups, plus design language, sitemap, and iteration log (reference only).
 - `07-review-changelog.md` — when `review-reconcile` (2c) has run: the audience-facing record of what changed across review rounds, so downstream readers see the delta since the version they reviewed.
 - `08-review-decisions/` — when per-round `*-review-decisions.md` files exist: detailed rationale and follow-up audit trail, included as an appendix rather than primary reading path.
 

@@ -42,6 +42,7 @@ Architecture still runs one PROJ at a time. If the concept includes a decomposit
 4. Read the concept at `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
 5. Read **all** PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/`
 6. If present, read UI references from `specs/PROJ-<X>-<theme>/1d_mockups/`, especially `implementation-handoff.md`, and `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
+   Resolve mockup screens through the handoff's source/preview references, with existing HTML files as the legacy fallback. Real component imports demonstrate UI reuse, not approved production business logic or architecture.
 7. If the concept names blocking sibling PROJs, read their approved concept/PRD/architecture summaries only as dependency context.
 
 ## Workflow

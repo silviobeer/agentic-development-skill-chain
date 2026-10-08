@@ -76,11 +76,11 @@ After decomposition:
 | 1 | brainstorming | Turn an idea into a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
-| 1d | ui-mockup | Create lightweight mockups and implementation handoff; track stakeholder iterations |
+| 1d | ui-mockup | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |
 | 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
-| 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery track) |
-| 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery track) |
+| 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery endpoint or requested full-chain export) |
+| 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |
 | 3 | architecture | Produce PM-friendly technical architecture |
 | 4 | writing-plans | Split work into wave-based implementation plans |
 | 4a | checkpoint | Checkpoint 1 as a structured reconcile loop: decision log, cascaded plan updates, seal `CP1:approved` in state.json; the same loop serves CP2 PR comments via delivery |

@@ -1,11 +1,11 @@
 ---
 name: concept-sync
-description: "Reconcile mockup iteration changes back into the concept before requirements. Use after ui-mockup when stakeholders have iterated on the mockups (changes prompted directly into the HTML) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-8 chain."
+description: "Reconcile mockup iteration changes back into the concept before requirements. Use after ui-mockup when stakeholders have iterated on the mockups (changes prompted directly into the mockups) and the agreed result must flow back into the concept. Reads the mockup iteration log, updates the concept doc, marks abandoned decisions, and signals handoff-ready for requirements-engineer. Primary step of the Product Discovery track, but also usable in the full 0-to-8 chain."
 ---
 
 # Concept Sync — Reconcile Mockup Iterations Into The Concept
 
-During mockup review, stakeholders iterate by prompting changes directly into the HTML mockups until everyone agrees. Those agreed changes drift away from the original concept. This skill closes that loop: it reads the tracked changes and updates the concept so the concept again reflects what was actually decided — before requirements are written.
+During mockup review, stakeholders iterate by prompting changes directly into the mockups until everyone agrees. Those agreed changes drift away from the original concept. This skill closes that loop: it reads the tracked changes and updates the concept so the concept again reflects what was actually decided — before requirements are written.
 
 This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → ui-mockup ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
 
@@ -36,7 +36,7 @@ Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
 2. Mockup iteration log: `specs/PROJ-<X>-<theme>/1d_mockups/iteration-log.md`
-3. Current mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`
+3. Current mockups: follow the screen/source references in `1d_mockups/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_mockups/`.
 4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 

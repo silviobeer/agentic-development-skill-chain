@@ -145,7 +145,9 @@ You own: <files/dirs>. Touch nothing else; escalate if you must.
 Shared resources: wrap every migration and auth-consuming command as
   scripts/worktree.sh with-shared-lock -- <cmd>. Do not start or stop a dev server.
 Prior waves: <one paragraph>. Notes: <path>/agent.md (read first, append walls).
-UI (if any): 1d_mockups/implementation-handoff.md; reuse registered components.
+UI (if any): 1d_mockups/implementation-handoff.md; follow screen/source references
+and reuse registered components. Component mockups do not replace production
+implementation or required tests.
 
 Every behavior change needs a test that failed before and passes after; run it
 and read the output. Before reporting, re-read your diff against the story once,

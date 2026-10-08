@@ -61,7 +61,7 @@ Requirements run one PROJ at a time. If the concept contains `Decomposition Cont
 Read these inputs:
 
 1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
-2. UI mockups: `specs/PROJ-<X>-<theme>/1d_mockups/*.html`
+2. UI mockups: follow the screen/source references in `1d_mockups/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_mockups/`.
 3. Sitemap: `specs/PROJ-<X>-<theme>/1d_mockups/sitemap.html`
 4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_mockups/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
@@ -82,7 +82,7 @@ Use the next available `PRD-Y` number inside the PROJ, starting at 1 and avoidin
 
 ### 2. Understand The Feature
 
-For UI features, read mockups and sitemap first:
+For UI features, resolve screens through the implementation handoff, then read mockups and sitemap:
 
 - Which screens exist?
 - Which user flows are clickable or linked?
@@ -182,7 +182,7 @@ and consistency findings unreliable.
 Build the ground-truth list from files that exist. Always include the concept.
 For UI work, add the compact UI contracts (`implementation-handoff.md`,
 `sitemap.html`, layout decision, and design language) rather than every mockup
-HTML file unless a disputed detail requires it:
+source file unless a disputed detail requires it:
 
 ```bash
 BASE="specs/PROJ-<X>-<theme>"
@@ -217,7 +217,7 @@ product-owner approval.
 
 ### 6. Handoff
 
-- **Full chain:** recommend `architecture` (3) for PROJ-level technical design. For UI features, the mockups and implementation handoff remain visual references for architecture.
+- **Full chain:** recommend `architecture` (3) for PROJ-level technical design. For UI features, the mockups and implementation handoff remain visual references for architecture. If an external review package is requested, `handoff-package` (2b) can export the approved artifacts without changing the delivery track or replacing architecture.
 - **Discovery / Linear handoff:** do not recommend `architecture`. If the work goes to people outside this repo (an external UI/UX expert, an external dev team) and a single standalone deliverable is wanted, recommend `handoff-package` (2b) to assemble a self-contained, zippable package. The chain ends here for this PROJ.
 
 ## Completion Checklist

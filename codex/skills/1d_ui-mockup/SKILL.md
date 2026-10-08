@@ -1,15 +1,15 @@
 ---
 name: ui-mockup
-description: "Create lightweight HTML mockups, a visual sitemap, and a UI implementation handoff before requirements. Use after visual-companion and optional frontend-design when: (1) UI flows need to be visualized before requirements and architecture, (2) a page/screen sitemap is needed, (3) stakeholders need visual feedback before user stories are finalized. Not for: requirements, component libraries, technical architecture, or production UI code."
+description: "Create component-based or standalone HTML mockups, a visual sitemap, and a UI implementation handoff before requirements. Use after visual-companion and optional frontend-design when: (1) UI flows need to be visualized before requirements and architecture, (2) a page/screen sitemap is needed, (3) stakeholders need visual feedback before user stories are finalized. Not for: requirements, component libraries, technical architecture, or production UI code."
 ---
 
 # UI Mockup And Sitemap Generator
 
-Create lightweight HTML mockups and a visual sitemap from the concept and the approved Visual Companion decision. This skill is visual and structural only: no technical architecture and no acceptance criteria.
+Create component-based or standalone HTML mockups and a visual sitemap from the concept and the approved Visual Companion decision. This skill is visual and structural only: no technical architecture and no acceptance criteria.
 
 For UI features, this skill is required before `requirements-engineer`. Pure backend/API features skip it.
 
-Also create a compact `implementation-handoff.md` so requirements, architecture, planning, and execution can consume the visual decision without interpreting the HTML mockups directly.
+Also create a compact `implementation-handoff.md` so requirements, architecture, planning, and execution can consume the visual decision without interpreting the mockup sources directly.
 
 ## Decomposed PROJ Handling
 
@@ -23,14 +23,24 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 
 ## Principles
 
-- **Lightweight:** Single HTML files, inline CSS, small vanilla JavaScript, no external dependencies.
-- **DRY mockups:** Reuse CSS classes, HTML patterns, and small JS helpers instead of writing one-off code per screen.
-- **Interactive when useful:** Clickable flows, tabs, side panels, modals, drawers, wizard steps, and state changes are encouraged when they clarify the UI.
-- **Simple:** No frameworks, no build step, no complex animation.
-- **Design-aware:** If an existing UI exists, scan and reuse colors, fonts, spacing, CSS variables, Tailwind config, and design tokens.
-- **Component-aware:** Prefer existing components and patterns; mark new UI pieces as candidates.
-- **Component-near, not pixel-perfect:** Approximate existing React components structurally and visually. Label intended reuse clearly.
+- **Reuse:** Import existing components, patterns, tokens, styles, and the app shell when a usable app runtime exists. Mark new UI pieces as candidates.
+- **Lightweight:** Reuse the existing stack and preview tooling; no new dependencies, per-PROJ package installation, or mockup platform.
+- **Interactive when useful:** Demonstrate navigation, overlays, forms, and state changes with small local fixtures, not production business logic.
 - **Show states:** Include normal, empty, loading, error, and success states where relevant.
+- **Review annotations:** Put component reuse and source labels in a separate review area, not inside product buttons, fields, or other product copy.
+
+## Execution Modes
+
+Choose and announce the execution mode separately from visual fidelity:
+
+- **Components (default with a usable app runtime):** Keep mockup screens, fixtures, and simulated interactions in `specs/PROJ-<X>-<theme>/1d_mockups/`, using the existing stack's source format (not necessarily React). Import real components and their styles/tokens. Reuse required UI providers, but do not mount providers or shells that trigger real authentication, data fetching, or writes; use existing presentation components and fixture seams instead.
+- **Standalone HTML (without a usable app runtime):** One self-contained HTML file per screen, inline CSS and small vanilla JavaScript, no external dependencies or build step. Reproduce documented visual patterns and label intended component reuse. This includes discovery with screenshots/design references but no source code.
+
+Inspect the existing start commands, routing, preview setup, imports, and provider requirements before choosing. Use an existing dev preview or Storybook when suitable; do not introduce Storybook. Reuse a running project dev server when available, otherwise start it with the existing project command and confirm the actual local URL. Never stop or replace a server owned by someone else.
+
+Keep only framework-required development entrypoints and minimal integration configuration outside the PROJ folder. For example, a development route at `/dev/mockups/proj-42` can import a screen from `1d_mockups/`. Use the framework's development-only mechanism and verify the mockup entry is inaccessible in production; hiding a navigation link is insufficient. Check imports, styles, and refresh/deep links through the real preview. If the toolchain excludes the PROJ folder, first try the smallest supported source/include or filesystem-access configuration change. If importing from that location still requires a second runtime or broad refactor, keep the sources in the PROJ folder and use the documented HTML fallback below; do not relocate them into production source directories.
+
+Do not scaffold a second app or broadly refactor production components to make a mockup work. Diagnose startup failures and make bounded fixes within the existing preview setup. If no usable runtime remains, or component isolation/source placement requires a broad refactor, announce standalone HTML fallback and record the specific blocker, attempted remedy, and approximated components in the handoff. The fallback permits mockup review and subsequent requirements work, but does not count as a verified component preview. Existing HTML mockups need no automatic conversion.
 
 ## Fidelity Modes
 
@@ -40,7 +50,7 @@ Pick the fidelity from the project mode and design references. State the chosen 
 - **Design-system:** Use when an existing design system is present (brownfield) or when `frontend-design` produced a `design-language.md`. Adopt the existing or defined tokens, colors, typography, spacing, and radii so the mockups read as the real product.
 - **Hybrid:** Apply the existing design system to known areas and fall back to greyscale wireframe for the documented gaps.
 
-If `1c_frontend-design` was skipped for a greenfield project, default to **Wireframe (greyscale)** rather than inventing a visual identity.
+If `1c_frontend-design` was skipped and no existing component styling or design reference establishes a visual identity, default to **Wireframe (greyscale)**. In a greenfield scaffold with styled real components, preserve those components and select **Design-system** fidelity (or **Hybrid** for gaps); do not recolor them solely to force wireframe fidelity. With unstyled primitives, component execution and greyscale wireframe fidelity can coexist.
 
 ## Input
 
@@ -72,7 +82,7 @@ Load design references:
 - If `1c_design/design-language.md` exists, use it as the primary design reference.
 - If the concept or layout decision references a canonical sibling design language, load it too and apply only local `design-delta.md` differences.
 - Check `docs/DESIGN-SYSTEM.md` (the curated design system baseline). If present, reuse its tokens, scales, patterns, and do/don't rules, and read `docs/components.md` for the component inventory.
-- For composed layouts — form, empty/loading/error state, page shell — open the showcase (`/dev/components#pattern-<name>`, or `1c_design/component-showcase.html` before the scaffold) and copy the rendered pattern. Do not invent a layout that a pattern already fixes; that is how two screens end up with two different forms.
+- For composed layouts — form, empty/loading/error state, page shell — open the showcase (`/dev/components#pattern-<name>`, or `1c_design/component-showcase.html` before the scaffold) and reuse the actual pattern in component mode, or reproduce it in standalone HTML mode. Do not invent a layout that a pattern already fixes; that is how two screens end up with two different forms.
 
 If no design reference exists, scan:
 
@@ -105,12 +115,14 @@ New component candidates:
 - BulkActionBar — no matching batch-action component found
 ```
 
-Label important mockup elements:
+In a separate review area, label important mockup elements:
 
-- `[Reuse: Button] Save`
-- `[Reuse: Dialog] Confirm delete`
-- `[Reuse: DataTable] Orders`
-- `[New candidate: BulkActionBar]`
+| Screen element | Review annotation |
+|----------------|-------------------|
+| Save action | `Reuse: Button` |
+| Delete confirmation | `Reuse: Dialog` |
+| Orders table | `Reuse: DataTable` |
+| Batch actions | `New candidate: BulkActionBar` |
 
 Do not silently invent UI pieces. If no existing component fits, mark `New candidate:` and briefly explain why.
 
@@ -129,7 +141,7 @@ Detect the app shell:
 - Sidebar: width, color, navigation items, active state
 - Main content area: padding, scrolling, max width
 
-If an app shell exists, embed every mockup inside it. If no shell exists, for example a landing or login page, mock up the screen without a shell.
+If an app shell exists, use its presentation layout for every applicable mockup (real imports in component mode, a static approximation in HTML mode). If no shell exists, for example a landing or login page, mock up the screen without a shell.
 
 ### 2. Create The Sitemap
 
@@ -143,20 +155,20 @@ The sitemap must show:
 - User flows with visual grouping
 - Role mapping for pages where relevant
 
-Use plain HTML/CSS boxes and links. Each sitemap box links to its mockup file.
+Use plain HTML/CSS boxes and links. Each sitemap box links to its HTML screen file or documented local component-preview URL and identifies the corresponding source file. Include the preview start instructions for component mode; keep the sitemap itself readable without the server.
 
 ### 3. Create Screen Mockups
 
-Create one HTML file per screen in `specs/PROJ-<X>-<theme>/1d_mockups/`.
+Create the screen sources in `specs/PROJ-<X>-<theme>/1d_mockups/` using the selected execution mode. Reuse shared compositions rather than duplicating an app shell per screen.
 
 Each mockup includes:
 
-- App shell when detected: static header, sidebar, and content area
+- App shell when detected: header, sidebar, and content area
 - Mockup header: page name, PROJ reference, and link back to the sitemap
 - Navigation links to connected mockup pages
 - Main content with placeholder copy, images, forms, and data
-- Component labels for important UI elements
-- Relevant vanilla-JS interactions
+- Component labels for important UI elements in the separate review area
+- Relevant simulated interactions using the existing stack, or vanilla JS in HTML mode
 - State sections for `[Normal State]`, `[Empty State]`, `[Loading State]`, and `[Error State]`
 - Source reference labels for concept sections, Visual Companion decisions, or mockup assumptions
 
@@ -164,12 +176,12 @@ Do not add acceptance-criteria labels; requirements are written after this skill
 
 Interaction rules:
 
-- Use only vanilla JS inside the HTML file.
+- In standalone HTML mode, use only vanilla JS inside the HTML file.
 - Demonstrate behavior, not final implementation.
-- No persistence, API calls, or build step.
+- No persistence or real backend/API calls, including indirect calls from imported components or providers. Use local fixtures and local state; the existing app build is allowed in component mode.
 - Link multi-screen flows. Simulate overlays or panels in-place when they are part of the selected Visual Companion direction.
 
-Code minimalism:
+Code minimalism (HTML-specific primitives below apply only to standalone HTML mode; component mode reuses existing components and framework idioms):
 
 - Use a few reusable primitives such as `.shell`, `.panel`, `.toolbar`, `.button`, `.table`, `.state`, and `.overlay`.
 - Use `data-*` attributes for interactions, for example `data-open="trend-panel"`.
@@ -182,7 +194,7 @@ Before writing, ask yourself: can this mockup be expressed with fewer reusable p
 
 ### 4. Review And Iterate With Stakeholders
 
-Open the mockups in a browser and ask the user to review:
+Open the mockups in a browser, verify the linked screens and relevant states/interactions, and ask the user to review:
 
 - Is the page structure correct?
 - Are screens or flows missing?
@@ -206,6 +218,8 @@ Classify each change's `Affects concept` field honestly: only scope or behavior 
 
 Do not edit the concept doc from this skill. Capture changes in the log; reconciliation happens in `concept-sync`.
 
+For external handoff of component mockups, capture the approved screens and relevant states under `1d_mockups/screenshots/` and describe their flows in the implementation handoff. Map captures to screens/states and refresh affected captures after iterations. If browser capture is unavailable, record the missing evidence; do not claim the external package is ready. Do not write a second HTML implementation for export. Only `handoff-package` creates a new dated package from these source artifacts.
+
 ### 5. Create The Implementation Handoff
 
 Create:
@@ -221,6 +235,19 @@ Required structure:
 
 ## Project Mode
 greenfield | brownfield | hybrid
+
+## Mockup Runtime
+- Execution mode: components | standalone-html
+- Start command and working directory: <existing project command, or not required for standalone HTML>
+- Local preview URL: <verified URL, or not applicable>
+- Development entrypoints/configuration outside the PROJ folder: <paths and purpose, or none>
+- Development-only verification: <check and result, or not applicable>
+- Runtime blockers / fallback reason: <details, or none>
+
+## Screen References
+| Screen / state | Source file | Preview URL or HTML file | Screenshot (external component handoff) |
+|----------------|-------------|--------------------------|----------------------------------------|
+| <name> | <path> | <location> | <path, or not required> |
 
 ## Source References
 - Concept:
@@ -240,7 +267,10 @@ greenfield | brownfield | hybrid
 ## Design Tokens And Styling
 - Use:
 - Avoid:
-- Existing app design takes precedence over exact HTML mockup CSS: yes
+- Existing app components and design tokens take precedence over standalone mockup approximations: yes
+
+## Flow Descriptions
+For each reviewed flow, describe the starting screen/state, user action, resulting screen/state, and simulated outcome. Link the corresponding Screen References entries and, for external component handoff, screenshots so readers can follow the flow offline.
 
 ## Interaction Contract
 - Interaction:
@@ -248,8 +278,8 @@ greenfield | brownfield | hybrid
 - Responsive/mobile behavior:
 
 ## Implementation Tolerance
-- Mockups are structural, not pixel-perfect.
-- Existing React components and design tokens take precedence over mockup CSS.
+- Mockups define the approved interface structure and interactions; importing real components does not make simulated business behavior production-ready.
+- Existing app components and design tokens take precedence over standalone mockup approximations.
 - Preserve the selected layout direction and interaction contract unless the user approves a change.
 
 ## Demo-Only In Mockup
@@ -265,7 +295,8 @@ The handoff must make clear:
 - Which new components may be built
 - Which tokens, fonts, and colors are binding
 - Which interactions must be implemented
-- Where HTML mockup differences are allowed
+- Where mockup differences are allowed; mockup code does not replace production implementation or tests
+- How to start and locate every screen, and which behavior is simulated
 
 ### 6. Final Review
 
@@ -275,7 +306,7 @@ Present `sitemap.html`, the screen mockups, and `implementation-handoff.md` toge
 - Are the new component candidates accepted?
 - Are demo-only parts correctly separated?
 
-If changes are requested, update mockups and handoff together.
+If changes are requested, update mockups, handoff, and any affected external-handoff screenshots together. Verify the captures still represent the final approved screens/states before declaring the handoff ready.
 
 ### 7. Handoff
 
@@ -293,15 +324,18 @@ Either way, the mockups are required input for user stories, acceptance criteria
 - [ ] Important UI elements labeled with `Reuse:` or `New candidate:`
 - [ ] App shell detected and embedded where applicable
 - [ ] Sitemap created with all pages and flows
+- [ ] Execution mode chosen and justified; screen sources kept in the PROJ folder
+- [ ] Component preview verified in the browser and development entry inaccessible in production, or standalone HTML verified
 - [ ] Mockup created for each screen
 - [ ] Mockups linked to each other
-- [ ] Relevant interactions simulated with vanilla JS
-- [ ] Reusable HTML/CSS/JS primitives used
+- [ ] Relevant interactions simulated locally without real backend calls or persistence
+- [ ] Real components reused in component mode; reusable HTML/CSS/JS primitives used in standalone mode
 - [ ] Empty, loading, and error states included
 - [ ] Source references included in mockups
 - [ ] Fidelity mode chosen and stated (wireframe greyscale / design-system / hybrid)
 - [ ] `iteration-log.md` maintained across iteration rounds with concept-impact classified
-- [ ] `implementation-handoff.md` created
+- [ ] `implementation-handoff.md` includes runtime details and screen/source references
+- [ ] For external component handoff, current screenshots and flow descriptions are available
 - [ ] User reviewed and approved mockups and handoff
 - [ ] Next step recommended: `concept-sync` (1e) if concept drifted, else `requirements-engineer` (2)
 

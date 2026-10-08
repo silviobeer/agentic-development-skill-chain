@@ -53,7 +53,7 @@ together. Product-level artifacts live outside the PROJ folder —
 | 1 | `brainstorming` | Required | `1_brainstorm/PROJ-<X>-concept.md` |
 | 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
-| 1d | `ui-mockup` | UI only | `1d_mockups/sitemap.html`, screen mockups, `implementation-handoff.md` |
+| 1d | `ui-mockup` | UI only | `1d_mockups/sitemap.html`, component or standalone HTML screen sources, `implementation-handoff.md` (runtime + screen references) |
 | 1e | `concept-sync` | After mockup iterations | reconciled `1_brainstorm/PROJ-<X>-concept.md` |
 | 2 | `requirements-engineer` | Required, including opposite-provider PRD review | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
 | 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
