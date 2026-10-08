@@ -189,6 +189,7 @@ This repo was shaped by ideas from:
 - [Superpowers](https://github.com/obra/superpowers)
 - [Ponytail](https://github.com/DietrichGebert/ponytail)
 - [Alex Sprogis](https://www.alexsprogis.de/)
+- [Matt Pocock](https://github.com/mattpocock)
 
 ## License
 
