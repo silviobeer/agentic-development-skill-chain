@@ -507,7 +507,7 @@ PROJ folders created before the layout rename use different subfolder
 names. Mapping, old → current:
 
 `2_visual-companion/` → `1b_visual-companion/` · `4_design/` → `1c_design/` ·
-`5_mockups/`, `1d_prototypes/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
+`5_mockups/`, `1d_mockups/` → `1d_prototypes/` · `3_PRDs/` → `2_PRDs/` ·
 `8_handoff/` → `2b_handoff/` · `6_plan/` → `3-4_plan/` ·
 `7_progress/` → `5_progress/`
 
