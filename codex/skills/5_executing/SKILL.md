@@ -266,18 +266,17 @@ Write to `agent.md` immediately when a learning occurs — not at the end. Futur
 
 ## Input
 
-Read the following before starting each PROJ:
+Read lazily — the lead's context has to last the whole PROJ, and nothing below is read up front "just in case":
 
-**All PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md`. These are the authoritative requirements source. Used by the wave-scoped Outer Ralph pass to verify ACs. If plan and PRD disagree on AC text, the PRD wins.
+**At PROJ start** — only the `## Wave shape` section of `specs/PROJ-<X>-<theme>/architecture-delta.md` (one line per wave: scope, complexity/model, execution mode, dependencies) and the wave 1 plan.
 
-**Architecture** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`. Cross-PRD tech design.
+**At each wave start** — only that wave's plan, `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`. Its lead-facing header (`## User Stories in this Wave`, `## Execution`) drives dispatch. Each `## <US-ID>` section is that worker's slice — ACs, smoke test, UI Implementation Notes, tasks with TDD cycles and file paths, UI handoff constraints, gotchas — and reaches the worker verbatim through `scripts/story-slice.mjs` (Step 3). Never re-read earlier waves' plans: what previous waves implemented comes from the Wave shape plus `5_progress/PROJ-<X>-progress.md`.
 
-**Wave plans** — `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (in numeric order). Each wave plan lists:
-- The user stories in that wave (may span multiple PRDs)
-- Tasks per US with TDD cycle descriptions and file paths
-- For UI tasks, UI Implementation Notes and UI handoff constraints propagated from `1d_prototypes/implementation-handoff.md`
+**PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md` stay the authoritative requirements source. The plan's ACs were traced against them by the plan cross-review and CP1, and Skill 6 tests the PRD ACs again, so open the matching PRD story only when a plan/PRD AC conflict is suspected (an AC in the slice reads paraphrased or incomplete, or a worker or the Outer Ralph pass questions one). If plan and PRD disagree on AC text, the PRD wins: add the PRD wording to the spawn prompt, marked as superseding the slice, and log the drift in `progress.md`.
 
-**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md` before starting implementation. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
+**Architecture** — workers get `architecture-delta.md` through their context bundle. The lead opens `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` only for a cross-PRD design question that the slice and the Wave shape do not settle.
+
+**UI implementation handoff** — for UI PROJs, read `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md` before the first wave with UI stories. It is the compact source for project mode, component reuse, new component candidates, design tokens, interaction contract, implementation tolerance, and demo-only mockup exclusions.
 
 The PRDs define WHAT success means. The wave plans define HOW to get there. The UI handoff defines how to preserve the approved interface shape without treating mockups as pixel-perfect production specs. Resolve screen sources and preview instructions from the handoff (legacy HTML references remain valid). Component mockup code does not replace production implementation or required tests.
 
@@ -316,7 +315,7 @@ Store this in `progress.md` as `BASE_SHA`. It is used later by the Quality Gate 
 
 ### 1. Read the dependency map
 
-Extract waves from the plan's dependency table:
+Extract waves from the `## Wave shape` section of `architecture-delta.md` (the plans themselves are read one wave at a time):
 
 ```
 Wave 1: US-1                    → 1 teammate
@@ -326,6 +325,8 @@ Wave 3: US-3                    → 1 teammate
 ```
 
 ### 2. Before each wave: read `agent.md`, refresh the context bundles
+
+Read wave N's plan now — this wave's plan only (see Input).
 
 If `agent.md` exists in the source folder, read it before spawning teammates.
 Include relevant sections in the teammate prompt so they don't repeat known dead ends.
@@ -413,20 +414,19 @@ Require plan approval for each implementer before they make changes.
 **For waves with a single user story:** Use a regular subagent (no team overhead needed). Pick the matching implementer type based on the US scope. Local editing is permitted only when delegation is unavailable or prohibited; report that reason explicitly.
 
 Pass to each teammate (via `references/implementer.md` template):
-- Full user story (Given/When/Then)
-- Its acceptance criteria
-- Its task list with TDD steps
-- Codebase context + conventions
-- What previous waves implemented
+- **The story slice, verbatim:** the unedited output of `node scripts/story-slice.mjs specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md <US-ID>`. It carries the story heading, ACs, smoke test, UI Implementation Notes, tasks with TDD cycles and file paths, UI handoff constraints and gotchas. Never re-type, summarise or trim it. A non-zero exit (ID missing or duplicated) is a plan defect: stop and fix the plan, never fall back to hand-copying.
+- What only the lead knows: execution mode, runtime constraints, file ownership and the shared-lock and dev-server rules (above)
+- What previous waves implemented — a short summary from `progress.md`; the Wave shape already reaches workers through `architecture-delta.md` in their bundle
 - Relevant sections from `agent.md`
-- **If the US touches UI:** include the relevant `UI Implementation Notes` from the wave plan and the matching sections from `1d_prototypes/implementation-handoff.md`:
+- Codebase context and conventions only outside bundle runs; in framework runs the role bundle injects the architecture, guidelines and test conventions — do not paste them again
+- **If the US touches UI:** the matching sections from `1d_prototypes/implementation-handoff.md` that the slice's UI Implementation Notes point to but do not quote:
   - Project mode (`greenfield`, `brownfield`, `hybrid`)
   - Mockup file reference and selected UI direction
   - Existing components/tokens to reuse
   - Approved new component candidates
   - Required interaction contract and responsive behavior
   - Implementation tolerance and demo-only exclusions
-- **If the US touches UI:** the design system baseline is `docs/DESIGN-SYSTEM.md` (rules) plus `docs/components.md` (inventory). In framework runs the `frontend-implementer` context bundle injects both — do not paste them again, that pays the token budget twice. Outside bundle runs, paste both files. Either way the teammate reuses registered components — never one-off styled elements.
+- **If the US touches UI:** the design system baseline is `docs/DESIGN-SYSTEM.md` (rules) plus `docs/components.md` (inventory). The `frontend-implementer` context bundle injects both — do not paste them again, that pays the token budget twice. The generic `implementer` bundle (full-stack stories) does not, and neither does a run without bundles: paste both files there. Either way the teammate reuses registered components — never one-off styled elements.
 - **If a US needs a component the catalog does not have:** the teammate escalates instead of styling a one-off. The lead agent runs the extension procedure from `1c_frontend-design` → *Extending The Design System* (variant before new component, confirm with the user, then catalog + `docs/components.md` + `/dev/components` showcase), then the teammate composes the new entry. A component that reaches QA without a catalog and registry entry is a Critical bug (`6_qa` hard-checks this).
 - **If the US touches Tailwind CSS styling:** Include the contents of `~/.codex/skills/tailwind-css/SKILL.md`. Pass the relevant sections (responsive patterns, dark mode, class organisation, component patterns) so the teammate uses consistent utility classes and avoids conflicts.
 - **If the US involves Next.js App Router:** Include the contents of `~/.codex/skills/nextjs-app-router-patterns/SKILL.md`. Pass the relevant sections (Server vs. Client Components, data fetching, routing, caching) so the teammate follows App Router conventions and avoids common pitfalls (e.g. accidentally marking a Server Component as `'use client'`).

@@ -127,6 +127,7 @@ check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
 for f in 5_executing/scripts/preflight.sh 5_executing/scripts/sync-framework.mjs 5_executing/templates/decisions.md.tmpl \
          5_executing/scripts/ponytail-check.sh 5_executing/scripts/compile-context-bundles.mjs \
          5_executing/scripts/context-injector.mjs 5_executing/scripts/migration-drift-check.sh \
+         5_executing/scripts/story-slice.mjs \
          5_executing/manifests/roles/micro-fixer.md 5_executing/manifests/roles/implementer.md \
          5_executing/manifests/roles/frontend-implementer.md 5_executing/manifests/roles/backend-implementer.md \
          5_executing/manifests/roles/reviewer.md 5_executing/manifests/roles/explore.md \
@@ -165,6 +166,7 @@ HARNESS_LOGS=$(mktemp -d); trap 'rm -rf "$HARNESS_LOGS"' EXIT
 HARNESS_NAMES=(); HARNESS_PIDS=()
 harness() { local name="$1"; shift; "$@" >"$HARNESS_LOGS/$name.log" 2>&1 & HARNESS_NAMES+=("$name"); HARNESS_PIDS+=($!); }
 harness wave-plan-validator bash "$ROOT/scripts/test-wave-plan-validator.sh"
+harness story-slice         bash "$ROOT/scripts/test-story-slice.sh"
 harness sync-framework      node "$ROOT/scripts/test-sync-framework.mjs"
 harness ledger              bash "$ROOT/scripts/test-ledger.sh"
 harness preflight-biome     bash "$ROOT/scripts/test-preflight-biome.sh"

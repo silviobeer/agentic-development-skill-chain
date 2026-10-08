@@ -217,7 +217,7 @@ Commit the manifest and changed helpers/templates with setup. Do not manually ov
 
 | From (installed skill) | To |
 |---|---|
-| `5_executing/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh`, `sync-framework.mjs` | `scripts/` |
+| `5_executing/scripts/state.sh`, `preflight.sh`, `env-local.sh`, `ponytail-check.sh`, `compile-context-bundles.mjs`, `context-injector.mjs`, `worktree.sh`, `validate-wave-plan.mjs`, `migration-drift-check.sh`, `story-slice.mjs`, `sync-framework.mjs` | `scripts/` |
 | `5_executing/manifests/roles/*.md` | `templates/roles/` |
 | `5_executing/templates/decisions.md.tmpl` | `templates/` |
 | `cross-review/scripts/cross-review.sh`, `review-with-claude.sh`, `review-with-codex.sh` | `scripts/` |

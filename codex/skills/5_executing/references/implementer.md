@@ -1,6 +1,6 @@
 # Implementer Subagent Prompt Template
 
-Use this template when dispatching a subagent for a user story. Fill in all bracketed placeholders before dispatching. The subagent should not need to read any files — everything it needs must be included in the prompt.
+Use this template when dispatching a subagent for a user story. Fill in all bracketed placeholders before dispatching. The subagent must not need to read the spec or plan files — its story slice, plus what only the lead knows, is in the prompt; everything else arrives through its role bundle.
 
 ## Template
 
@@ -11,24 +11,34 @@ Task tool:
     You are implementing a single user story. Your job is to implement all tasks
     for this story using TDD, then run one bounded internal self-review.
 
-    ## User Story
-    [FULL TEXT of the user story — Given/When/Then]
-
-    ## Acceptance Criteria
-    [List of ACs for this story — verbatim from the plan]
+    ## Your Story (verbatim plan slice)
+    [Paste the unedited output of
+     `node scripts/story-slice.mjs <wave-plan> <US-ID>` — story heading (the
+     PRD's As a/I want/so that line, verbatim), ACs derived from its Given/When/Then,
+     smoke test, UI notes, tasks with TDD cycles and file paths, gotchas.
+     Never re-type or trim it; a non-zero exit is a plan defect to fix first.
+     If the lead found a plan/PRD AC conflict, add the PRD wording below the
+     slice, marked as superseding it.]
     Note: You do NOT verify ACs yourself. The main agent does that after you report back.
 
-    ## Tasks
-    [FULL TEXT of all tasks under this US — paste them here with TDD steps]
+    ## Execution and Ownership
+    [Execution mode and runtime constraints from the plan's `## Execution` block,
+     the files/dirs you own, the shared-lock rule for migrations and
+     auth-consuming commands, and the dev-server rule]
+
+    ## Previous Waves
+    [Short summary from `progress.md` of what earlier waves built that this US
+     builds on. Never paste other waves' plans.]
 
     ## Codebase Context
-    [Relevant file paths, existing patterns, conventions, tech stack notes]
-    [What was implemented in previous waves that this US builds on]
+    [Outside bundle runs only: relevant file paths, existing patterns,
+     conventions, tech stack notes. Skip in framework runs — the role bundle
+     injects architecture, guidelines and test conventions.]
 
     ## UI Design System (include for any US that touches UI)
-    [Skip this section in framework runs — the frontend-implementer context bundle
-     already injects docs/DESIGN-SYSTEM.md and docs/components.md.
-     Outside bundle runs, paste both files here (DESIGN-SYSTEM.md is capped at 80
+    [Skip this section only when the worker runs on the frontend-implementer
+     context bundle — it already injects docs/DESIGN-SYSTEM.md and docs/components.md.
+     The generic implementer bundle (full-stack stories) does not. Otherwise, paste both files here (DESIGN-SYSTEM.md is capped at 80
      lines, so paste it whole; components.md may be trimmed to the relevant entries).
      The subagent MUST reuse registered components — never one-off styled elements.]
 
@@ -122,7 +132,7 @@ Task tool:
 
 ## Usage Notes
 
-- Paste the full task text. The subagent must not read the spec or plan files.
-- Include enough prior-wave context so the subagent understands what already exists.
+- Paste the story slice verbatim; never paraphrase the US, ACs or tasks. The subagent must not read the spec or plan files.
+- Prior-wave context comes from `progress.md`, not from re-reading earlier plans.
 - After every wave worker reports back, the lead runs the wave-scoped AC verification pass — not the subagent.
 - For parallel waves: dispatch all US subagents in the same wave simultaneously using multiple Task tool calls in one message.

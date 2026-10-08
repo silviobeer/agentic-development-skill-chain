@@ -65,7 +65,10 @@ from `5_executing` and the same scripts enforce them.
    legacy PROJ (`7_progress/`, `6_plan/`) keeps writing where its files already
    are — never a second folder (`5_executing` § Legacy Folder Layout). `wave-gate.sh` and `quality-gate-proof.sh`
    parse it; keep their headings verbatim.
-3. **Wave start.** Before dispatching wave N:
+3. **Wave start.** Read lazily: at PROJ start only the `## Wave shape`
+   section of `architecture-delta.md` and the wave 1 plan; at each wave start
+   only that wave's plan, never earlier ones — what previous waves built comes
+   from the Wave shape plus `progress.md`. Before dispatching wave N:
    `git tag "wave-${WAVE}-start-PROJ-${PROJ}"` (delete and recreate on a
    re-run). The gate scopes CodeRabbit to this tag and fails hard without it.
    When `api-contracts.md` has entries for wave N, recompile the bundles
@@ -125,11 +128,15 @@ from `5_executing` and the same scripts enforce them.
     `fix(PROJ-<X>-PRD-<Y>): address review findings for [US-N]`,
     `fix(PROJ-<X>): address quality gate findings`.
 
-12. **Scope.** The PRDs in `2_PRDs/` are the authoritative requirements: when
-    plan and PRD disagree on AC text, the PRD wins, and briefs carry the PRD
-    text. Sibling PROJs referenced by the plan are dependencies or context
-    only — never implement their scope; if a wave depends on an incomplete
-    sibling PROJ, stop before that wave and report the blocker.
+12. **Scope.** The PRDs in `2_PRDs/` are the authoritative requirements. The
+    plan cross-review and CP1 traced the plan's ACs against them and Skill 6
+    tests them again, so the lead opens a PRD story only when a plan/PRD AC
+    conflict is suspected.
+    When they disagree on AC text, the PRD wins: the brief adds the PRD wording
+    as superseding the slice, and `progress.md` notes the drift. Sibling
+    PROJs referenced by the plan are dependencies or context only — never
+    implement their scope; if a wave depends on an incomplete sibling PROJ,
+    stop before that wave and report the blocker.
 
 ## Left to the model
 
@@ -143,9 +150,12 @@ expected to choose the concrete steps.
 - **Self-review.** Before reporting, a worker re-reads its diff against the
   story once, fixes what it finds within its ownership, runs the targeted
   tests once, and reports anything unresolved. It does not loop.
-- **Worker briefs.** A brief carries the story text, its acceptance criteria
-  (verified by the lead, not the worker), the task list, the ownership set,
-  the shared-resource rule, prior-wave summary, a pointer to `agent.md`, and
+- **Worker briefs.** A brief carries the story slice verbatim — the output of
+  `node scripts/story-slice.mjs <wave-plan> <US-ID>` with the story, its
+  acceptance criteria (verified by the lead, not the worker) and tasks; never
+  re-typed, and a non-zero exit is a plan defect to fix first — plus only what
+  the slice lacks: execution mode, the ownership set, the shared-resource rule,
+  a prior-wave summary from `progress.md`, a pointer to `agent.md`, and
   for UI stories a pointer to `1d_prototypes/implementation-handoff.md` plus the
   design-system baseline (`docs/DESIGN-SYSTEM.md`, `docs/components.md`) when
   no context bundle injects it. Do not paste framework skill files
@@ -186,10 +196,11 @@ expected to choose the concrete steps.
 ```
 Implement US-<N> "<title>" for PROJ-<X>.
 
-Story: <Given/When/Then>
-Acceptance criteria, PRD text (the lead verifies these; do not run the AC commands):
-<list>
-Tasks: <list with file paths>
+Your story — verbatim slice of the wave plan; the lead verifies its acceptance
+criteria, do not run the AC commands:
+<output of node scripts/story-slice.mjs <wave-plan> <US-ID>, unedited>
+<only on a plan/PRD AC conflict: PRD wording, superseding the slice>
+Execution: <parallel|sequential>, <runtime constraints>.
 You own: <files/dirs>. Touch nothing else; escalate if you must.
 Shared resources: wrap every migration and auth-consuming command as
   scripts/worktree.sh with-shared-lock -- <cmd>. Do not start or stop a dev server.

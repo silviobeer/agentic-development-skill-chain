@@ -17,9 +17,10 @@ flowchart LR
 
 Inputs:
 
-- PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md`
-- Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
-- Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`
+- Wave shape in `specs/PROJ-<X>-<theme>/architecture-delta.md` (read at PROJ start)
+- Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (one per wave, read at that wave's start)
+- PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (authoritative; opened only when a plan/PRD AC conflict is suspected)
+- Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` (on demand; workers get `architecture-delta.md` through their context bundle)
 - Gate config in `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`
 - UI handoff in `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`, when the PROJ has UI work
 
@@ -35,8 +36,8 @@ Outputs:
 ```mermaid
 flowchart TD
   A[P0 creates or resumes persistent PROJ worktree] --> B[Re-enter worktree and record BASE_SHA]
-  B --> C[Read PRDs, architecture, and wave plans]
-  C --> D[Start wave N and tag wave base]
+  B --> C[Read Wave shape]
+  C --> D[Start wave N: read its plan, tag wave base]
   D --> E[Implement each user story with TDD]
   E --> F[One bounded Inner Ralph self-review per worker]
   F --> G[One wave-scoped Outer Ralph pass]
@@ -127,6 +128,8 @@ For implementation, the skill chooses the implementer type by scope:
 - UI-only user story -> frontend implementer.
 - Server-only user story -> backend implementer.
 - Full-stack user story -> generic implementer.
+
+Each worker's spawn prompt embeds its story section of the wave plan verbatim, printed by `scripts/story-slice.mjs <wave-plan> <US-ID>`; the lead adds only what the slice lacks (execution mode, ownership and lock rules, a prior-wave summary from `progress.md`, `agent.md` and UI-handoff pointers).
 
 Parallel waves can run multiple independent user stories at once. In those cases, an integration guard monitors file ownership and overlap. Single-story waves do not need team overhead.
 
