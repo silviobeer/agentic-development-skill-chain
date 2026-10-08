@@ -184,7 +184,7 @@ Present waves, stories per wave, execution mode, and the cross-review result. Do
 
 Say once before invoking checkpoint:
 
-> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). For an unattended run say **'continue automatic until delivery, goal is PR draft'**: checkpoint (4a) for CP1, setup (4b) for branch + preflight, then `runner/run-phase.sh auto <X> <theme>` for P5–P8 ending in an open PR and morning report. CP1 approval stays human.
+> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). For an unattended run say **'continue automatic until delivery, goal is PR draft'**: checkpoint (4a) for CP1, setup (4b) for branch + preflight, then `runner/run-phase.sh auto <X> <theme>` for P5–P8 ending in an open PR and morning report. No other approval stop follows CP1.
 >
 > Manual path: ensure `scripts/wave-gate.sh` exists (copy from `~/.claude/skills/5_executing/scripts/wave-gate.sh`, `chmod +x`, commit) and `jq`, `coderabbit`, `agent-browser` are installed, then run `/5_executing`. Quality Gate and QA follow the last wave automatically."
 
