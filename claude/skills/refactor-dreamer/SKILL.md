@@ -334,6 +334,7 @@ For each decision that may need durable documentation:
 - Positive:
 - Negative:
 **Supersedes:** <old ADR/doc/decision if any>
+**Landing:** accepted candidates become `D-<X>-<NN>` entries via the checkpoint decision log, then `docs/DECISIONS.md` at P7 — no separate ADR files
 **Related Opportunity:** <Opportunity N>
 ```
 

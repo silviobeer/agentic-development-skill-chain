@@ -395,6 +395,12 @@ failing.
    `decisions.md` entries with lasting value into `docs/ARCHITECTURE.md`.
    Document deviations as "planned X, built Y, because ..." — never
    silently overwrite the baseline.
+   Entries with lasting WHY (rejected alternatives, constraints, trade-offs)
+   are appended to `docs/DECISIONS.md` — append-only, one `D-<X>-<NN>`
+   entry each (Decision, Context, Alternatives, Status), `ARCHITECTURE.md`
+   links by ID instead of restating the WHY. When a decision replaces an
+   earlier one, set the old entry's Status to `superseded by D-…`; never
+   delete or rewrite it. Create the file on first use.
 2. Migrate ground-file assumptions this PROJ validated into
    `docs/ARCHITECTURE.md`/`docs/GUIDELINES.md` and DELETE them from
    `ground-file.md` — the ground file holds ONLY what docs/ does not
