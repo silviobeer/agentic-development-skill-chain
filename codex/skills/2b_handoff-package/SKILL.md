@@ -34,7 +34,7 @@ This is the terminal step of the product discovery track. It can also produce a 
 
 Read these inputs (the same PROJ locations on both delivery tracks):
 
-1. Reconciled concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (with `Concept Sync Log` / `Handoff Readiness`)
+1. Reconciled concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` (with `Concept Sync Log` / `Handoff Readiness`)
 2. PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`
 3. Review changelog (if present): `specs/PROJ-<X>-<theme>/2_PRDs/review-changelog.md`
 4. Review decision records (if present): `specs/PROJ-<X>-<theme>/2_PRDs/*-review-decisions.md`

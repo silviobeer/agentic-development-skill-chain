@@ -39,7 +39,7 @@ Architecture still runs one PROJ at a time. If the concept includes a decomposit
 1. Read `specs/INDEX.md` (if present) to understand project context
 2. Check existing components: `git ls-files src/components/`
 3. Check existing APIs: `git ls-files src/app/api/`
-4. Read the concept at `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+4. Read the concept at `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
 5. Read **all** PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/`
 6. If present, read UI references from `specs/PROJ-<X>-<theme>/1d_prototypes/`, especially `implementation-handoff.md`, and `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
    Resolve mockup screens through the handoff's source/preview references, with existing HTML files as the legacy fallback. Real component imports demonstrate UI reuse, not approved production business logic or architecture.
@@ -239,7 +239,7 @@ bash scripts/cross-review.sh architecture <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
     specs/PROJ-<X>-<theme>/architecture-delta.md \
     specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
-  --ground-truth specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+  --ground-truth specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md \
     specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
   --author-provider <current-writer> --persist --round 1
 ```

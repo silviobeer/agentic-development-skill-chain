@@ -13,7 +13,7 @@ route to render the showcase into, the component registry generates from a
 half a dozen places instead of stated once.
 
 This skill closes that gap. It runs ONCE per project, after
-`product-vision` (0a) and before `brainstorming` (1).
+`product-vision` (0a) and before `concept` (1).
 
 **The stack is recorded in exactly one place: `docs/ARCHITECTURE.md`,
 section `## Stack`.** Every skill that needs a stack fact reads it there.
@@ -187,7 +187,7 @@ that drift are worse than one.
    `docs/ARCHITECTURE.md` ≤200 lines.
 3. Commit: `chore: project bootstrap — <framework> + <database or "no backend">`
 
-→ NEXT ACTION: `brainstorming` (1) on the first PROJ of
+→ NEXT ACTION: `concept` (1) on the first PROJ of
 `specs/product-roadmap.md`. The repo now has a real component directory, so
 `frontend-design` (1c) writes into it instead of into a standalone HTML file.
 
@@ -218,7 +218,7 @@ that drift are worse than one.
 - **One stack, one place** — `docs/ARCHITECTURE.md` § Stack. Anything that
   needs a stack fact reads it there; nothing restates it.
 - **No product decisions** — scope belongs to `product-vision` (0a), features
-  to `brainstorming` (1).
+  to `concept` (1).
 - **No feature code** — this skill produces an empty, running project. Not a
   single screen, not a single route beyond what the scaffold generates.
 - **English** — all documentation in English.

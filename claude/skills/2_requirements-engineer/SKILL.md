@@ -11,7 +11,7 @@ Never write code or technical architecture in this skill. Architecture and imple
 
 ## PROJ vs. PRD
 
-- **PROJ-X** is the initiative or feature theme, for example `PROJ-1-auth`. Brainstorming assigns it and creates the folder.
+- **PROJ-X** is the initiative or feature theme, for example `PROJ-1-auth`. Concept assigns it and creates the folder.
 - **PRD-Y** is one testable, deployable feature inside the PROJ. Number PRDs from 1 within each PROJ.
 
 ## Feature Granularity
@@ -60,7 +60,7 @@ Requirements run one PROJ at a time. If the concept contains `Decomposition Cont
 
 Read these inputs:
 
-1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+1. Concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
 2. UI mockups: follow the screen/source references in `1d_prototypes/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_prototypes/`.
 3. Sitemap: `specs/PROJ-<X>-<theme>/1d_prototypes/sitemap.html`
 4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
@@ -186,7 +186,7 @@ source file unless a disputed detail requires it:
 
 ```bash
 BASE="specs/PROJ-<X>-<theme>"
-GROUND_TRUTH=("$BASE/1_brainstorm/PROJ-<X>-concept.md")
+GROUND_TRUTH=("$BASE/1_concept/PROJ-<X>-concept.md")
 for candidate in \
   "$BASE/1d_prototypes/implementation-handoff.md" \
   "$BASE/1d_prototypes/sitemap.html" \

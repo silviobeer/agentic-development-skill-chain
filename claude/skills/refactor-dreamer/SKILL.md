@@ -1,6 +1,6 @@
 ---
 name: refactor-dreamer
-description: "Run a long-form, parallel architecture drift and refactor discovery pass over the current codebase. Use when the user wants an overnight/deep exploration that sends subagents through the repo to identify larger refactor opportunities, architecture mismatches caused by feature growth, simplification targets, technical debt themes, and chain-ready inputs for later brainstorming, architecture, or implementation planning. Produces evidence-backed reports and handoff artifacts only; it does not change code and is not part of the 0-7 feature chain."
+description: "Run a long-form, parallel architecture drift and refactor discovery pass over the current codebase. Use when the user wants an overnight/deep exploration that sends subagents through the repo to identify larger refactor opportunities, architecture mismatches caused by feature growth, simplification targets, technical debt themes, and chain-ready inputs for later concept, architecture, or implementation planning. Produces evidence-backed reports and handoff artifacts only; it does not change code and is not part of the 0-7 feature chain."
 ---
 
 # Refactor Dreamer
@@ -210,7 +210,7 @@ Each opportunity must use this shape:
 **Effort:** small | medium | large
 **Risk:** low | medium | high
 **Reversibility:** easy | moderate | hard
-**Recommended chain entry:** brainstorming | architecture | writing-plans | documentation | none
+**Recommended chain entry:** concept | architecture | writing-plans | documentation | none
 
 ### Problem
 <What no longer fits and why it matters.>
@@ -312,7 +312,7 @@ Use `<skill-name>` next because <reason>.
 
 Recommended next action rules:
 
-- Use `brainstorming` when the refactor needs product/maintainer concept approval, scope shaping, or tradeoff discussion. This is the default.
+- Use `concept` when the refactor needs product/maintainer concept approval, scope shaping, or tradeoff discussion. This is the default.
 - Use `architecture` only when a PROJ already exists with approved PRDs and the refactor changes cross-cutting tech decisions.
 - Use `writing-plans` only when architecture and PRDs are already approved.
 - Use `documentation` when the main gap is missing or outdated human/system documentation.

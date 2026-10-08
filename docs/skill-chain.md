@@ -7,7 +7,7 @@ flowchart LR
   S0[0 chain-guide] --> S0A[0a product-vision · new product]
   S0 --> S0B[0b intake · existing codebase]
   S0A --> S0C[0c bootstrap · stack + scaffold]
-  S0C --> S1[1 brainstorming]
+  S0C --> S1[1 concept]
   S0B --> S1
   S0 --> S1
   S1 --> S1B[1b visual-companion]
@@ -41,7 +41,7 @@ The chain serves two delivery tracks: the full in-repo build (Steps 1–7) and a
 
 Architecture (3) continues into writing-plans (4) and writing-plans into checkpoint (4a) without intermediate approval stops when their cross-reviews are clean; Checkpoint 1 is the single human approval of the planning package and cascades changes back into both. Either skill still stops on remaining Critical/High findings, open product decisions, or an explicit request to review one artifact alone. If planning exposes a PRD or architecture defect, it returns to the owning skill and its required cross-review before continuing to checkpoint.
 
-`cross-review`, `5b_executing-large-model`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `5b_executing-large-model` is not a step of its own but a lean substitute for Step 5 on frontier models: identical gates and state contracts, procedure reduced to invariants. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_brainstorming` as raw input.
+`cross-review`, `5b_executing-large-model`, `bugfixing`, `refactor-dreamer`, `sonar-cli` and `vibecoder` intentionally sit outside this flow. `5b_executing-large-model` is not a step of its own but a lean substitute for Step 5 on frontier models: identical gates and state contracts, procedure reduced to invariants. `cross-review` is a mechanism, not a step — it is invoked by producing skills and never routed to directly, which is why it carries no chain number. Concept, architecture, and plan reviews start automatically as soon as their outputs are saved, before user approval or handoff. Requirements, P6 QA, and P7 documentation also require it. Use `bugfixing` for a reported defect that needs reproduction, a narrow repair, regression-test proof, and test-escape analysis without starting a feature PROJ. Launch `refactor-dreamer` separately for a long-form architecture drift/refactor discovery run, then feed its `chain-input.md` into the appropriate chain step. Use `sonar-cli` separately for SonarScanner/SonarQube CLI setup, analysis runs, and issue triage. Use `vibecoder` for a freeform exploratory coding session on a scratch branch: it keeps a live journal while you experiment, then distills it into a `chain-input.md` that feeds `1_concept` as raw input.
 
 ## Legacy PROJ Folders
 
@@ -56,7 +56,7 @@ own documents is the whole migration, and skipping it is a valid answer.
 
 ## Decomposed Ideas
 
-Step 1 clarifies the problem before comparing solution directions. If a usable clarification artifact is supplied, `brainstorming` reads it and skips the questions it answers. The concept records its source and carries the problem, success factors, non-goals, and constraints forward. No separate brief file or gate record is required. After clarification, Step 1 can split a broad seed into several PROJs before detailed concept intake. This is for product boundaries, not task management: PRDs split behavior inside one PROJ, and waves split implementation order.
+Step 1 clarifies the problem before comparing solution directions. If a usable clarification artifact is supplied, `concept` reads it and skips the questions it answers. The concept records its source and carries the problem, success factors, non-goals, and constraints forward. No separate brief file or gate record is required. After clarification, Step 1 can split a broad seed into several PROJs before detailed concept intake. This is for product boundaries, not task management: PRDs split behavior inside one PROJ, and waves split implementation order.
 
 After decomposition:
 
@@ -73,7 +73,7 @@ After decomposition:
 | 0a | product-vision | New product: `docs/PRODUCT.md` (what/who/non-goals) + the numbered PROJ map with dependencies |
 | 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
-| 1 | brainstorming | Clarify the problem or use a supplied brief, then compare directions and write a buildable feature concept |
+| 1 | concept | Clarify the problem or use a supplied brief, then compare directions and write a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |
@@ -217,7 +217,7 @@ For a detailed explanation of Step 5 loops, gates, proof files, and QA handoff, 
 | 5b_executing-large-model | Drop-in Step 5 for frontier models: same state.sh, wave tag, wave-gate, Outer Ralph recovery, Quality Gate proof and Skill 6 handoff as `5_executing`, with TDD choreography and persona reviews replaced by intent and invariants (worker tiering by `Complexity` kept, strongest model leads and reviews); needs `5_executing` installed, selected in framework runs via `SKILLCHAIN_P5_SKILL` |
 | bugfixing | Reproduce and diagnose one reported defect, prove a regression test red before the fix, dispatch a narrow repair, run at most three Ralph repair attempts, and explain why prior tests missed it; standalone evidence lives in `specs/_bugfixing/BUGFIX-YYYYMMDD-HHMM-<slug>/bugfix-report.md` |
 | refactor-dreamer | Run an overnight/deep codebase scan for architecture drift, larger refactor opportunities, ADR candidates, fitness functions, and chain-ready input |
-| vibecoder | Freeform exploratory coding on a scratch branch with a live-appended journal, distilled at wrap-up into a `chain-input.md` feature seed for `1_brainstorming` |
+| vibecoder | Freeform exploratory coding on a scratch branch with a live-appended journal, distilled at wrap-up into a `chain-input.md` feature seed for `1_concept` |
 | sonar-cli | Set up and operate SonarScanner CLI and SonarQube CLI for project analysis, quality gates, and issue triage |
 | supabase-local-dev | Diagnose shared-local-Supabase-DB problems outside the chain's own P0/wave-gate flow: migration drift between git worktrees sharing one Postgres instance (keyed by `config.toml`'s committed `project_id`), RLS/grant surprises from testing as the `postgres` superuser, and `config.toml` vs. deployed truth; same `migration-drift-check.sh` check |
 

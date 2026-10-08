@@ -1,6 +1,6 @@
 ---
 name: vibecoder
-description: "Run a freeform exploratory coding session (a spike) on a scratch branch, keep a live journal of what gets tried and why direction changes as it happens, then distill that journal plus the resulting diff into a chain-ready concept seed once the session wraps up. Use when the user wants to vibe-code, prototype freely, or explore an idea in code before committing to a concept: going back and forth, trying dead ends, changing direction mid-session. Has three entry points: start a spike (scratch branch + live journal), resume a spike (re-load the journal and pick live documentation back up after a session break), and wrap up a spike (distill journal + diff into specs/_vibecoder/.../chain-input.md, then ask what to do with the branch). Not part of the 0-8 chain; its chain-input.md feeds 1_brainstorming as raw input, not a replacement for it. Not for planned feature work, TDD implementation, or bug fixes — use writing-plans/executing or bugfixing instead."
+description: "Run a freeform exploratory coding session (a spike) on a scratch branch, keep a live journal of what gets tried and why direction changes as it happens, then distill that journal plus the resulting diff into a chain-ready concept seed once the session wraps up. Use when the user wants to vibe-code, prototype freely, or explore an idea in code before committing to a concept: going back and forth, trying dead ends, changing direction mid-session. Has three entry points: start a spike (scratch branch + live journal), resume a spike (re-load the journal and pick live documentation back up after a session break), and wrap up a spike (distill journal + diff into specs/_vibecoder/.../chain-input.md, then ask what to do with the branch). Not part of the 0-8 chain; its chain-input.md feeds 1_concept as raw input, not a replacement for it. Not for planned feature work, TDD implementation, or bug fixes — use writing-plans/executing or bugfixing instead."
 ---
 
 # Vibe Spike
@@ -14,8 +14,8 @@ gets lost when the spike branch is eventually thrown away.
 
 This is an optional workflow outside the numbered 0-to-8 feature chain. It
 does not create a PROJ, PRD, architecture document, or wave plan. Its output
-is raw input for `1_brainstorming`, not a replacement for the concept work
-brainstorming does.
+is raw input for `1_concept`, not a replacement for the concept work
+concept does.
 
 ## Mandatory Delegation Contract
 
@@ -114,10 +114,10 @@ want to distill the spike into something usable.
    ambiguous. Do not re-interview what is already documented.
 4. Write `chain-input.md` (template below) into the same run folder.
 5. Ask explicitly what should happen to the branch: keep it as reference,
-   delete it now, or decide after brainstorming. Do not assume or act without
+   delete it now, or decide after concept. Do not assume or act without
    an answer — the branch may hold context worth returning to.
 6. Report: the run folder path, a one-line essence, the recommended next
-   skill (`1_brainstorming`), and the recorded branch decision.
+   skill (`1_concept`), and the recorded branch decision.
 
 ## Output Location
 
@@ -148,15 +148,15 @@ specs/_vibecoder/VIBE-YYYYMMDD-HHMM-<slug>/
 
 ## chain-input.md Template
 
-Keep this short enough to paste directly into brainstorming's feature-seed
+Keep this short enough to paste directly into concept's feature-seed
 intake.
 
 ```markdown
 # Chain Input — VIBE-YYYYMMDD-HHMM-<slug>
 
 ## Recommended Next Action
-Feed this into `1_brainstorming` as the feature seed. This is raw input, not
-an approved concept — brainstorming still owns scope, alternatives, and
+Feed this into `1_concept` as the feature seed. This is raw input, not
+an approved concept — concept still owns scope, alternatives, and
 assumption playback.
 
 ## What Was Explored
@@ -171,7 +171,7 @@ assumption playback.
 ## What Didn't (and why it's worth knowing)
 - <dead end, with the reason it was dropped — often as valuable as a hit>
 
-## Open Questions For Brainstorming
+## Open Questions For Concept
 - <question the spike raised but did not answer>
 
 ## Rough Story Seeds (tentative, unvalidated)
@@ -182,7 +182,7 @@ assumption playback.
 - `git diff <base>...<spike-branch>` (<N> files changed)
 
 ## Branch Disposition
-<kept as reference at <branch> | deleted | pending brainstorming outcome>
+<kept as reference at <branch> | deleted | pending concept outcome>
 ```
 
 ## Hard Rules
@@ -193,7 +193,7 @@ assumption playback.
   and writes into `specs/_vibecoder/`.
 - Do not create a PROJ, PRD, or architecture doc from this skill directly.
 - `chain-input.md` must stay concise — if it grows past what fits in a
-  brainstorming intake message, cut detail rather than let it become a second
+  concept intake message, cut detail rather than let it become a second
   concept document.
 - Never treat a session gap as fully documented. If commits exist that no
   live entry covers, reconstruct and label them at resume time rather than
@@ -205,5 +205,5 @@ Keep it short:
 
 - Run folder path.
 - One-line essence.
-- Recommended next skill: `1_brainstorming`.
+- Recommended next skill: `1_concept`.
 - Branch decision recorded.

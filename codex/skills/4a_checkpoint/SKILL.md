@@ -162,7 +162,7 @@ existing `6_plan/` directory instead.
 
 Only after the cascade is clean:
 
-1. Read the `state.json` created with the PROJ folder by brainstorming (1).
+1. Read the `state.json` created with the PROJ folder by concept (1).
    If this is a legacy PROJ without one, recover once with
    `bash ~/.codex/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`;
    it must still be `CP1:pending` before this checkpoint approves it.

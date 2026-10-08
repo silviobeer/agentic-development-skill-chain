@@ -30,7 +30,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 0a | `product-vision` | Once per product, new build: interview into `docs/PRODUCT.md` (what/who/non-goals) and cut the product into a numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
-| 1 | `brainstorming` | Clarify the problem (or use a supplied brief), then compare directions, allocate PROJ-X, and write the concept |
+| 1 | `concept` | Clarify the problem (or use a supplied brief), then compare directions, allocate PROJ-X, and write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |
@@ -55,11 +55,11 @@ despite the letter. Skills with no number are not steps (see below). Inside
 `specs/PROJ-<X>-<theme>/`, each subfolder carries the number of the skill
 that writes it.
 
-Brainstorming can decompose one broad seed into multiple PROJs; downstream
+Concept can decompose one broad seed into multiple PROJs; downstream
 skills handle one PROJ at a time with sibling PROJs as dependency context.
 
 The same skills serve two delivery tracks: the full in-repo build and a
-**product discovery** track for pure product management — brainstorm,
+**product discovery** track for pure product management — concept,
 wireframe, mockup, iterate with stakeholders, then hand a PRD to a
 developer via Linear at Step 2, no codebase required. See
 [docs/pm-chain.md](docs/pm-chain.md).

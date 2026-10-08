@@ -1,9 +1,9 @@
 ---
-name: brainstorming
+name: concept
 description: "Turn a feature idea or supplied problem brief into an approved buildable concept. Clarify the problem only when no usable clarification artifact exists, then compare directions, scope the work, and hand off to visual-companion or requirements-engineer."
 ---
 
-# Brainstorming Ideas Into Feature Concepts
+# Concept: From Idea To Feature Concept
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Turn a feature idea into one or more clear, buildable feature concepts.
 
 This is the start of the whole PROJ skill chain. It establishes the PROJ number, theme slug, project folder, concept document, scope boundaries, assumptions, and first handoff decision that every later skill depends on. If the seed idea is too broad for one PROJ, this skill first cuts it into separate PROJs with explicit dependencies and sequencing.
 
-This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`, matching the chain-guide Step 1 output.
+This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`, matching the chain-guide Step 1 output.
 
 Work in two passes: **Clarification** establishes the problem, users, success factors, non-goals, and constraints; **Concept** compares directions and decides scope. If the user supplies a clarification artifact, read it and skip the clarification interview. Carry its facts into the concept without reopening settled questions; ask only about material gaps or contradictions.
 
@@ -40,7 +40,7 @@ Ask one question per response unless the user explicitly asks for a checklist or
 This skill owns the first durable artifact in the process:
 
 ```text
-specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
+specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
 ```
 
 Later skills consume this artifact:
@@ -97,13 +97,13 @@ The concept document must provide enough product-level input for downstream skil
 
 ### Mockup-Relevant Inputs
 
-For UI features, brainstorming may record product vocabulary, required high-level states, content examples, and existing behavior to preserve. It must not create screen lists, sitemaps, component reuse decisions, visual styling, or UI implementation handoff; those belong to `visual-companion`, `frontend-design`, and `prototyping`.
+For UI features, concept may record product vocabulary, required high-level states, content examples, and existing behavior to preserve. It must not create screen lists, sitemaps, component reuse decisions, visual styling, or UI implementation handoff; those belong to `visual-companion`, `frontend-design`, and `prototyping`.
 
 ## Downstream Boundary
 
-Brainstorming must produce the inputs later skills need without doing their work.
+Concept must produce the inputs later skills need without doing their work.
 
-### Brainstorming Owns
+### Concept Owns
 
 - Feature intent and problem framing.
 - Primary users and real usage scenarios.
@@ -116,7 +116,7 @@ Brainstorming must produce the inputs later skills need without doing their work
 - Whether the feature has UI and therefore needs `visual-companion`.
 - Whether the feature is pure backend/API and can go directly to `requirements-engineer`.
 
-### Brainstorming Does Not Own
+### Concept Does Not Own
 
 - UI container decisions such as sidepanel, modal, drawer, split view, wizard, or dedicated page. That belongs to `visual-companion`.
 - Visual design language, colors, typography, spacing, or style direction. That belongs to `frontend-design`.
@@ -125,7 +125,7 @@ Brainstorming must produce the inputs later skills need without doing their work
 - Technical architecture, data model design, API design, package choices, or implementation strategy. That belongs to `architecture` and later planning.
 - Wave plans, tasks, tests, file ownership, or production code. That belongs to `writing-plans` and `executing`.
 
-When a question drifts into a later skill's responsibility, capture it as a downstream input, handoff note, or open decision instead of resolving it in brainstorming.
+When a question drifts into a later skill's responsibility, capture it as a downstream input, handoff note, or open decision instead of resolving it in concept.
 
 ## Brownfield Context Intake (Discovery Track)
 
@@ -195,7 +195,7 @@ PRDs, user stories, and waves are too late for deciding whether one broad seed i
 
 - **PRDs/user stories** split behavior inside an already-approved PROJ. They are good for testable feature slices, not for deciding project identity.
 - **Waves** split implementation order. They are good for dependency management during execution, not for product scoping.
-- **Brainstorming** owns product boundaries. It must decide whether the seed should become one PROJ or multiple PROJs before downstream artifacts inherit the wrong scope.
+- **Concept** owns product boundaries. It must decide whether the seed should become one PROJ or multiple PROJs before downstream artifacts inherit the wrong scope.
 
 Skipping this gate is acceptable only when the seed has one coherent user outcome, one main audience, and one downstream path.
 
@@ -288,8 +288,8 @@ Create a task for each item and complete them in order:
 12. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
 13. **Present feature concept** - section by section, scaled to complexity, and get approval.
 14. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_brainstorm/`, then run `bash ~/.codex/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
-16. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`.
+15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.claude/skills/4a_checkpoint/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only checkpoint (4a) may approve it.
+16. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`.
 17. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
 18. **User reviews written concept** - wait for approval before transition.
 19. **Repeat or transition** - for multi-PROJ maps, repeat concept creation for the next approved PROJ or transition the current PROJ to visual-companion/requirements-engineer.
@@ -364,6 +364,12 @@ Cover these gaps when the clarification source or concept intake has not already
 - **Scope:** Define what is in, out, and later without changing the clarified non-goals silently.
 - **Users and scenarios:** Fill in missing usage contexts for the chosen direction.
 - **Edge cases:** Ask about consequential failures or exceptions that could change the direction or scope.
+- **Product terms:** Sharpen the language as ambiguities surface, not as a separate round:
+  - *Fuzzy or overloaded term:* propose one precise canonical term ("do you mean the Customer or the User?").
+  - *Conflict with existing language:* when a term contradicts `docs/PRODUCT.md`, `0_context/existing-state.md` (Domain Vocabulary), or earlier answers, call it out immediately and ask which is meant.
+  - *Concrete scenarios:* invent borderline cases that probe the edges between concepts ("does X count as Y?") and make the user decide.
+  - *Contradiction with the code* (brownfield with code): when the user states how something works, check it and surface mismatches.
+  - *Record immediately:* write each resolved term or scenario into `Key Terms And Disputed Scenarios` as it is settled, free of implementation detail. No separate `GLOSSARY.md` and no technical ADRs in this phase.
 
 Prefer multiple-choice questions when helpful. Open-ended questions are fine when the user has useful context that options would bias.
 
@@ -487,7 +493,7 @@ Do not over-specify implementation details. Architecture, PRDs, plans, and imple
 After approval, allocate the PROJ folder and write:
 
 ```text
-specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
+specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
 ```
 
 Use this structure:
@@ -542,6 +548,10 @@ Approved concept
 
 ## Data, Permissions, And Constraints
 
+## Key Terms And Disputed Scenarios
+- <term>: <definition in one sentence; what counts, what does not>
+- <borderline scenario> → <agreed outcome and why>
+
 ## Error Handling And Edge Cases
 
 ## High-Level Implementation Success
@@ -595,7 +605,7 @@ approval. Supply everything that establishes as-is truth for the concept:
 
 ```bash
 bash scripts/cross-review.sh concept <X> <theme> \
-  --artifacts specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md \
+  --artifacts specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md \
   --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
     docs/PRODUCT.md specs/product-roadmap.md \
   --author-provider <current-writer> --round 1
@@ -620,6 +630,7 @@ Review the written concept before asking the user to review it:
 3. **Scope check:** the concept is focused enough for one PROJ, or it has been decomposed.
 4. **Decomposition check:** for broad seeds, the approved project map, sibling PROJs, dependencies, and excluded sibling scope are documented.
 5. **Ambiguity check:** requirements cannot be interpreted in materially different ways.
+   Key product terms are defined, and disputed scenarios are settled, in `Key Terms And Disputed Scenarios`.
 6. **Deep-dive coverage:** success criteria, out-of-scope, and users/scenarios are explicitly documented.
 7. **Exploration record:** rejected/deferred alternatives are captured briefly.
 8. **Assumption record:** confirmed assumptions are documented; unresolved assumptions are not hidden.
@@ -637,7 +648,7 @@ Fix issues inline. If fixing requires information not already confirmed, ask the
 
 After self-review, ask the user to review the written concept:
 
-> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`. Automatic cross-review is complete. Please review the concept before we continue. Let me know if you want to make any changes."
+> "Concept written and committed to `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`. Automatic cross-review is complete. Please review the concept before we continue. Let me know if you want to make any changes."
 
 Wait for the user's response. If they request changes, update the concept and run self-review again. Only proceed after approval.
 
@@ -646,7 +657,7 @@ Wait for the user's response. If they request changes, update the concept and ru
 - If the feature has a UI component, invoke `visual-companion`.
 - If the feature is pure backend/API, invoke `requirements-engineer`.
 - If the current PROJ depends on an uncreated or unapproved sibling PROJ, pause transition and create or approve that prerequisite first.
-- Do NOT invoke writing-plans, architecture, executing, QA, documentation, or implementation directly from brainstorming.
+- Do NOT invoke writing-plans, architecture, executing, QA, documentation, or implementation directly from concept.
 
 ## Key Principles
 

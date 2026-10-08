@@ -6,7 +6,7 @@ This document is the expanded process reference for `chain-guide`. The executabl
 
 ```text
 0   chain-guide              Detect current PROJ state and recommend the next skill
-1   brainstorming            Create the approved feature concept
+1   concept            Create the approved feature concept
 1b  visual-companion         Explore UI shape for UI features
 1c  frontend-design          Define or extend the design language when needed
 1d  prototyping                Create sitemap, mockups, and UI implementation handoff
@@ -27,7 +27,7 @@ Each PROJ uses:
 ```text
 specs/PROJ-<X>-<theme>/
   0_context/            existing-state capture, brownfield only
-  1_brainstorm/         Step 1  concept
+  1_concept/         Step 1  concept
   1b_visual-companion/  Step 1b layout exploration and decision
   1c_design/            Step 1c design language or design delta
   1d_prototypes/           Step 1d sitemap, mockups, implementation handoff
@@ -50,11 +50,11 @@ together. Product-level artifacts live outside the PROJ folder —
 | 0a | `product-vision` | New product | `docs/PRODUCT.md`, `specs/product-roadmap.md` |
 | 0b | `intake` | Existing codebase | the curated `docs/` baseline, extracted |
 | 0c | `bootstrap` | New build | `docs/ARCHITECTURE.md` § Stack, scaffold, `AGENTS.md` + `CLAUDE.md` |
-| 1 | `brainstorming` | Required | `1_brainstorm/PROJ-<X>-concept.md` |
+| 1 | `concept` | Required | `1_concept/PROJ-<X>-concept.md` |
 | 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
 | 1d | `prototyping` | UI only | `1d_prototypes/sitemap.html`, component or standalone HTML screen sources, `implementation-handoff.md` (runtime + screen references) |
-| 1e | `concept-sync` | After mockup iterations | reconciled `1_brainstorm/PROJ-<X>-concept.md` |
+| 1e | `concept-sync` | After mockup iterations | reconciled `1_concept/PROJ-<X>-concept.md` |
 | 2 | `requirements-engineer` | Required, including opposite-provider PRD review | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
 | 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
 | 2c | `review-reconcile` | PRD review returned gaps | `2_PRDs/*-review-decisions.md`, `review-changelog.md` |
@@ -83,7 +83,7 @@ architecture, and plans; it is not a step anyone routes to.
 
 ## Decomposed PROJs
 
-Brainstorming may split one broad seed into several PROJs. Downstream skills then run one PROJ at a time.
+Concept may split one broad seed into several PROJs. Downstream skills then run one PROJ at a time.
 
 - Each PROJ has its own concept, PRDs, architecture, plans, execution, QA, and docs.
 - Sibling PROJs are context, dependencies, or future scope.

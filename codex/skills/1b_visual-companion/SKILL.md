@@ -54,7 +54,7 @@ docs(PROJ-<X>): explore UI layout approaches for <theme>
 Read the concept doc:
 
 ```text
-specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
+specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
 ```
 
 Then inspect the existing app so the exploration fits what is already there:
@@ -174,6 +174,7 @@ Interaction requirements:
 - Clickable primary actions such as `Create`, `Open details`, `Edit`, `Save`, `Cancel`
 - State changes that demonstrate the flow: panel opens, modal appears, wizard advances, selected row changes, etc.
 - A compact "decision notes" area per approach
+- Visible current state after every action (selected row, open panel, wizard step), so reviewers see what changed
 - At least one desktop-width frame and one mobile-width preview or responsive toggle when mobile behavior matters
 
 Visual rules:
@@ -295,7 +296,7 @@ Do not transition until the user has explicitly selected or approved a direction
 - **Grounded in the app.** Existing routes, components, and navigation patterns are constraints, not afterthoughts.
 - **Coarse before detailed.** Decide containers, flow, and information hierarchy; leave detailed UI to `prototyping` and design language to `frontend-design`.
 - **Decision-oriented.** The artifact should help the user pick a direction quickly.
-- **Question first, finding last.** The exploration exists to answer a stated Decision Question; the documented Finding is the output that survives. The HTML itself is discarded, never carried into production code.
+- **Question first, finding last.** The exploration exists to answer a stated Decision Question; the documented Finding is the output that survives. The HTML stays in the PROJ folder as a source for the decision, but is never carried into production code.
 
 ## What This Step Does NOT Do
 

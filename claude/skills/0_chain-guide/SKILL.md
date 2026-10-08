@@ -15,11 +15,11 @@ Step  Skill                  Output
  0a   product-vision         docs/PRODUCT.md + specs/product-roadmap.md      ┐ new
  0c   bootstrap              docs/ARCHITECTURE.md §Stack + scaffold + AGENTS.md ┘ build
  0b   intake                 the same curated docs/ baseline, extracted from code
-  1   brainstorming          specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md
+  1   concept          specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
  1b   visual-companion (opt) specs/PROJ-<X>-<theme>/1b_visual-companion/layout-*.*
  1c   frontend-design (opt)  specs/PROJ-<X>-<theme>/1c_design/design-language.md
  1d   prototyping (UI req.)    specs/PROJ-<X>-<theme>/1d_prototypes/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
- 1e   concept-sync (opt)     reconciled 1_brainstorm/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
+ 1e   concept-sync (opt)     reconciled 1_concept/PROJ-<X>-concept.md (Concept Sync Log + Handoff Readiness)
   2   requirements-engineer  specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md
  2b   handoff-package (opt)  specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/ standalone package (+ zip) — discovery endpoint or requested full-chain export
  2c   review-reconcile (opt) specs/PROJ-<X>-<theme>/2_PRDs/<prd>-review-decisions.md + review-changelog.md — resolve PRD review gaps
@@ -90,8 +90,8 @@ same skills the runner's lanes load — interactive use stays supported.
 
 The same chain serves two delivery tracks. Detect which one applies before recommending a next step.
 
-- **Full chain (in-repo build):** brainstorm → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
-- **Product discovery (Linear handoff):** brainstorm → visual-companion → prototyping (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — brainstorming, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
+- **Full chain (in-repo build):** concept → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
+- **Product discovery (Linear handoff):** concept → visual-companion → prototyping (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — concept, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
 
 A requested external `handoff-package` is also available after approved PRDs in the full chain. Component mockups are exported as screenshots and flow descriptions; packaging does not switch tracks or replace subsequent implementation steps.
 
@@ -105,9 +105,9 @@ On the discovery track, do not recommend Steps 3–7. The chain ends at `require
 
 Discovery-track notes:
 
-- **Folder structure is identical** to the full chain (`specs/PROJ-<X>-<theme>/`); `brainstorming` bootstraps it on first run. No manual scaffolding.
+- **Folder structure is identical** to the full chain (`specs/PROJ-<X>-<theme>/`); `concept` bootstraps it on first run. No manual scaffolding.
 - **Git is optional.** If the workspace is not a git repo, skip commit recommendations; the files are the durable artifacts. Optionally suggest `git init` for iteration history.
-- **Brownfield discovery** captures the existing product/design system/vocabulary into `0_context/existing-state.md` during brainstorming, since there is no codebase to scan.
+- **Brownfield discovery** captures the existing product/design system/vocabulary into `0_context/existing-state.md` during concept, since there is no codebase to scan.
 - **Handoff packages are generated snapshots.** Existing `2b_handoff/YYYY-MM-DD-handoff*/` runs are immutable; only `handoff-package` (2b) may create or update files under `2b_handoff/`. If `review-reconcile` or another skill changes source artifacts, recommend a new `handoff-package` run instead of editing a prior package.
 
 ## Detect Current State
@@ -140,11 +140,11 @@ recommending anything. It carries the PROJ numbers, the `Depends on`
 ordering, and each entry's `Status`. A PROJ whose dependency is not
 `shipped` waits — recommend the dependency instead. `planned` entries with
 no `specs/PROJ-<X>-<theme>/` folder yet are the natural candidates for
-**brainstorming** (1).
+**concept** (1).
 
 Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
-1. `1_brainstorm/PROJ-<X>-concept.md` — concept written? → step 1 done
+1. `1_concept/PROJ-<X>-concept.md` — concept written? → step 1 done
 2. `1b_visual-companion/layout-decision.md` + `layout-exploration.html` — visual companion present? → step 1b done
 3. Project-mode detection: prefer `1b_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
 4. `1c_design/design-language.md` exists → step 1c done
@@ -167,7 +167,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 Based on detected state, tell the user:
 
 **No PROJ folder found:**
-> "No feature work detected. Start with the **brainstorming** skill (`/1_brainstorming`) to explore your idea — it will allocate PROJ-X and set up the folder."
+> "No feature work detected. Start with the **concept** skill (`/1_concept`) to explore your idea — it will allocate PROJ-X and set up the folder."
 
 **Concept written, no visual companion output, no PRDs (UI feature):**
 > "Concept for `PROJ-<X>-<theme>` found. This feature has a UI component. Recommended next step: use **visual-companion** (1b) to explore interactive layout approaches before design, mockups, and PRDs."
@@ -259,7 +259,7 @@ If the user asks "what does each step do?":
 | 0a | product-vision (once per product) | New build: `docs/PRODUCT.md` (what/who/non-goals) + numbered PROJ map in `specs/product-roadmap.md` |
 | 0c | bootstrap (once per project) | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold, build/test green, root `AGENTS.md` + `CLAUDE.md` |
 | 0b | intake (once per repo) | Bootstrap the curated docs baseline: scan + provenance-marked drafts, developer interview, checkpoint reconcile, seal commit |
-| 1 | brainstorming | Explore the idea, allocate PROJ-X and thema slug, write concept |
+| 1 | concept | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
 | 1d | prototyping (UI required) | HTML sitemap + component or standalone HTML mockups + `implementation-handoff.md` (runtime, screen references, flows) + `iteration-log.md`; execution mode is independent of visual fidelity |

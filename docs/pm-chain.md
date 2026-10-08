@@ -1,12 +1,12 @@
 # PM / Product Discovery Chain
 
-A track for pure product management: brainstorm, wireframe, mockup, iterate with stakeholders, reconcile the concept, and hand a PRD to a developer via [Linear](https://linear.app). **No code is written and there is no codebase here.** The same skills as the full chain are reused — only the path through them and the endpoint differ.
+A track for pure product management: concept, wireframe, mockup, iterate with stakeholders, reconcile the concept, and hand a PRD to a developer via [Linear](https://linear.app). **No code is written and there is no codebase here.** The same skills as the full chain are reused — only the path through them and the endpoint differ.
 
 ## Flow
 
 ```mermaid
 flowchart LR
-  S0A[0a product-vision · new product only] --> S1[1 brainstorming]
+  S0A[0a product-vision · new product only] --> S1[1 concept]
   S1 --> S1B[1b visual-companion]
   S1B --> S1C[1c frontend-design optional]
   S1B --> S1D[1d prototyping]
@@ -35,7 +35,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
     ├── product-roadmap.md          # only if product-vision (0a) ran
     └── PROJ-1-<theme>/
         ├── 0_context/              # brownfield: existing-state.md + references/ (only if something already exists)
-        ├── 1_brainstorm/           # PROJ-1-concept.md
+        ├── 1_concept/           # PROJ-1-concept.md
         ├── 1b_visual-companion/     # layout-decision.md + layout-exploration.html
         ├── 1c_design/               # design-language.md (only if a design system is defined)
         ├── 1d_prototypes/              # mockups + sitemap + implementation-handoff.md + iteration-log.md
@@ -43,7 +43,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
         └── 2b_handoff/              # optional standalone package runs
 ```
 
-`brainstorming` (1) bootstraps `specs/PROJ-<X>-<theme>/` on its first run, exactly as in the full chain. Nothing needs to be created by hand.
+`concept` (1) bootstraps `specs/PROJ-<X>-<theme>/` on its first run, exactly as in the full chain. Nothing needs to be created by hand.
 
 **Git is optional.** No skill on this track requires a git repository; if the workspace isn't a repo, the commit steps are skipped and the files themselves are the durable artifacts. Because the core value of this track is *tracking mockup iterations and concept changes*, an optional `git init` is recommended for a version history — but never required.
 
@@ -52,7 +52,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | Step | Skill | Purpose on this track |
 |---|---|---|
 | 0a | product-vision (new product only) | Establish what the product is — `docs/PRODUCT.md` (purpose, users, non-goals, success) — and cut it into a numbered PROJ map in `specs/product-roadmap.md`. Skip when the engagement is a single feature inside an existing product |
-| 1 | brainstorming | Clarify the problem, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
+| 1 | concept | Clarify the problem, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | prototyping | Build mockups, then iterate by prompting changes directly into the mockups; every concept-affecting change is recorded in `iteration-log.md` |
@@ -61,7 +61,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
 | 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
 
-In Step 1, **Clarification** establishes the problem owner, job to be done, current pain, success factors, non-goals, and constraints without choosing a solution. A supplied brief provides these facts, so `brainstorming` skips the questions it answers. The concept keeps a `Clarification` section with the source and key facts; it then compares directions and decides scope. Project decomposition follows clarification, so the split reflects distinct user outcomes rather than parts of a proposed solution. No separate brief file or gate record is required.
+In Step 1, **Clarification** establishes the problem owner, job to be done, current pain, success factors, non-goals, and constraints without choosing a solution. A supplied brief provides these facts, so `concept` skips the questions it answers. The concept keeps a `Clarification` section with the source and key facts; it then compares directions and decides scope. Project decomposition follows clarification, so the split reflects distinct user outcomes rather than parts of a proposed solution. No separate brief file or gate record is required.
 
 ## The review-reconcile loop
 
@@ -83,7 +83,7 @@ It is the post-requirements sibling of `concept-sync`: `concept-sync` reconciles
 
 ## Brownfield: capturing what already exists
 
-When the work extends or fits into something that already exists (a live product, a design system, a brand, established vocabulary), there is no codebase to scan — so `brainstorming` captures the as-is state explicitly into `specs/PROJ-<X>-<theme>/0_context/`:
+When the work extends or fits into something that already exists (a live product, a design system, a brand, established vocabulary), there is no codebase to scan — so `concept` captures the as-is state explicitly into `specs/PROJ-<X>-<theme>/0_context/`:
 
 - `existing-state.md` — existing surfaces, design system/brand, domain vocabulary, and invariants that must be preserved.
 - `references/` — screenshots, exported style guides, and saved links the user provides. A provided live URL may be fetched for reference.
@@ -102,7 +102,7 @@ On this code-free discovery track, mockups remain standalone HTML. With a usable
 
 Stakeholder agreement is reached *on the mockups*. Because changes are prompted directly into the mockups, they would otherwise be lost. `prototyping` therefore maintains `1d_prototypes/iteration-log.md`, one entry per round, each classified as scope, behavior, or presentation-only. Only scope/behavior changes flow back into the concept.
 
-`concept-sync` (1e) then reads the log, updates `1_brainstorm/PROJ-<X>-concept.md`, records superseded decisions, and writes a `Handoff Readiness` section with `Delivery track: discovery (Linear handoff)`. This closes the loop so requirements are written against an accurate concept.
+`concept-sync` (1e) then reads the log, updates `1_concept/PROJ-<X>-concept.md`, records superseded decisions, and writes a `Handoff Readiness` section with `Delivery track: discovery (Linear handoff)`. This closes the loop so requirements are written against an accurate concept.
 
 ## Linear handoff
 

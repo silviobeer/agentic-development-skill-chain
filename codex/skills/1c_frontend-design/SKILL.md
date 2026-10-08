@@ -35,7 +35,7 @@ For `hybrid` projects, do not reinvent the whole visual language. Fill only the 
 
 ## Decomposed PROJ Handling
 
-Design language may be cross-PROJ when brainstorming decomposes one seed into tightly linked UI PROJs. In that case, run this skill once for the approved PROJ family rather than inventing separate visual systems for each sibling.
+Design language may be cross-PROJ when concept decomposes one seed into tightly linked UI PROJs. In that case, run this skill once for the approved PROJ family rather than inventing separate visual systems for each sibling.
 
 Use this rule:
 
@@ -51,9 +51,9 @@ Artifact handling:
 
 ## Input
 
-- Concept doc from Step 1 (`specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`) — understand the app's purpose and audience
+- Concept doc from Step 1 (`specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`) — understand the app's purpose and audience
 - Visual Companion output (`specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md` and `layout-exploration.html`) — understand selected UI structure, `Project Mode`, `Shape Brief`, and interaction containers
-- User preferences expressed during brainstorming
+- User preferences expressed during concept
 
 ## Process
 

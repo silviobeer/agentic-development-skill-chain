@@ -1,11 +1,11 @@
 ---
 name: product-vision
-description: "Establish what a product IS before any feature is designed: interview the product owner into docs/PRODUCT.md (purpose, audience, non-goals, success) and cut the product into a numbered PROJ map in specs/product-roadmap.md. Use when: (1) a new product/project starts and no docs/PRODUCT.md exists, (2) the product direction changed and the map needs a revision round. Not for: a single feature in an existing product (use brainstorming), extracting the baseline from an existing codebase (use intake), stack or scaffold decisions, feature detail."
+description: "Establish what a product IS before any feature is designed: interview the product owner into docs/PRODUCT.md (purpose, audience, non-goals, success) and cut the product into a numbered PROJ map in specs/product-roadmap.md. Use when: (1) a new product/project starts and no docs/PRODUCT.md exists, (2) the product direction changed and the map needs a revision round. Not for: a single feature in an existing product (use concept), extracting the baseline from an existing codebase (use intake), stack or scaffold decisions, feature detail."
 ---
 
 # Product Vision — What Are We Building, And In What Order
 
-The chain's highest zoom level. `brainstorming` (1) turns ONE idea into ONE
+The chain's highest zoom level. `concept` (1) turns ONE idea into ONE
 buildable PROJ concept; it has no artifact above the PROJ. So on a new
 product the question "what is this thing, and what is it deliberately not"
 gets discussed once, decomposed into PROJs, and then evaporates — and every
@@ -43,7 +43,7 @@ product interview means deciding it without the architecture.
 
 <HARD-GATE>
 No feature detail. One sentence of user outcome per PROJ, no user stories,
-no screens, no acceptance criteria. Those belong to `brainstorming` (1) and
+no screens, no acceptance criteria. Those belong to `concept` (1) and
 `requirements-engineer` (2), and a second list of them here would be a
 second source of truth that is wrong within a month.
 </HARD-GATE>
@@ -102,7 +102,7 @@ Present the map with dependencies and a recommended first PROJ, with the
 reason. Use temporary labels (`PROJ-A candidate`) until the user approves
 the cut. **Real numbers are allocated only after approval** — the roadmap is
 the record of that approval, which is why the numbers are handed out here
-and not in `brainstorming`.
+and not in `concept`.
 
 ### 3. Write the two artifacts
 
@@ -139,7 +139,7 @@ injected into context bundles, therefore costs no token budget and may grow:
 ```markdown
 # Product Roadmap — <Product>
 
-Source: `docs/PRODUCT.md` · Numbers allocated here · Status updated by `1_brainstorming`
+Source: `docs/PRODUCT.md` · Numbers allocated here · Status updated by `1_concept`
 
 ## Map
 | # | Theme | User outcome (one sentence) | Depends on | Status |
@@ -166,14 +166,14 @@ Rules for the map:
 
 - **One sentence of user outcome, no feature list.** The sentence says when
   the PROJ is done, not what is inside it. What is inside is
-  `1_brainstorm/PROJ-<X>-concept.md`, and one list is enough.
+  `1_concept/PROJ-<X>-concept.md`, and one list is enough.
 - **`Depends on` is the only mechanic.** It is what lets `chain-guide` (0)
   say "PROJ-3 waits for PROJ-2" instead of that ordering living scattered
   across concept documents.
 - **No estimates, no dates.** No skill reads them and they are wrong by the
   time anyone does.
 - **Status:** `planned | concept | building | shipped | dropped`. Set to
-  `concept` by `brainstorming` when it opens the PROJ, to `shipped` by
+  `concept` by `concept` when it opens the PROJ, to `shipped` by
   `delivery` (8) on merge. Everything else is a manual product decision and
   gets a changelog line.
 
@@ -189,9 +189,9 @@ count: `docs/PRODUCT.md` must fit 30 non-blank lines. Over the cap means the
 vision is carrying feature detail — cut it, never raise the cap.
 
 → NEXT ACTION: `bootstrap` (0c) — decide the stack and stand up the empty
-project — then `brainstorming` (1) on the recommended first PROJ. On the
+project — then `concept` (1) on the recommended first PROJ. On the
 discovery track (no code, Linear handoff) skip `bootstrap` and go straight
-to `brainstorming`.
+to `concept`.
 
 ## Revision Round
 
@@ -210,7 +210,7 @@ map by hand:
 - `docs/PRODUCT.md` — the curated product baseline (≤30 non-blank lines)
 - `specs/product-roadmap.md` — the numbered PROJ map with dependencies
 
-Consumed by: `brainstorming` (1) takes one map entry as its scope boundary
+Consumed by: `concept` (1) takes one map entry as its scope boundary
 and inherits its siblings and exclusions · `chain-guide` (0) routes by
 `Depends on` and `Status` · every context bundle carries `docs/PRODUCT.md`,
 so implementers know what the product is · `intake` (0b) merges rather than

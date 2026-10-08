@@ -33,7 +33,7 @@ Decide before you edit. Capture every decision in a record **before** touching t
 
 Not every gap is the product owner's to decide. Some require engineering input (architecture, feasibility, effort, security). Those are **deferred to a developer meeting**, not force-decided — they stay open with a clear status and land on an agenda.
 
-`specs/PROJ-<X>-<theme>/2b_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_brainstorm/`, `2_PRDs/`, `1d_prototypes/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
+`specs/PROJ-<X>-<theme>/2b_handoff/` contains generated, dated package runs. Treat every existing run folder and file there as immutable. This skill updates source artifacts only (`1_concept/`, `2_PRDs/`, `1d_prototypes/`). If the external handoff must reflect reconciled changes, run `handoff-package` (2b) afterward so it creates a new dated run from the updated sources.
 
 ## Decomposed PROJ Handling
 
@@ -46,7 +46,7 @@ Read these inputs:
 1. The review itself — pasted text or a file the user provides (gaps, questions, suggested updates).
 2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md`.
 3. The canonical scope/decisions source if one exists (e.g. the concept's decisions register or an explicitly supplied source document) — **read it first** so no decision contradicts a canonical rule.
-4. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` (if it exists).
+4. Concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` (if it exists).
 5. Mockups: screen/source references in `1d_prototypes/implementation-handoff.md` + `iteration-log.md`. Legacy handoffs without screen references use the existing screen HTML files.
 
 If the review references decision IDs, rules, or sections, resolve them in the source documents before interpreting the gap — an answer that violates a canonical rule is wrong even if it closes the gap.

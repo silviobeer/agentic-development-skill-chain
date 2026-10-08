@@ -7,7 +7,7 @@ description: "Reconcile mockup iteration changes back into the concept before re
 
 During mockup review, stakeholders iterate by prompting changes directly into the mockups until everyone agrees. Those agreed changes drift away from the original concept. This skill closes that loop: it reads the tracked changes and updates the concept so the concept again reflects what was actually decided — before requirements are written.
 
-This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (brainstorm → visual-companion → prototyping ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
+This is the bridge between visual iteration and `requirements-engineer`. It is the primary reconciliation step in the **Product Discovery track** (concept → visual-companion → prototyping ⟳ → concept-sync → requirements-engineer), and it is equally valid in the full 0-to-8 chain whenever mockups were iterated after the concept was written.
 
 ## When To Use
 
@@ -34,7 +34,7 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 
 Read these inputs:
 
-1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+1. Concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
 2. Mockup iteration log: `specs/PROJ-<X>-<theme>/1d_prototypes/iteration-log.md`
 3. Current mockups: follow the screen/source references in `1d_prototypes/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_prototypes/`.
 4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
@@ -56,7 +56,7 @@ Only scope and behavior changes flow into the concept. Presentation-only changes
 
 ### 2. Reconcile Into The Concept
 
-Update `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md` so it again describes the agreed product:
+Update `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` so it again describes the agreed product:
 
 - Update the relevant concept sections (goals, scope, flows, constraints, assumptions, risks).
 - Where the iteration **replaced** an earlier concept decision, update the text and record the old decision under `## Superseded Decisions` with a one-line reason.

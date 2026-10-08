@@ -59,7 +59,7 @@ Read in this priority order. Structured data first; raw reconstruction only as f
    - `## QA Results`: QA summary and residual risk
    - `## PROJ Retrospective`: implementation lessons and durable observations
    - `## AGENTS.md Candidates`: proposed durable agent rules awaiting approval
-2. `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+2. `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
    - app/feature purpose, target user, in-scope/out-of-scope boundaries
 3. `specs/PROJ-<X>-<theme>/2_PRDs/*.md`
    - user stories, feature names, acceptance criteria, edge cases

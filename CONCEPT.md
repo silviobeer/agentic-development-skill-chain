@@ -227,7 +227,7 @@ codebase runs `0b_intake` instead — the same curated baseline, extracted
 rather than decided. Exactly one of the two paths.
 
 The repository's existing pre-PRD flow is preserved unchanged. A PROJ
-starts with `1_brainstorming`, optionally follows the UI branch
+starts with `1_concept`, optionally follows the UI branch
 (`1b_visual-companion` → optional `1c_frontend-design` →
 `1d_prototyping` → optional `1e_concept-sync`), and then runs
 `2_requirements-engineer`. On the product-discovery track it may continue
@@ -242,7 +242,7 @@ never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
         0c bootstrap (stack + scaffold)  |  (same curated baseline)
               │
         EXISTING PRE-PRD FLOW (preserved)
-        brainstorm → UI exploration/mockups when needed → requirements
+        concept → UI exploration/mockups when needed → requirements
               │
               ├── discovery track → Linear / 2b_handoff package → STOP
               │
@@ -303,7 +303,7 @@ owner (what it is, who uses it, what it deliberately is NOT, when it is a
 success, what is fixed) and cuts the product into a numbered PROJ map in
 `specs/product-roadmap.md` — one sentence of user outcome per PROJ, plus
 `Depends on` and `Status`. That map is where PROJ numbers are allocated,
-where `chain-guide` reads the ordering, and where `1_brainstorming` takes
+where `chain-guide` reads the ordering, and where `1_concept` takes
 its scope boundary from. It is NOT injected into context bundles, so it
 costs no token budget; `docs/PRODUCT.md` keeps its 30-line cap.
 
@@ -806,7 +806,7 @@ specs/product-roadmap.md       ← PROJ map: outcome, Depends on, Status
 
 specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 0_context/                 ← existing-state inputs when applicable
-├── 1_brainstorm/              ← approved concept
+├── 1_concept/              ← approved concept
 ├── 1b_visual-companion/        ← UI structure exploration when applicable
 ├── 2_PRDs/                    ← requirements snapshot
 ├── 1c_design/                  ← optional design language

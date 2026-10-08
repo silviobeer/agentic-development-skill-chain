@@ -26,7 +26,7 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 - **Reuse:** Import existing components, patterns, tokens, styles, and the app shell when a usable app runtime exists. Mark new UI pieces as candidates.
 - **Lightweight:** Reuse the existing stack and preview tooling; no new dependencies, per-PROJ package installation, or mockup platform.
 - **Interactive when useful:** Demonstrate navigation, overlays, forms, and state changes with small local fixtures, not production business logic.
-- **Question-driven:** Name the open question each mockup round must answer (e.g. "Does the review state fit in the list row?") before building or iterating, and record the answer as a finding. Mockups are disposable decision aids: record what was learned, never port mockup code into production.
+- **Question-driven:** Name the open question each mockup round must answer (e.g. "Does the review state fit in the list row?") before building or iterating, and record the answer as a finding. Mockups are decision aids: keep them as the source of the decision and record what was learned, but never port mockup code into production. Show the current state after each simulated action.
 - **Show states:** Include normal, empty, loading, error, and success states where relevant.
 - **Review annotations:** Put component reuse and source labels in a separate review area, not inside product buttons, fields, or other product copy.
 
@@ -57,7 +57,7 @@ If `1c_frontend-design` was skipped and no existing component styling or design 
 
 Read these inputs:
 
-1. Concept: `specs/PROJ-<X>-<theme>/1_brainstorm/PROJ-<X>-concept.md`
+1. Concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
 2. Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
 3. Visual Companion prototype: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-exploration.html`
 4. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md` or a canonical sibling design language that lists the current PROJ under `Applies To`
