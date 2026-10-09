@@ -139,11 +139,13 @@ Examples:
 
 Document assumptions from the conversation in `layout-decision.md`.
 
+If the concept lists `Candidate Directions`, the first Decision Question is which candidate drives the feature (e.g. "Does self-service onboarding run as a wizard, an AI chat, or both?"): build one approach per candidate in the existing app's usual container, so the comparison is about the direction, not the container. Ask the container question only after a candidate is chosen, as a second round in the same files.
+
 Phrase each decision as a **Decision Question the exploration must answer**, in one sentence, ending in a question mark and answerable by choosing among the approaches (e.g. "Does object detail open in a sidepanel, modal, or full page?"). Every approach, and every interactive element in the HTML, must help answer that question; drop variants and interactions that do not. State the question at the top of `layout-exploration.html` and in `layout-decision.md`.
 
 ### 4. Generate 3-4 Approaches
 
-Create distinct approaches. Prefer variants that answer the user's real uncertainty.
+Create distinct approaches. Prefer variants that answer the user's real uncertainty. With `Candidate Directions`, the approaches are exactly the concept's 2-3 candidates; do not add a direction the concept did not approve.
 
 Common approach set:
 - **Approach A — Sidepanel / Drawer:** keeps list context visible, good for inspect/edit flows.
@@ -277,7 +279,7 @@ Iterate by editing the same files. Do not create many `v2` files unless the user
 
 After the user chooses a direction:
 
-- Update `layout-decision.md` with `## Selected Direction` and fill `## Finding` (answer to the Decision Question, deciding reason, rejected variants).
+- Update `layout-decision.md` with `## Selected Direction` and fill `## Finding` (answer to the Decision Question, deciding reason, rejected variants). If the concept had `Candidate Directions`, say so: `concept-sync` writes the chosen candidate back into the concept before requirements.
 - Then invoke `frontend-design` if the recorded `## Design System State` decision says to build it — the default for `greenfield`, and for `hybrid` with meaningful design-language gaps.
 - If the user chose to skip knowingly, go to `prototyping` directly and tell it to use greyscale wireframes.
 - Otherwise invoke `prototyping` directly for `brownfield`.

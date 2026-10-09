@@ -18,8 +18,7 @@ This is the bridge between visual iteration and `requirements-engineer`. It is t
 
 ## When To Skip
 
-- The concept and mockups never diverged (no iteration happened).
-- The change log is empty.
+- The concept and mockups never diverged (no iteration happened), the change log is empty, and the concept has no `Candidate Directions`.
 - You are still mid-iteration — keep iterating in `prototyping` first.
 
 ## Decomposed PROJ Handling
@@ -54,7 +53,11 @@ Read `iteration-log.md` and the current mockups. For each logged change, classif
 
 Only scope and behavior changes flow into the concept. Presentation-only changes stay in the mockups and the UI handoff.
 
+If the concept lists `Candidate Directions`, the choice made in `layout-decision.md` (`Selected Direction` and `Finding`) is a scope change too: it is required input in that case.
+
 ### 2. Reconcile Into The Concept
+
+Replace `Candidate Directions` with `Selected Direction` for the chosen candidate; move every other candidate to `Explored Alternatives` with the deciding reason from `Finding`.
 
 Update `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` so it again describes the agreed product:
 

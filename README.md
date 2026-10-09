@@ -31,7 +31,7 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1a | `clarification` (opt) | PM and stakeholder clarify the problem live into a standalone stakeholder brief in `specs/_clarification/` |
-| 1 | `concept` | Clarify the problem (or use a supplied brief), then compare directions, allocate PROJ-X, and write the concept |
+| 1 | `concept` | Clarify the problem (or use a supplied brief), then open the solution space, compare directions, allocate PROJ-X, and write the concept |
 | 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |

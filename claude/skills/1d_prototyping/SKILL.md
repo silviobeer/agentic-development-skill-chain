@@ -316,6 +316,7 @@ If changes are requested, update mockups, handoff, and any affected external-han
 After approval:
 
 - If the mockups were iterated and the concept may have drifted (any `iteration-log.md` entry with `Affects concept: yes`), recommend `concept-sync` (1e) next so the agreed changes flow back into the concept before requirements.
+- If the concept still lists `Candidate Directions`, recommend `concept-sync` (1e) so the direction chosen in `layout-decision.md` lands in the concept.
 - If nothing affected the concept, recommend `requirements-engineer` (2) directly.
 
 Either way, the mockups are required input for user stories, acceptance criteria, and edge cases.

@@ -74,7 +74,7 @@ After decomposition:
 | 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1a | clarification (optional) | PM and stakeholder clarify the problem live into a standalone stakeholder brief: job to be done, owner, success factors with baselines and targets, non-goals, constraints, open questions |
-| 1 | concept | Clarify the problem or use a supplied brief, then compare directions and write a buildable feature concept |
+| 1 | concept | Clarify the problem or use a supplied brief, open the solution space, then compare directions and write a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |

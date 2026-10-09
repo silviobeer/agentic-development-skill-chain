@@ -55,7 +55,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 |---|---|---|
 | 0a | product-vision (new product only) | Establish what the product is — `docs/PRODUCT.md` (purpose, users, non-goals, success) — and cut it into a numbered PROJ map in `specs/product-roadmap.md`. Skip when the engagement is a single feature inside an existing product |
 | 1a | clarification (optional) | Sit with the stakeholder and clarify the problem into a standalone `specs/_clarification/<slug>-stakeholder_brief.md`; the PM picks it up later for concept |
-| 1 | concept | Clarify the problem, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
+| 1 | concept | Clarify the problem, open the solution space, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
 | 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | prototyping | Build mockups, then iterate by prompting changes directly into the mockups; every concept-affecting change is recorded in `iteration-log.md` |
@@ -64,7 +64,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 2b | handoff-package (optional) | Assemble a standalone, zippable package for an external UI/UX expert and/or developers; the chain ends here |
 | 2c | review-reconcile (optional) | When a developer/stakeholder review returns gaps on the PRDs, resolve them point by point, defer engineering items to a developer meeting, and update PRDs/concept/mockups with a handoff-facing changelog |
 
-In Step 1, **Clarification** establishes the problem owner, job to be done, current pain, success factors, non-goals, and constraints without choosing a solution. Usually the PM runs `clarification` (1a) together with the stakeholder first; the confirmed stakeholder brief provides these facts, so `concept` skips the questions it answers and routes blocking open questions back to their owner. The concept keeps a `Clarification` section with the source and key facts; it then compares directions and decides scope. Project decomposition follows clarification, so the split reflects distinct user outcomes rather than parts of a proposed solution. A brief file is optional; no gate record is required.
+In Step 1, **Clarification** establishes the problem owner, job to be done, current pain, success factors, non-goals, and constraints without choosing a solution. Usually the PM runs `clarification` (1a) together with the stakeholder first; the confirmed stakeholder brief provides these facts, so `concept` skips the questions it answers and routes blocking open questions back to their owner. The concept keeps a `Clarification` section with the source and key facts; it then opens the solution space with fundamentally different approaches before converging on a direction and deciding scope. Project decomposition follows clarification, so the split reflects distinct user outcomes rather than parts of a proposed solution. A brief file is optional; no gate record is required.
 
 ## The review-reconcile loop
 

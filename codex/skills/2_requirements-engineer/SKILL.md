@@ -70,7 +70,7 @@ Read these inputs:
 
 For UI features, mockups and `implementation-handoff.md` are required inputs. They define screens, flows, states, component reuse, new component candidates, design tokens, the interaction contract, and implementation tolerance.
 
-If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `prototyping` first. Pure backend/API features may proceed directly from the concept.
+If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `prototyping` first. Pure backend/API features may proceed directly from the concept. If the concept still lists `Candidate Directions`, stop and run `concept-sync` first.
 
 ## Workflow
 
