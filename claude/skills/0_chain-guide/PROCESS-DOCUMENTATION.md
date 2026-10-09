@@ -6,6 +6,7 @@ This document is the expanded process reference for `chain-guide`. The executabl
 
 ```text
 0   chain-guide              Detect current PROJ state and recommend the next skill
+1a  clarification            Clarify the problem with the stakeholder into a stakeholder brief (optional)
 1   concept            Create the approved feature concept
 1b  visual-companion         Explore UI shape for UI features
 1c  frontend-design          Define or extend the design language when needed
@@ -40,7 +41,8 @@ specs/PROJ-<X>-<theme>/
 Each folder prefix is the number of the skill that writes it. `3-4_plan/`
 is the one shared folder: architecture (3) and wave plans (4) belong
 together. Product-level artifacts live outside the PROJ folder —
-`docs/PRODUCT.md` and `specs/product-roadmap.md`.
+`docs/PRODUCT.md` and `specs/product-roadmap.md` — and so do stakeholder
+briefs in `specs/_clarification/`, because one brief may become several PROJs.
 
 ## Step Responsibilities
 
@@ -50,6 +52,7 @@ together. Product-level artifacts live outside the PROJ folder —
 | 0a | `product-vision` | New product | `docs/PRODUCT.md`, `specs/product-roadmap.md` |
 | 0b | `intake` | Existing codebase | the curated `docs/` baseline, extracted |
 | 0c | `bootstrap` | New build | `docs/ARCHITECTURE.md` § Stack, scaffold, `AGENTS.md` + `CLAUDE.md` |
+| 1a | `clarification` | Optional, stakeholder session | `specs/_clarification/<slug>-stakeholder_brief.md` (outside the PROJ folder) |
 | 1 | `concept` | Required | `1_concept/PROJ-<X>-concept.md` |
 | 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |

@@ -183,7 +183,15 @@ Record in the concept's `Project Context` that `0_context/existing-state.md` exi
 
 Before exploring solutions, establish the problem owner (and deputy if relevant), job to be done, current pain, outcome/adoption/guardrail success factors with known baselines and targets, non-goals, and constraints. Keep success factors in business terms; measurement implementation belongs later. Do not choose scope, solution direction, UI, or technology in this pass.
 
-Use a user-provided brief or other clarification artifact as the source when it covers these points. Record its path or link in the concept and skip questions it answers. If no artifact exists, gather the missing facts conversationally and preserve them in the concept's `Clarification` section. Do not require a separate brief file or gate record.
+Use a stakeholder brief from `clarification` (1a, `specs/_clarification/<slug>-stakeholder_brief.md`) or another user-provided clarification artifact as the source when it covers these points. Record its path or link in the concept and skip questions it answers. If no artifact exists, gather the missing facts conversationally and preserve them in the concept's `Clarification` section. Do not require a separate brief file or gate record.
+
+A stakeholder brief from `clarification` was confirmed by the stakeholder, usually without the PM who now runs concept being able to re-ask them:
+
+- Take confirmed facts as given; do not ask the PM to re-confirm them.
+- For each open question, first ask whether it has been answered since. A still-open question marked `Blocks concept? yes` is a stakeholder follow-up: report it with its owner and do not select a direction until it is resolved. Non-blocking ones carry into `Open clarification questions`.
+- If the PM's direction would contradict the stakeholder brief (for example, widen a non-goal), flag it as needing the problem owner instead of overriding it silently.
+- Never edit the stakeholder brief. If it no longer holds, ask for a new revision via `clarification`.
+- When one stakeholder brief is decomposed into several PROJs, every sibling concept cites the same stakeholder brief.
 
 ## Project Decomposition Gate
 

@@ -235,7 +235,8 @@ codebase runs `0b_intake` instead — the same curated baseline, extracted
 rather than decided. Exactly one of the two paths.
 
 The repository's existing pre-PRD flow is preserved unchanged. A PROJ
-starts with `1_concept`, optionally follows the UI branch
+starts with `1_concept` (optionally fed by a `1a_clarification`
+stakeholder brief), optionally follows the UI branch
 (`1b_visual-companion` → optional `1c_frontend-design` →
 `1d_prototyping` → optional `1e_concept-sync`), and then runs
 `2_requirements-engineer`. On the product-discovery track it may continue

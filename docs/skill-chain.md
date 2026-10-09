@@ -10,6 +10,8 @@ flowchart LR
   S0C --> S1[1 concept]
   S0B --> S1
   S0 --> S1
+  S0 -.optional.-> S1A[1a clarification · with stakeholder]
+  S1A --> S1
   S1 --> S1B[1b visual-companion]
   S1 --> S2[2 requirements-engineer]
   S1B --> S1C[1c frontend-design]
@@ -54,7 +56,7 @@ own documents is the whole migration, and skipping it is a valid answer.
 
 ## Decomposed Ideas
 
-Step 1 clarifies the problem before comparing solution directions. If a usable clarification artifact is supplied, `concept` reads it and skips the questions it answers. The concept records its source and carries the problem, success factors, non-goals, and constraints forward. No separate brief file or gate record is required. After clarification, Step 1 can split a broad seed into several PROJs before detailed concept intake. This is for product boundaries, not task management: PRDs split behavior inside one PROJ, and waves split implementation order.
+Step 1 clarifies the problem before comparing solution directions. Optionally, the PM first runs `clarification` (1a) live with the stakeholder; it writes a standalone `specs/_clarification/<slug>-stakeholder_brief.md` that the PM later hands to `concept`. If a brief or other usable clarification artifact is supplied, `concept` reads it and skips the questions it answers. The concept records its source and carries the problem, success factors, non-goals, and constraints forward. A brief file is optional; no gate record is required. After clarification, Step 1 can split a broad seed into several PROJs before detailed concept intake. This is for product boundaries, not task management: PRDs split behavior inside one PROJ, and waves split implementation order.
 
 After decomposition:
 
@@ -71,6 +73,7 @@ After decomposition:
 | 0a | product-vision | New product: `docs/PRODUCT.md` (what/who/non-goals) + the numbered PROJ map with dependencies |
 | 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
+| 1a | clarification (optional) | PM and stakeholder clarify the problem live into a standalone stakeholder brief: job to be done, owner, success factors with baselines and targets, non-goals, constraints, open questions |
 | 1 | concept | Clarify the problem or use a supplied brief, then compare directions and write a buildable feature concept |
 | 1b | visual-companion | Explore UI structure before requirements |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |

@@ -15,6 +15,7 @@ Step  Skill                  Output
  0a   product-vision         docs/PRODUCT.md + specs/product-roadmap.md      ┐ new
  0c   bootstrap              docs/ARCHITECTURE.md §Stack + scaffold + AGENTS.md ┘ build
  0b   intake                 the same curated docs/ baseline, extracted from code
+ 1a   clarification (opt) specs/_clarification/<slug>-stakeholder_brief.md
   1   concept          specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
  1b   visual-companion (opt) specs/PROJ-<X>-<theme>/1b_visual-companion/layout-*.*
  1c   frontend-design (opt)  specs/PROJ-<X>-<theme>/1c_design/design-language.md
@@ -94,8 +95,8 @@ same procedures the runner's lanes load — interactive use stays supported.
 
 The same chain serves two delivery tracks. Detect which one applies before recommending a next step.
 
-- **Full chain (in-repo build):** concept → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
-- **Product discovery (Linear handoff):** concept → visual-companion → prototyping (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — concept, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
+- **Full chain (in-repo build):** (optional clarification) → concept → (UI prep) → requirements → architecture → plans → executing → QA → docs. Used when this repo will hold the implementation. A codebase exists or will exist here.
+- **Product discovery (Linear handoff):** (optional clarification) → concept → visual-companion → prototyping (iterate) → concept-sync → requirements-engineer → optional handoff-package, then stop. Used when the user only does product management — concept, wireframes/mockups, stakeholder iteration — and hands a PRD to a developer via Linear and/or an external UI/UX expert. **No code is written here and there is no codebase.**
 
 A requested external `handoff-package` is also available after approved PRDs in the full chain. Component mockups are exported as screenshots and flow descriptions; packaging does not switch tracks or replace subsequent implementation steps.
 
@@ -172,6 +173,8 @@ Based on detected state, tell the user:
 
 **No PROJ folder found:**
 > "No feature work detected. Start with the **concept** skill (`/1_concept`) to explore your idea — it will allocate PROJ-X and set up the folder."
+
+If a stakeholder still has to explain the problem, suggest **clarification** (`/1a_clarification`) first, run together with them. If `specs/_clarification/*-stakeholder_brief.md` exists with no concept citing it, recommend `/1_concept <stakeholder brief path>` when it is confirmed, or list its blocking open questions when it is not.
 
 **Concept written, no visual companion output, no PRDs (UI feature):**
 > "Concept for `PROJ-<X>-<theme>` found. This feature has a UI component. Recommended next step: use **visual-companion** (1b) to explore interactive layout approaches before design, mockups, and PRDs."
@@ -263,6 +266,7 @@ If the user asks "what does each step do?":
 | 0a | product-vision (once per product) | New build: `docs/PRODUCT.md` (what/who/non-goals) + numbered PROJ map in `specs/product-roadmap.md` |
 | 0c | bootstrap (once per project) | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold, build/test green, root `AGENTS.md` + `CLAUDE.md` |
 | 0b | intake (once per repo) | Bootstrap the curated docs baseline: scan + provenance-marked drafts, developer interview, checkpoint reconcile, seal commit |
+| 1a | clarification (optional) | PM and stakeholder clarify the problem live into `specs/_clarification/<slug>-stakeholder_brief.md` |
 | 1 | concept | Explore the idea, allocate PROJ-X and thema slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |

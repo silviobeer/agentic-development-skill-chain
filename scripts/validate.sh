@@ -7,6 +7,7 @@ CORE_SKILLS=(
   0a_product-vision
   0b_intake
   0c_bootstrap
+  1a_clarification
   1_concept
   1b_visual-companion
   2_requirements-engineer
@@ -124,6 +125,8 @@ check_identical "$ROOT/claude/skills/5b_executing-large-model/SKILL.md" \
   "$ROOT/codex/skills/5b_executing-large-model/SKILL.md"
 check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
+check_identical "$ROOT/claude/skills/1a_clarification/SKILL.md" \
+  "$ROOT/codex/skills/1a_clarification/SKILL.md"
 for f in 5_executing/scripts/preflight.sh 5_executing/scripts/sync-framework.mjs 5_executing/templates/decisions.md.tmpl \
          5_executing/scripts/ponytail-check.sh 5_executing/scripts/compile-context-bundles.mjs \
          5_executing/scripts/context-injector.mjs 5_executing/scripts/migration-drift-check.sh \
