@@ -155,11 +155,12 @@ function collect(root) {
   for (const dir of componentDirs(root)) {
     for (const file of walk(dir)) {
       const src = readFileSync(file, "utf8");
-      // Supports both `export function Button` and shadcn's
-      // `function Button` ... `export { Button }` form.
+      // Supports `export function Button`, shadcn's `function Button` ...
+      // `export { Button }` and the bottom `export default Button;` form.
       const exported = new Set();
-      for (const m of src.matchAll(/export\s+(?:default\s+)?(?:function|const)\s+([A-Z]\w*)|export\s*\{([^}]+)\}/g)) {
+      for (const m of src.matchAll(/export\s+(?:default\s+)?(?:function|const)\s+([A-Z]\w*)|export\s*\{([^}]+)\}|export\s+default\s+([A-Z]\w*)\s*;?\s*$/gm)) {
         if (m[1]) exported.add(m[1]);
+        if (m[3]) exported.add(m[3]);
         for (const name of m[2]?.matchAll(/\b([A-Z]\w*)\b/g) ?? []) exported.add(name[1]);
       }
       // The doc block may not span its own `*/`. With a plain lazy `[\s\S]*?`
@@ -319,6 +320,7 @@ function selftest() {
   const app = join(repo, "app", "src");
   const files = {
     "layout/components/side-menu.tsx": "/** Navigation rail. */\nexport function SideMenu() {}\n",
+    "layout/components/app-bar.tsx": "/** Top bar. */\nfunction TopBar() {}\n\nexport default TopBar;\n",
     "features/settings/object-types/components/type-card.tsx": "/** One object type. */\nexport function TypeCard() {}\n",
     "lab/variants/a-v1/components/wizard.tsx": "/** Variant-local wizard. */\nexport function Wizard() {}\n",
     "components/form/components/field.tsx": "/** Form field. */\nexport function Field() {}\n",
@@ -330,11 +332,12 @@ function selftest() {
   }
   const cli = (...a) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...a], { cwd: repo, encoding: "utf8" });
   // Showcase anchors are not what this block tests — keep them satisfied.
-  writeFileSync(join(app, "app/dev/components/page.tsx"), `export default function Page() {\n  return <><i id="side-menu" /><i id="type-card" /><i id="wizard" /><i id="field" /></>\n}\n`);
+  writeFileSync(join(app, "app/dev/components/page.tsx"), `export default function Page() {\n  return <><i id="side-menu" /><i id="type-card" /><i id="wizard" /><i id="field" /><i id="top-bar" /></>\n}\n`);
   assert.equal(cli("app", "--out", "docs/components.md").status, 0, "--out run must succeed");
   assert.ok(!existsSync(join(repo, "app", "docs", "components.md")), "--out must not write under the app root");
   const scoped = readFileSync(join(repo, "docs", "components.md"), "utf8");
   assert.match(scoped, /\| SideMenu \| `@\/layout\/components\/side-menu` \|/, "layout components must be scanned");
+  assert.match(scoped, /\| TopBar \| `@\/layout\/components\/app-bar` \| Top bar\. \|/, "bottom `export default Name;` must be registered");
   assert.match(scoped, /\| TypeCard \| `@\/features\/settings\/object-types\/components\/type-card` \|/, "nested feature components must be scanned");
   assert.match(scoped, /\| Wizard \| `@\/lab\/variants\/a-v1\/components\/wizard` \|/, "lab components must be scanned");
   assert.equal(scoped.match(/\| Field \|/g)?.length, 1, "nested components/ folder must be counted once");
