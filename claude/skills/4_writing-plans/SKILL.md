@@ -14,7 +14,7 @@ All under `specs/PROJ-<X>-<theme>/`:
 | Source | Owns |
 |---|---|
 | `3-4_plan/PROJ-<X>-architecture.md` | cross-cutting decisions (data model, tech, dependencies) |
-| `2_PRDs/*.md` | user stories and ACs |
+| `2_PRDs/PROJ-<X>-PRD-*.md` | user stories and ACs |
 | `1d_prototypes/implementation-handoff.md` (UI PROJs) | project mode, reuse, new component candidates, tokens, interaction contract, mockup tolerance |
 | `3-4_plan/PROJ-<X>-migration-design.md` (if present) | migration SQL/trigger detail — cite by decision, never copy |
 
@@ -170,7 +170,7 @@ bash scripts/cross-review.sh plan <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md \
     specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
   --ground-truth specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md \
-    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/GUIDELINES.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md docs/GUIDELINES.md \
   --author-provider <current-writer> --persist --round 1
 ```
 

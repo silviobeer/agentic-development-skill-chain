@@ -19,7 +19,7 @@ Inputs:
 
 - Wave shape in `specs/PROJ-<X>-<theme>/architecture-delta.md` (read at PROJ start)
 - Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md` (one per wave, read at that wave's start)
-- PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md` (authoritative; opened only when a plan/PRD AC conflict is suspected)
+- PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md` (authoritative; opened only when a plan/PRD AC conflict is suspected)
 - Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` (on demand; workers get `architecture-delta.md` through their context bundle)
 - Gate config in `specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json`
 - UI handoff in `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`, when the PROJ has UI work

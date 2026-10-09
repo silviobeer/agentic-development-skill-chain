@@ -27,7 +27,7 @@ You are a QA Engineer and Red-Team Pen-Tester. Your mindset is adversarial — y
 ## Input
 
 Read the following for the PROJ under test:
-- All PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/*.md` — user stories, acceptance criteria, edge cases
+- All PRDs in `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md` — user stories, acceptance criteria, edge cases
 - Architecture in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` — tech design context
 - Progress in `specs/PROJ-<X>-<theme>/5_progress/PROJ-<X>-progress.md` — implementation status, Ralph results
 - Wave plans in `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md` — what was built
@@ -114,7 +114,7 @@ BASE="specs/PROJ-<X>-<theme>"
 BASE_SHA="$(bash scripts/state.sh get <X> <theme> .base_sha)"
 bash scripts/cross-review.sh qa <X> <theme> \
   --artifacts "$BASE/5_progress/PROJ-<X>-progress.md" \
-  --ground-truth "$BASE/3-4_plan/PROJ-<X>-architecture.md" "$BASE"/2_PRDs/*.md \
+  --ground-truth "$BASE/3-4_plan/PROJ-<X>-architecture.md" "$BASE"/2_PRDs/PROJ-<X>-PRD-*.md \
   --author-provider codex --persist --personas \
   --diff-base "$BASE_SHA" \
   --diff-paths . ':(exclude)specs/**' ':(exclude)**/*.test.*' \
@@ -503,4 +503,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

@@ -195,7 +195,7 @@ for candidate in \
   [ ! -f "$candidate" ] || GROUND_TRUTH+=("$candidate")
 done
 bash scripts/cross-review.sh requirements <X> <theme> \
-  --artifacts "$BASE"/2_PRDs/*.md \
+  --artifacts "$BASE"/2_PRDs/PROJ-<X>-PRD-*.md \
   --ground-truth "${GROUND_TRUTH[@]}" \
   --author-provider <current-writer> --round 1
 ```
@@ -262,4 +262,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

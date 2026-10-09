@@ -17,7 +17,7 @@ reviews are mandatory gates; do not ask the user whether to start them.
 | Mode | Artifact | Review focus |
 |---|---|---|
 | `concept` | `1_concept/PROJ-<X>-concept.md` | product coherence, buildability, boundaries, grounding |
-| `requirements` | the complete `2_PRDs/*.md` set | concept and UI traceability, story/AC testability, edge behavior, cross-PRD consistency, architecture leakage |
+| `requirements` | the complete `2_PRDs/PROJ-<X>-PRD-*.md` set | concept and UI traceability, story/AC testability, edge behavior, cross-PRD consistency, architecture leakage |
 | `architecture` | `3-4_plan/PROJ-<X>-architecture.md` | decisions, feasibility, traceability, risk |
 | `plan` | wave plans and gate config | executability, coverage, sequencing, scope |
 | `qa` | QA summary/evidence plus implementation diff | evidence integrity, adversarial coverage, finding quality, release decision; `--personas` runs six isolated discipline reviewers |
@@ -54,7 +54,7 @@ layout decision, and design language over embedding every mockup HTML file:
 
 ```bash
 bash scripts/cross-review.sh requirements <X> <theme> \
-  --artifacts specs/PROJ-<X>-<theme>/2_PRDs/*.md \
+  --artifacts specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md \
   --ground-truth specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md \
     specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md \
   --author-provider <current-writer> --round 1

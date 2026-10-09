@@ -79,7 +79,7 @@ What makes an overnight run trustworthy, in short: dual Claude + Codex lanes
 per phase with exactly one writer orchestrator (the peer stays read-only),
 `state.json`/`findings.json` as the only handoff, a persistent per-PROJ
 worktree, evidence-based wave gates followed by an integration-focused PROJ
-gate, provider-opposite cross-review on every artifact, budgeted context
+gate, provider-opposite cross-review on every gated artifact, budgeted context
 bundles per role, the shared Ponytail minimalism ladder, hard P6/P7 gates
 re-verified independently by the runner, and a stop policy that parks a run
 on a failed writer, timeout, unsealed phase, or red gate instead of

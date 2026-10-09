@@ -57,7 +57,7 @@ A discovery engagement has no codebase, so there is nothing to scaffold. Open a 
 | 1a | clarification (optional) | Sit with the stakeholder and clarify the problem into a standalone `specs/_clarification/<slug>-stakeholder_brief.md`; the PM picks it up later for concept |
 | 1 | concept | Clarify the problem, open the solution space, then compare directions and write the concept; skip clarification questions answered by a supplied brief; for brownfield, capture the existing state into `0_context/` |
 | 1b | visual-companion | Decide the rough UI shape before mockups |
-| 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and `/dev/components` showcase in the chosen stack. Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
+| 1c | frontend-design (optional) | Build the design system: tokens, component catalog, and showcase (a standalone `1c_design/component-showcase.html` on this track, with the anchors of the later `/dev/components` route). Only when adopting or defining a design system; otherwise skip and use greyscale wireframes |
 | 1d | prototyping | Build mockups, then iterate by prompting changes directly into the mockups; every concept-affecting change is recorded in `iteration-log.md` |
 | 1e | concept-sync | After agreement, reconcile the tracked changes back into the concept and set the delivery track |
 | 2 | requirements-engineer | Produce developer-ready PRDs and pass the required opposite-provider review before handoff |
@@ -70,8 +70,9 @@ In Step 1, **Clarification** establishes the problem owner, job to be done, curr
 
 Before any first handoff, `requirements-engineer` routes the complete PRD set
 to the provider opposite its author and checks it against the approved concept
-plus compact UI contracts. Critical/High findings must be resolved; one fresh
-round verifies the repair. This adversarial quality gate is distinct from
+plus compact UI contracts. Findings of every severity are reconciled within
+approved scope and re-reviewed for up to three automatic rounds; remaining
+Critical/High findings block handoff. This adversarial quality gate is distinct from
 `review-reconcile`: the latter handles gaps later returned by a human developer
 or stakeholder and records the resulting product decisions.
 

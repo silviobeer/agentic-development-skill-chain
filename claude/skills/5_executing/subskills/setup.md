@@ -373,4 +373,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this subskill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this subskill.

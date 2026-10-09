@@ -44,7 +44,7 @@ Work one PROJ at a time. A review usually targets one PROJ's PRDs. If the review
 Read these inputs:
 
 1. The review itself — pasted text or a file the user provides (gaps, questions, suggested updates).
-2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/*.md`.
+2. Target PRDs: `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`.
 3. The canonical scope/decisions source if one exists (e.g. the concept's decisions register or an explicitly supplied source document) — **read it first** so no decision contradicts a canonical rule.
 4. Concept: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` (if it exists).
 5. Mockups: screen/source references in `1d_prototypes/implementation-handoff.md` + `iteration-log.md`. Legacy handoffs without screen references use the existing screen HTML files.
@@ -173,4 +173,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

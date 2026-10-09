@@ -274,7 +274,7 @@ Read lazily — the lead's context has to last the whole PROJ, and nothing below
 
 **At each wave start** — only that wave's plan, `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-<N>-plan.md`. Its lead-facing header (`## User Stories in this Wave`, `## Execution`) drives dispatch. Each `## <US-ID>` section is that worker's slice — ACs, smoke test, UI Implementation Notes, tasks with TDD cycles and file paths, UI handoff constraints, gotchas — and reaches the worker verbatim through `scripts/story-slice.mjs` (Step 3). Never re-read earlier waves' plans: what previous waves implemented comes from the Wave shape plus `5_progress/PROJ-<X>-progress.md`.
 
-**PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/*.md` stay the authoritative requirements source. The plan's ACs were traced against them by the plan cross-review and CP1, and Skill 6 tests the PRD ACs again, so open the matching PRD story only when a plan/PRD AC conflict is suspected (an AC in the slice reads paraphrased or incomplete, or a worker or the Outer Ralph pass questions one). If plan and PRD disagree on AC text, the PRD wins: add the PRD wording to the spawn prompt, marked as superseding the slice, and log the drift in `progress.md`.
+**PRDs** — `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md` stay the authoritative requirements source. The plan's ACs were traced against them by the plan cross-review and CP1, and Skill 6 tests the PRD ACs again, so open the matching PRD story only when a plan/PRD AC conflict is suspected (an AC in the slice reads paraphrased or incomplete, or a worker or the Outer Ralph pass questions one). If plan and PRD disagree on AC text, the PRD wins: add the PRD wording to the spawn prompt, marked as superseding the slice, and log the drift in `progress.md`.
 
 **Architecture** — workers get `architecture-delta.md` through their context bundle. The lead opens `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md` only for a cross-PRD design question that the slice and the Wave shape do not settle.
 
@@ -796,4 +796,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

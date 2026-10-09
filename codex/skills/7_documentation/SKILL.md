@@ -61,7 +61,7 @@ Read in this priority order. Structured data first; raw reconstruction only as f
    - `## AGENTS.md Candidates`: proposed durable agent rules awaiting approval
 2. `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
    - app/feature purpose, target user, in-scope/out-of-scope boundaries
-3. `specs/PROJ-<X>-<theme>/2_PRDs/*.md`
+3. `specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md`
    - user stories, feature names, acceptance criteria, edge cases
 4. `specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-architecture.md`
    - architecture, data model, data flows, cross-cutting decisions
@@ -527,4 +527,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

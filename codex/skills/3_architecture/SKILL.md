@@ -161,7 +161,7 @@ bash scripts/cross-review.sh architecture <X> <theme> \
     specs/PROJ-<X>-<theme>/architecture-delta.md \
     specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-migration-design.md \
   --ground-truth specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md \
-    specs/PROJ-<X>-<theme>/2_PRDs/*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
+    specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-*.md docs/ARCHITECTURE.md docs/GUIDELINES.md \
     specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md \
     <design-language file read as input 5, local or shared> \
     <sibling PROJ files read as input 6> \
@@ -207,4 +207,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

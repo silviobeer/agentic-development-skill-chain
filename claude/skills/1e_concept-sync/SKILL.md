@@ -85,6 +85,8 @@ If the iteration abandoned an approach that the concept or Visual Companion prev
 - Reason: <why it changed during mockup review>
 ```
 
+If the abandoned approach was the `Selected Direction` in `1b_visual-companion/layout-decision.md`, update that file too (new `Selected Direction`, old one under its rejected variants with the reason), since `prototyping` treats it as binding.
+
 ### 4. Review With The User
 
 Show the user a concise diff-style summary:
@@ -162,4 +164,5 @@ Say it once, then continue either way:
 > current names, or continue with the existing layout?"
 
 Renaming is a `git mv` per folder plus a search for the old paths in the
-PROJ's own documents. It is never a precondition for this skill.
+PROJ's own documents, never inside generated `2b_handoff/` runs (only
+`handoff-package` writes those). It is never a precondition for this skill.

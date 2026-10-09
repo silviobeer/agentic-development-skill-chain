@@ -155,6 +155,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 4. `1c_design/design-language.md` exists → step 1c done
 5. `1d_prototypes/sitemap.html` + `1d_prototypes/implementation-handoff.md` + the screen sources referenced by the handoff — mockups and UI handoff present? → step 1d done. For legacy handoffs without screen references, check the screen HTML files (the sitemap alone is not a screen). Do not require HTML screens for component mode or a currently running server to recognize completed artifacts.
    - `1d_prototypes/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
+   - The concept still lists `Candidate Directions` and `layout-decision.md` has a `Selected Direction` → recommend `concept-sync` (1e) before requirements.
    - Concept contains `Concept Sync Log` / `Handoff Readiness` → step 1e done.
 6. `2_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
    - `2b_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
@@ -181,6 +182,8 @@ If a stakeholder still has to explain the problem, suggest **clarification** (`/
 
 **Concept written, no PRDs (backend/API feature):**
 > "Concept for `PROJ-<X>-<theme>` found. Next step: use **requirements-engineer** to write PRDs with user stories and acceptance criteria."
+
+If `layout-decision.md` records a `## Design System State` decision, follow it instead of the greenfield/hybrid default below: "skip knowingly" goes straight to **prototyping** with greyscale wireframes.
 
 **Visual Companion exists, no design-language, no mockups, no PRDs (greenfield):**
 > "Visual Companion output is ready at `specs/PROJ-<X>-<theme>/1b_visual-companion/`. Greenfield project detected. Next step: use **frontend-design** (1c), then **prototyping** (1d), then **requirements-engineer** (2)."
