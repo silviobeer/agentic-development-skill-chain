@@ -822,7 +822,7 @@ specs/product-roadmap.md       ← PROJ map: outcome, Depends on, Status
 
 specs/PROJ-<X>-<theme>/        ← PROJ artifacts
 ├── 0_context/                 ← existing-state inputs when applicable
-├── 1_concept/              ← approved concept
+├── 1_concept/              ← approved concept + direction log (not injected)
 ├── 1b_visual-companion/        ← UI structure exploration when applicable
 ├── 2_PRDs/                    ← requirements snapshot
 ├── 1c_design/                  ← optional design language

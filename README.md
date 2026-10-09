@@ -32,10 +32,10 @@ scaffold stood up, agent files written); an existing codebase goes through
 | 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1a | `clarification` (opt) | PM and stakeholder clarify the problem live into a standalone stakeholder brief in `specs/_clarification/` |
 | 1 | `concept` | Clarify the problem (or use a supplied brief), then open the solution space, compare directions, allocate PROJ-X, and write the concept |
-| 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection |
+| 1b | `visual-companion` (opt) | Interactive layout exploration, project mode detection; prototypes each open candidate direction |
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
-| 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff |
-| 1e | `concept-sync` (opt) | Reconcile iterated mockups back into the concept |
+| 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff; narrows carried-forward candidates to one |
+| 1e | `concept-sync` (opt) | Reconcile iterated mockups and the chosen candidate direction back into the concept |
 | 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases, required opposite-provider review before handoff |
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |

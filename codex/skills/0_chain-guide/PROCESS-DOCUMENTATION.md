@@ -28,7 +28,7 @@ Each PROJ uses:
 ```text
 specs/PROJ-<X>-<theme>/
   0_context/            existing-state capture, brownfield only
-  1_concept/         Step 1  concept
+  1_concept/         Step 1  concept + direction log (dropped options; not read downstream)
   1b_visual-companion/  Step 1b layout exploration and decision
   1c_design/            Step 1c design language or design delta
   1d_prototypes/           Step 1d sitemap, mockups, implementation handoff
@@ -53,11 +53,11 @@ briefs in `specs/_clarification/`, because one brief may become several PROJs.
 | 0b | `intake` | Existing codebase | the curated `docs/` baseline, extracted |
 | 0c | `bootstrap` | New build | `docs/ARCHITECTURE.md` § Stack, scaffold, `AGENTS.md` + `CLAUDE.md` |
 | 1a | `clarification` | Optional, stakeholder session | `specs/_clarification/<slug>-stakeholder_brief.md` (outside the PROJ folder) |
-| 1 | `concept` | Required | `1_concept/PROJ-<X>-concept.md` |
+| 1 | `concept` | Required | `1_concept/PROJ-<X>-concept.md`, `PROJ-<X>-direction-log.md` |
 | 1b | `visual-companion` | UI only | `1b_visual-companion/layout-exploration.html` and `layout-decision.md` |
 | 1c | `frontend-design` | Greenfield or hybrid UI gaps | `1c_design/design-language.md` or `design-delta.md` |
 | 1d | `prototyping` | UI only | `1d_prototypes/sitemap.html`, component or standalone HTML screen sources, `implementation-handoff.md` (runtime + screen references) |
-| 1e | `concept-sync` | After mockup iterations | reconciled `1_concept/PROJ-<X>-concept.md` |
+| 1e | `concept-sync` | After mockup iterations or open candidate directions | reconciled `1_concept/PROJ-<X>-concept.md` |
 | 2 | `requirements-engineer` | Required, including opposite-provider PRD review | `2_PRDs/PROJ-<X>-PRD-<Y>-*.md` |
 | 2b | `handoff-package` | External handoff | `2b_handoff/YYYY-MM-DD-handoff*/` |
 | 2c | `review-reconcile` | PRD review returned gaps | `2_PRDs/*-review-decisions.md`, `review-changelog.md` |

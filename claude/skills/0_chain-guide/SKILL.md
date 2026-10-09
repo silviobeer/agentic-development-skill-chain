@@ -16,7 +16,7 @@ Step  Skill                  Output
  0c   bootstrap              docs/ARCHITECTURE.md §Stack + scaffold + AGENTS.md ┘ build
  0b   intake                 the same curated docs/ baseline, extracted from code
  1a   clarification (opt) specs/_clarification/<slug>-stakeholder_brief.md
-  1   concept          specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
+  1   concept          specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md + PROJ-<X>-direction-log.md
  1b   visual-companion (opt) specs/PROJ-<X>-<theme>/1b_visual-companion/layout-*.*
  1c   frontend-design (opt)  specs/PROJ-<X>-<theme>/1c_design/design-language.md
  1d   prototyping (UI req.)    specs/PROJ-<X>-<theme>/1d_prototypes/sitemap.html + mockups + implementation-handoff.md + iteration-log.md
@@ -273,11 +273,11 @@ If the user asks "what does each step do?":
 | 0c | bootstrap (once per project) | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold, build/test green, root `AGENTS.md` + `CLAUDE.md` |
 | 0b | intake (once per repo) | Bootstrap the curated docs baseline: scan + provenance-marked drafts, developer interview, checkpoint reconcile, seal commit |
 | 1a | clarification (optional) | PM and stakeholder clarify the problem live into `specs/_clarification/<slug>-stakeholder_brief.md` |
-| 1 | concept | Explore the idea, allocate PROJ-X and thema slug, write concept |
+| 1 | concept | Clarify the problem, open the solution space, allocate PROJ-X and theme slug, write concept |
 | 1b | visual-companion (optional) | Interactive layout exploration plus project mode: greenfield/brownfield/hybrid |
 | 1c | frontend-design (optional) | Visual design language — greenfield, or hybrid gaps only |
 | 1d | prototyping (UI required) | HTML sitemap + component or standalone HTML mockups + `implementation-handoff.md` (runtime, screen references, flows) + `iteration-log.md`; execution mode is independent of visual fidelity |
-| 1e | concept-sync (optional) | Reconcile iterated mockup changes back into the concept; set delivery track (full chain vs. Linear handoff) |
+| 1e | concept-sync (optional) | Reconcile iterated mockup changes and the chosen candidate direction back into the concept; set delivery track (full chain vs. Linear handoff) |
 | 2 | requirements-engineer | PRDs from concept + approved mockups + UI handoff: user stories, acceptance criteria, edge cases; Linear handoff mode produces developer-ready PRDs |
 | 2b | handoff-package (optional) | Standalone, zippable package for external UI/UX experts and developers: README index, single-source-of-truth scope/decisions, role-split handoffs, copied mockups |
 | 3 | architecture | PROJ-level tech design covering all PRDs — data model, cross-cutting decisions |

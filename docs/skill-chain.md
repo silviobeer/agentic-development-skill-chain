@@ -17,7 +17,7 @@ flowchart LR
   S1B --> S1C[1c frontend-design]
   S1C --> S1D[1d prototyping]
   S1B --> S1D
-  S1D -->|iterated| S1E[1e concept-sync]
+  S1D -->|iterated or candidates| S1E[1e concept-sync]
   S1D --> S2
   S1E --> S2
   S2 -.discovery track.-> S2B[2b handoff-package]
@@ -75,10 +75,10 @@ After decomposition:
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
 | 1a | clarification (optional) | PM and stakeholder clarify the problem live into a standalone stakeholder brief: job to be done, owner, success factors with baselines and targets, non-goals, constraints, open questions |
 | 1 | concept | Clarify the problem or use a supplied brief, open the solution space, then compare directions and write a buildable feature concept |
-| 1b | visual-companion | Explore UI structure before requirements |
+| 1b | visual-companion | Explore UI structure before requirements; with open candidate directions, build one approach per candidate and narrow the set |
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
-| 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff |
-| 1e | concept-sync | Reconcile iterated mockup changes back into the concept; set delivery track |
+| 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff; with several carried-forward candidates, prototype each until one remains |
+| 1e | concept-sync | Reconcile iterated mockup changes and the chosen candidate direction back into the concept; set delivery track |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery endpoint or requested full-chain export) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |
