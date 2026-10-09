@@ -101,8 +101,7 @@ If style evidence exists (config, design language, or captured existing state), 
 Detect existing components before building mockups:
 
 - `docs/components.md`
-- `src/components/**`
-- `src/features/*/components/**`
+- every `components/` folder under `src/` (`src/components/**`, `src/layout/components/**`, `src/features/**/components/**`)
 - UI library hints in `package.json` such as shadcn, Radix, MUI, Chakra, or Headless UI
 - Existing dialog, modal, drawer, table, form, button, card, badge, tabs, and command components
 
