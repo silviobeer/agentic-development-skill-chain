@@ -45,6 +45,8 @@ Read these inputs (the same PROJ locations on both delivery tracks):
 9. Optional brownfield as-is reference: `specs/PROJ-<X>-<theme>/0_context/existing-state.md` and `0_context/references/`
 10. Previous handoff runs, if any: `specs/PROJ-<X>-<theme>/2b_handoff/YYYY-MM-DD-handoff*/`
 
+Do not read or package `1_concept/PROJ-<X>-direction-log.md` or anything under `_dropped/`; the package carries only the selected direction.
+
 Check the iteration log against the concept before packaging. If scope/behavior iterations remain unreconciled, run `concept-sync` (1e) first. If there were no concept-affecting iterations, an approved concept and approved PRDs suffice; a missing `Handoff Readiness` section alone does not require concept-sync or block packaging. Record the basis for readiness in the package manifest without changing the delivery track.
 
 ## Workflow

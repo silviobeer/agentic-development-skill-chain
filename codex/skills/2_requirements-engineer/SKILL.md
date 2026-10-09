@@ -68,9 +68,11 @@ Read these inputs:
 6. Optional design language: `specs/PROJ-<X>-<theme>/1c_design/design-language.md`
 7. Optional shared sibling design language referenced by the concept, layout decision, or mockup handoff
 
+Do not read `1_concept/PROJ-<X>-direction-log.md` or anything under `_dropped/`: they hold discarded directions, not requirements input.
+
 For UI features, mockups and `implementation-handoff.md` are required inputs. They define screens, flows, states, component reuse, new component candidates, design tokens, the interaction contract, and implementation tolerance.
 
-If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `prototyping` first. Pure backend/API features may proceed directly from the concept. If the concept still lists `Candidate Directions`, stop and run `concept-sync` first.
+If a UI feature has no mockups, stop and run `visual-companion` -> optional `frontend-design` -> `prototyping` first. Pure backend/API features may proceed directly from the concept. If the concept still lists `Candidate Directions`, or `1d_prototypes/iteration-log.md` has an `Affects concept: yes` entry the concept's `Concept Sync Log` does not cover, stop and run `concept-sync` first.
 
 ## Workflow
 

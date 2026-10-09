@@ -66,6 +66,8 @@ Read these inputs:
 
 The selected direction in `layout-decision.md` is binding. Refine it into concrete screens and states. Do not invent alternate layout containers unless the user explicitly asks.
 
+**Several candidates.** If `layout-decision.md` lists `## Carried Forward` instead, build each live candidate in its own `1d_prototypes/<candidate-slug>/` folder with its own `iteration-log.md`, and defer `sitemap.html` and `implementation-handoff.md` until one remains. Each review round asks which candidate wins. When the user drops one: remove it from `Carried Forward`, move its folder to `1d_prototypes/_dropped/<candidate-slug>/`, and append it to `1_concept/PROJ-<X>-direction-log.md` (format in `concept`). When one remains: replace `Carried Forward` with `Selected Direction` in `layout-decision.md` and update its `## Finding` with the deciding reason, move the winner's `iteration-log.md` to `1d_prototypes/iteration-log.md`, and write the sitemap and handoff for the winner only, with screen references pointing into its folder. Never read `_dropped/` afterwards.
+
 Read these sections especially:
 
 - `Project Mode` (`greenfield`, `brownfield`, `hybrid`)
@@ -316,7 +318,7 @@ If changes are requested, update mockups, handoff, and any affected external-han
 After approval:
 
 - If the mockups were iterated and the concept may have drifted (any `iteration-log.md` entry with `Affects concept: yes`), recommend `concept-sync` (1e) next so the agreed changes flow back into the concept before requirements.
-- If the concept still lists `Candidate Directions`, recommend `concept-sync` (1e) so the direction chosen in `layout-decision.md` lands in the concept.
+- If the concept still lists `Candidate Directions`, recommend `concept-sync` (1e) so the direction chosen in `layout-decision.md` lands in the concept. Do not hand off while `layout-decision.md` still lists `Carried Forward`.
 - If nothing affected the concept, recommend `requirements-engineer` (2) directly.
 
 Either way, the mockups are required input for user stories, acceptance criteria, and edge cases.

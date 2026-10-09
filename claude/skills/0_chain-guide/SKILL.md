@@ -75,9 +75,9 @@ DESIGN-SYSTEM.md, components.md, security-baseline.md, test-conventions.md,
 root AGENTS.md — from a code scan (provenance-marked drafts) plus a
 developer interview, reconciled via the bootstrap variant of executing's checkpoint subskill
 and sealed as a baseline commit (no state.json — concept (1) creates one per PROJ).
-`cross-review` is the opposite-provider review mechanism; it is required by
-requirements-engineer, P6 QA (evidence check), and P7 (docs truth-check), and
-optionally invoked after concept, architecture, and plans. Users are never
+`cross-review` is the opposite-provider review mechanism; it is required after
+concept, requirements-engineer, architecture, plans, P6 QA (evidence check),
+and P7 (docs truth-check). Users are never
 routed to it directly.
 
 Route a reported defect, regression, broken user flow, or request to explain
@@ -124,6 +124,8 @@ baseline is missing, and the next step depends on whether code exists:
 - **No code** (empty workspace, or specs only) → **product-vision** (0a),
   then **bootstrap** (0c) to decide the stack and stand up the project —
   unless this is the discovery track, where 0c is skipped.
+- **Discovery track for a single feature in an existing product** → skip
+  0a and go to **concept**, which captures the existing state into `0_context/`.
 
 Either way this comes before any further chain step — framework runs need
 the baseline for the P0 context bundles. Run one baseline path, not both.
@@ -151,6 +153,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
 1. `1_concept/PROJ-<X>-concept.md` — concept written? → step 1 done
 2. `1b_visual-companion/layout-decision.md` + `layout-exploration.html` — visual companion present? → step 1b done
+   - `layout-decision.md` lists `Carried Forward` → several candidates are still live; step 1d is not done whatever exists in `1d_prototypes/`; recommend `prototyping` (1d) until one remains.
 3. Project-mode detection: prefer `1b_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
 4. `1c_design/design-language.md` exists → step 1c done
 5. `1d_prototypes/sitemap.html` + `1d_prototypes/implementation-handoff.md` + the screen sources referenced by the handoff — mockups and UI handoff present? → step 1d done. For legacy handoffs without screen references, check the screen HTML files (the sitemap alone is not a screen). Do not require HTML screens for component mode or a currently running server to recognize completed artifacts.
@@ -164,7 +167,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/state.sh get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1; `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
 9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Read the file:
    - Has every wave marked complete? → step 5 done
-   - Has "QA Test Results" section at top level? → step 6 done
+   - Any `2_PRDs/PROJ-<X>-PRD-*.md` has a `## QA Test Results` section? → step 6 done
 10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
 11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
 

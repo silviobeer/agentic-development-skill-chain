@@ -38,6 +38,7 @@ Read these inputs:
 3. Current mockups: follow the screen/source references in `1d_prototypes/implementation-handoff.md`; for legacy HTML handoffs without that section, read the screen HTML files in `1d_prototypes/`.
 4. UI implementation handoff: `specs/PROJ-<X>-<theme>/1d_prototypes/implementation-handoff.md`
 5. Optional Visual Companion decision: `specs/PROJ-<X>-<theme>/1b_visual-companion/layout-decision.md`
+6. Direction log: `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-direction-log.md` (append-only; format in `concept`). Ignore anything under `_dropped/`.
 
 If `iteration-log.md` does not exist but mockups clearly changed, reconstruct the change set by comparing the current mockups against the concept and ask the user to confirm what was decided. Then write the missing log so the trail is not lost.
 
@@ -57,12 +58,12 @@ If the concept lists `Candidate Directions`, the choice made in `layout-decision
 
 ### 2. Reconcile Into The Concept
 
-Replace `Candidate Directions` with `Selected Direction` for the chosen candidate; move every other candidate to `Explored Alternatives` with the deciding reason from `Finding`.
+Replace `Candidate Directions` with `Selected Direction` for the chosen candidate; append every other candidate the direction log does not already record (earlier stages log the ones they drop) with the deciding reason from `Finding`, so the concept keeps no dropped option.
 
 Update `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` so it again describes the agreed product:
 
 - Update the relevant concept sections (goals, scope, flows, constraints, assumptions, risks).
-- Where the iteration **replaced** an earlier concept decision, update the text and record the old decision under `## Superseded Decisions` with a one-line reason.
+- Where the iteration **replaced** an earlier concept decision, update the text and record the old decision in the direction log with a one-line reason.
 - Where the iteration **added** scope, add it to the concept's scope/flows.
 - Where the iteration **dropped** scope, move it to `## Future Scope` or mark it out of scope — do not silently delete it.
 - Keep the concept at concept altitude: no acceptance criteria, no API/schema design, no component file paths. Behavior and scope only.
@@ -76,16 +77,16 @@ Add or update a sync trailer at the end of the concept:
 
 ### 3. Mark Abandoned Directions
 
-If the iteration abandoned an approach that the concept or Visual Companion previously committed to, record it explicitly so it is not re-proposed later:
+If the iteration abandoned an approach that the concept or Visual Companion previously committed to, append it to the direction log so it is not re-proposed later, and keep it out of the concept:
 
 ```markdown
-## Superseded Decisions
+## <date> - concept-sync
 - Was: <original concept decision>
 - Now: <agreed decision after iteration>
 - Reason: <why it changed during mockup review>
 ```
 
-If the abandoned approach was the `Selected Direction` in `1b_visual-companion/layout-decision.md`, update that file too (new `Selected Direction`, old one under its rejected variants with the reason), since `prototyping` treats it as binding.
+If the abandoned approach was the `Selected Direction` in `1b_visual-companion/layout-decision.md`, update that file too (new `Selected Direction` and `Finding`; the old direction goes to the direction log, not into `layout-decision.md`), since `prototyping` treats it as binding and `requirements-engineer` reads it.
 
 ### 4. Review With The User
 
@@ -131,7 +132,7 @@ The reconciled concept, the current mockups, and the implementation handoff are 
 - [ ] Each change classified as scope, behavior, or presentation-only
 - [ ] Scope and behavior changes reflected in the concept
 - [ ] Dropped scope moved to Future Scope, not deleted
-- [ ] Superseded decisions recorded with reasons
+- [ ] Superseded decisions and dropped candidates in the direction log, none left in the concept
 - [ ] `Concept Sync Log` trailer added/updated
 - [ ] `Handoff Readiness` section added with delivery track set
 - [ ] User reviewed the change summary and approved

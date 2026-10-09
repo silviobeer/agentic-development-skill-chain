@@ -60,7 +60,7 @@ Create a task for each item and complete them in order:
 14. **Present the feature concept** - in [template](#concept-document) order, scaled to complexity; ask for approval after each section when the concept is large or nuanced. Do not over-specify implementation.
 15. **Allocate PROJ-X and theme slug** - scan `specs/PROJ-*/`, pick the next free integer (or the roadmap's number), agree on a kebab-case theme. Only after the boundary is approved.
 16. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.codex/skills/5_executing/scripts/state.sh init <X> <theme>`. Write captured brownfield context to `0_context/` now. The new file stays `CP1:pending`; only the Step 5 checkpoint subskill may approve it.
-17. **Write the concept doc and self-review** - see [Concept Document](#concept-document) and [Self-Review](#self-review); commit.
+17. **Write the concept doc, direction log, and self-review** - see [Concept Document](#concept-document), [Direction Log](#direction-log), and [Self-Review](#self-review); commit.
 18. **Automatic cross-review** - see [Cross-Review](#automatic-cross-review).
 19. **User reviews the written concept** - see [User Review And Transition](#user-review-and-transition).
 20. **Repeat or transition** - next approved PROJ of the map, or hand off.
@@ -119,7 +119,7 @@ Right after clarification, before scope, intake, appetite, or any recommendation
 
 Example, seed "make onboarding more self-service": A) a guided wizard, B) an AI chat assistant, C) both — the wizard with the chat as help along the way; and, from other classes, D) remove onboarding steps through smart defaults and data import, E) keep human onboarding but let users book and prepare it themselves. An interaction approach like wizard versus chat is a product-level option here; which container hosts it (page, modal, sidepanel) stays with `visual-companion`.
 
-Then ask the user which options to keep alive, merge, or add. The survivors carry into intake and the convergence in [Exploration](#exploration); every dropped option goes to `Explored Alternatives` with the reason. Skip opening only when the user explicitly states the solution is fixed; record that and why under `Explored Alternatives`.
+Then ask the user which options to keep alive, merge, or add. The survivors carry into intake and the convergence in [Exploration](#exploration); every dropped option goes to the [direction log](#direction-log) with the reason. Skip opening only when the user explicitly states the solution is fixed; record that and why in the direction log.
 
 Later iterations (changes after user review, concept-sync, revising an approved concept) do not reopen the space unless the problem framing changed or the user asks.
 
@@ -194,7 +194,9 @@ Converge from the options kept alive in [Opening](#opening) so the first plausib
 
 Then propose 2-3 approaches, each with what it is, best fit, trade-offs, scope impact, and main risks. Lead with your recommendation and why, accounting for project context, goals, success criteria, constraints, and out-of-scope boundaries.
 
-**Decide by prototype:** for a UI feature, the user may keep 2-3 approaches open instead of choosing one here, so that `visual-companion` builds a clickable approach for each and the choice is made on the prototypes. Record them under `Candidate Directions` in place of `Selected Direction`, each with what it is, what it bets on, scope impact, and main risks; everything else in the concept (problem, users, success criteria, scope boundary, constraints) must hold for every candidate, with per-candidate differences noted inline. A pure backend/API feature has no prototype step and must select one direction here.
+**Decide by prototype:** for a UI feature, the user may keep two or more approaches open instead of choosing one here (each one costs a prototype, so rarely more than three), so that the choice is made on wireframes and prototypes. The set narrows stage by stage: the user may cut it again inside concept (for example after discussing it with the stakeholder), `visual-companion` may carry several forward, and `prototyping` ends with one. Record them under `Candidate Directions` in place of `Selected Direction`, each with what it is, what it bets on, scope impact, and main risks; everything else in the concept (problem, users, success criteria, scope boundary, constraints) must hold for every candidate, with per-candidate differences noted inline. A pure backend/API feature has no prototype step and must select one direction here.
+
+While concept runs, the concept holds only the live set: whenever the user drops a candidate, rewrite `Candidate Directions` to the survivors and append the dropped one to the direction log in the same edit; do not leave it in the concept as a rejected option. From `visual-companion` on, `layout-decision.md` defines the live set; the concept's `Candidate Directions` stays as concept left it until `concept-sync` collapses it to the selected direction, and no later stage treats it as the live set.
 
 **Assumption playback:** "I derived the following assumptions from your answers. Please confirm or correct each one:" followed by a numbered list. Separate confirmed inputs (stated by the user or found in the project), assumptions (need confirmation), and open questions. Corrections trigger follow-up questions, not silent re-derivation.
 
@@ -249,7 +251,7 @@ Approved concept
 ### Later
 
 ## Selected Direction
-<or `## Candidate Directions` with 2-3 approaches when a UI feature decides by prototype; see [Exploration](#exploration)>
+<or `## Candidate Directions` with the live approaches when a UI feature decides by prototype; see [Exploration](#exploration)>
 
 ## Key Behaviors And Flows
 
@@ -274,16 +276,8 @@ Approved concept
 - For requirements-engineer: <major behaviors; product-level edge cases and failure expectations; constraints PRDs must preserve>
 - For architecture/planning: <constraints with technical implications; data ownership, permission, and external dependency hints; operational risks, durability, latency; existing behavior to preserve; explicit non-goals against overbuilding>
 
-## Explored Alternatives
-Every option from Opening and convergence that was not selected.
-
-### Alternative A
-- Summary:
-- Why not selected:
-
-### Alternative B
-- Summary:
-- Why not selected:
+## Direction Log
+Dropped options and superseded decisions: `PROJ-<X>-direction-log.md`. Not input for later stages.
 
 ## Assumptions Confirmed
 
@@ -298,6 +292,24 @@ Every option from Opening and convergence that was not selected.
 
 Keep it product-level and decision-rich; no PRDs, architecture, or implementation plan. Commit with `feat(PROJ-<X>): add concept for <theme>`. Git is optional on the discovery track: without a repository, skip the commit (or suggest an optional `git init` for a history of concept and mockup iterations); the file itself is the durable artifact.
 
+## Direction Log
+
+Every option that leaves the funnel lands in `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-direction-log.md`, never in the working artifacts. It is append-only and written by concept, `visual-companion`, `prototyping`, and `concept-sync`, which also read it so a dropped option is not proposed again without new information. Requirements, review-reconcile, architecture, planning, execution, and `handoff-package` never read it. A dropped candidate's prototype folder moves to `1d_prototypes/_dropped/`, which the same later stages ignore; the wireframe comparison in `layout-exploration.html` stays as the record and only `prototyping` reads it.
+
+```markdown
+# PROJ-<X> Direction Log - <theme>
+
+Dropped directions and superseded decisions. Not input for requirements, architecture, planning, or handoff.
+
+## <date> - <concept | stakeholder | visual-companion | prototyping | concept-sync>
+- Dropped: <option> - <one-line summary>
+- Reason: <why, in the user's or stakeholder's terms>
+- Evidence: <path under `_dropped/`, or none>
+- Still live: <remaining candidates, or the selected direction>
+```
+
+A decision later replaced during mockup iteration is logged the same way, with `Was`, `Now`, and `Reason` instead of `Dropped`.
+
 ## Self-Review
 
 Before the user reviews it, check the written concept and fix issues inline; ask the user when a fix needs unconfirmed information:
@@ -306,7 +318,7 @@ Before the user reviews it, check the written concept and fix issues inline; ask
 2. **Consistency:** direction, scope, users, success criteria, and risks do not contradict each other.
 3. **Scope:** focused enough for one PROJ, or decomposed with map, siblings, dependencies, and excluded sibling scope documented.
 4. **Ambiguity:** requirements cannot be read in materially different ways; key terms are defined and disputed scenarios settled.
-5. **Coverage:** success criteria, out of scope, and users/scenarios are explicit; rejected alternatives and confirmed assumptions are recorded; unresolved assumptions are not hidden.
+5. **Coverage:** success criteria, out of scope, and users/scenarios are explicit; every dropped option is in the direction log and none lingers in the concept; confirmed assumptions are recorded; unresolved assumptions are not hidden.
 6. **Contract:** every template section, including the downstream handoff notes for the chosen path, is filled.
 7. **Boundary:** nothing from the [Boundary](#boundary) "does not own" list leaked in; implementation success reads as product constraints, risks, or handoff notes, not technical design.
 
@@ -319,6 +331,7 @@ approval. Supply everything that establishes as-is truth for the concept:
 ```bash
 bash scripts/cross-review.sh concept <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md \
+    specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-direction-log.md \
   --ground-truth specs/PROJ-<X>-<theme>/0_context/existing-state.md \
     docs/PRODUCT.md specs/product-roadmap.md \
   --author-provider <current-writer> --round 1
