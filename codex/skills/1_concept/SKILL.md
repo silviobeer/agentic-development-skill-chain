@@ -7,17 +7,9 @@ description: "Turn a feature idea or supplied problem brief into an approved bui
 
 ## Purpose
 
-Turn a feature idea into one or more clear, buildable feature concepts.
+Turn a feature idea or stakeholder brief into one or more approved, buildable feature concepts at `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md` (the chain-guide Step 1 output). This starts the PROJ chain: it fixes the PROJ number, theme slug, folder, scope boundary, assumptions, and first handoff. `visual-companion`, `frontend-design`, `prototyping`, `requirements-engineer`, `architecture`, `writing-plans`, `executing`, `qa`, and `documentation` all build on it, so each concept must be stable enough that nobody re-litigates the basic feature intent. Do not leave ambiguity unresolved because a later step exists.
 
-This is the start of the whole PROJ skill chain. It establishes the PROJ number, theme slug, project folder, concept document, scope boundaries, assumptions, and first handoff decision that every later skill depends on. If the seed idea is too broad for one PROJ, this skill first cuts it into separate PROJs with explicit dependencies and sequencing.
-
-This is not free-form ideation and not implementation planning. The endpoint is always one or more approved buildable feature concepts written to `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`, matching the chain-guide Step 1 output.
-
-Work in two passes: **Clarification** establishes the problem, users, success factors, non-goals, and constraints; **Concept** compares directions and decides scope. If the user supplies a clarification artifact, read it and skip the clarification interview. Carry its facts into the concept without reopening settled questions; ask only about material gaps or contradictions.
-
-The concept document defines the feature's purpose, users, scope, success criteria, constraints, explored approaches, selected direction, and known risks.
-
-Start by understanding the current project context and clarifying the problem. Then assess whether the seed idea fits one PROJ or should be decomposed into multiple PROJs. After the scope boundary is approved, collect the minimum inputs needed to shape each feature concept. Ask questions one at a time. Explore alternatives before choosing a direction. Do not proceed until the user confirms that nothing important is unclear.
+Not free-form ideation and not implementation planning. Work in two passes: **Clarification** establishes the problem, users, success factors, non-goals, and constraints without choosing a solution; **Concept** decides the project boundary, compares directions, and fixes scope. A seed too broad for one PROJ is cut into separate PROJs with explicit dependencies first.
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write code, scaffold a project, edit production files, or create an implementation plan until you have presented a feature concept and the user has approved it.
@@ -31,123 +23,54 @@ Do NOT fill gaps with assumptions. If you catch yourself thinking "I assume the 
 A vague "yes" is not clarification. Answers like "yes", "looks fine", "should work", "probably", "I think so", or "mostly" are non-answers when a concrete decision is needed. Re-ask with specific alternatives.
 </HARD-GATE>
 
-## Core Rule
+Ask one question per response unless the user explicitly asks for a checklist or wants to move fast. Inspect the project instead of asking when it can answer. Prefer multiple-choice questions when helpful; ask open-ended when options would bias useful context.
 
-Ask one question per response unless the user explicitly asks for a checklist or wants to move fast. If a needed answer can be discovered from the project, inspect the project instead of asking.
+## Boundary
 
-## Chain Ownership
+Concept owns: feature intent and problem framing; primary users and real scenarios; current workflow or pain; business/product success criteria; scope (in, out, later); product-level constraints, dependencies, risks, and trade-offs; high-level implementation success (what must be true for the implementation to count as successful, not how); and whether the feature has UI (→ `visual-companion`) or is pure backend/API (→ `requirements-engineer`).
 
-This skill owns the first durable artifact in the process:
+Concept does **not** own the following. When a question drifts there, record it as a downstream input, handoff note, or open decision instead of resolving it:
 
-```text
-specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
-```
+- UI container choice (sidepanel, modal, drawer, split view, wizard, dedicated page) → `visual-companion`.
+- Visual design language, colors, typography, spacing, style → `frontend-design`.
+- Screen lists, sitemap, detailed UI states, component reuse, UI implementation handoff → `prototyping`.
+- User stories, acceptance criteria, detailed edge-case matrices → `requirements-engineer`.
+- Architecture, data model, API design, package choices, implementation strategy → `architecture`.
+- Wave plans, tasks, tests, file ownership, production code → `writing-plans`, `executing`.
 
-Later skills consume this artifact:
+For UI features, concept may record product vocabulary, required high-level states, content examples, and existing behavior to preserve.
 
-- `visual-companion` uses it to explore UI layout shape.
-- `frontend-design` uses the selected UI direction when design language is needed.
-- `prototyping` uses it plus visual/design decisions to create component-based or standalone HTML mockups and implementation handoff.
-- `requirements-engineer` uses it to write PRDs, user stories, acceptance criteria, and edge cases.
-- `architecture` uses it with PRDs to write PROJ-level technical design.
-- `writing-plans`, `executing`, `qa`, and `documentation` rely on its scope boundaries and project identity.
+## Checklist
 
-Because this starts the chain, each concept must be stable enough for downstream skills to use without re-litigating the basic feature intent. Do not leave unresolved ambiguity in the concept just because a later step exists.
+Create a task for each item and complete them in order:
 
-When one seed idea becomes multiple PROJs, each PROJ has its own concept document, downstream path, scope boundary, and dependency notes. Later skills run per PROJ unless the user explicitly asks to continue with several PROJs in sequence.
-
-## Output Contract
-
-The concept document must provide enough product-level input for downstream skills to proceed without repeating discovery.
-
-### Required For All Downstream Skills
-
-- Feature intent and selected product direction.
-- Primary users and concrete usage scenarios.
-- Current workflow or pain.
-- If decomposed from a larger seed: how this PROJ relates to sibling PROJs and what dependency order exists.
-- Scope boundaries: in scope, out of scope, later.
-- Success criteria stated as product/user outcomes.
-- Product-level constraints, dependencies, and risks.
-- Confirmed assumptions and conscious trade-offs.
-- High-level implementation success conditions.
-
-### Required For `visual-companion` When The Feature Has UI
-
-- Primary user job and surrounding context.
-- Information shape: list/detail, form-heavy, review/approval, timeline, dashboard, wizard-like, or other high-level shape.
-- Likely UI tensions that need exploration, without choosing the container.
-- Mobile importance, deep-link needs, destructive-action concerns, and context-preservation needs.
-- UI anti-goals or constraints from the product discussion.
-
-### Required For `requirements-engineer`
-
-- Users and scenarios.
-- Selected direction and major behaviors.
-- Scope boundaries and success criteria.
-- Product-level edge cases and failure expectations.
-- Constraints that PRDs must preserve.
-
-### Required For `architecture` And Planning
-
-- Product constraints with technical implications.
-- Data ownership hints, permission hints, and external dependency hints.
-- Operational risks, durability expectations, latency expectations, and existing behavior to preserve.
-- Explicit non-goals so architecture and plans do not overbuild.
-
-### Mockup-Relevant Inputs
-
-For UI features, concept may record product vocabulary, required high-level states, content examples, and existing behavior to preserve. It must not create screen lists, sitemaps, component reuse decisions, visual styling, or UI implementation handoff; those belong to `visual-companion`, `frontend-design`, and `prototyping`.
-
-## Downstream Boundary
-
-Concept must produce the inputs later skills need without doing their work.
-
-### Concept Owns
-
-- Feature intent and problem framing.
-- Primary users and real usage scenarios.
-- Current workflow or pain.
-- Business/product success criteria.
-- Scope boundaries: in scope, out of scope, later.
-- Product-level constraints and dependencies.
-- High-level implementation success discussion: what must be true for the later implementation to be considered successful.
-- High-level risks and trade-offs.
-- Whether the feature has UI and therefore needs `visual-companion`.
-- Whether the feature is pure backend/API and can go directly to `requirements-engineer`.
-
-### Concept Does Not Own
-
-- UI container decisions such as sidepanel, modal, drawer, split view, wizard, or dedicated page. That belongs to `visual-companion`.
-- Visual design language, colors, typography, spacing, or style direction. That belongs to `frontend-design`.
-- Screen-by-screen mockups, sitemap, detailed states, component reuse labels, or UI implementation handoff. That belongs to `prototyping`.
-- User stories, acceptance criteria, or detailed edge-case matrices. That belongs to `requirements-engineer`.
-- Technical architecture, data model design, API design, package choices, or implementation strategy. That belongs to `architecture` and later planning.
-- Wave plans, tasks, tests, file ownership, or production code. That belongs to `writing-plans` and `executing`.
-
-When a question drifts into a later skill's responsibility, capture it as a downstream input, handoff note, or open decision instead of resolving it in concept.
+1. **Explore project context** - before asking, read `README.md`, `docs/`, `specs/INDEX.md`, existing PROJs and their decisions, `AGENTS.md`, routes, screens, components, APIs, schemas, theme files and component registry, deployment and platform constraints (runtime, storage, env vars, cron, serverless limits), and recent commits. Summarize briefly. On the discovery track for an existing product without a local codebase, run [Brownfield Context Intake](#brownfield-context-intake-discovery-track) instead or in addition.
+2. **Clarify the problem** - see [Clarification](#clarification).
+3. **Run the decomposition gate** - see [Project Decomposition Gate](#project-decomposition-gate). If `specs/product-roadmap.md` exists, the cut and the PROJ number are already decided there: take the entry's user outcome, `Depends on`, and boundaries as given, and set its `Status` to `concept`. Only decompose further if this single entry turns out to be more than one PROJ — then split it in the roadmap too, with a changelog line.
+4. **Approve project boundary** - explicit user approval for one PROJ or the multi-PROJ map before feature intake.
+5. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or all concepts in dependency order.
+6. **Collect feature-concept intake** - see [Intake](#intake).
+7. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
+8. **Clarifying questions** - one at a time until the remaining gaps in [Clarifying Questions](#clarifying-questions) are covered.
+9. **Controlled exploration and approaches** - see [Exploration](#exploration).
+10. **Assumption playback** - read back every assumption and wait for confirmation or correction.
+11. **Devil's-Advocate pass** - 3-5 weaknesses, risks, or tensions, each resolved or explicitly accepted.
+12. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?" Only an unambiguous answer ("everything is clear", "nothing is unclear anymore") lets you proceed; anything vague or partial sends you back to clarification.
+13. **Present the feature concept** - in [template](#concept-document) order, scaled to complexity; ask for approval after each section when the concept is large or nuanced. Do not over-specify implementation.
+14. **Allocate PROJ-X and theme slug** - scan `specs/PROJ-*/`, pick the next free integer (or the roadmap's number), agree on a kebab-case theme. Only after the boundary is approved.
+15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.codex/skills/5_executing/scripts/state.sh init <X> <theme>`. Write captured brownfield context to `0_context/` now. The new file stays `CP1:pending`; only the Step 5 checkpoint subskill may approve it.
+16. **Write the concept doc and self-review** - see [Concept Document](#concept-document) and [Self-Review](#self-review); commit.
+17. **Automatic cross-review** - see [Cross-Review](#automatic-cross-review).
+18. **User reviews the written concept** - see [User Review And Transition](#user-review-and-transition).
+19. **Repeat or transition** - next approved PROJ of the map, or hand off.
 
 ## Brownfield Context Intake (Discovery Track)
 
-On the product discovery track there is usually **no codebase to scan**, so the "Auto-Discovered Inputs" repo scan finds little. When the work extends or fits into something that already exists — a live product, an established design system, a brand, known domain vocabulary — capture that existing state explicitly so it is not lost. Skip this section for greenfield discovery (nothing exists yet) and for the full in-repo chain (the repo scan already covers it).
+The discovery track usually has no codebase to scan. When the work extends something that already exists — a live product, design system, brand, domain vocabulary — capture it so it is not lost. Skip this for greenfield discovery and for the full in-repo chain (the repo scan covers it). Gather the references during context discovery, before the decomposition gate; write the files once the PROJ number and theme are approved (checklist step 14).
 
-Run this during project-context discovery, before the Decomposition Gate. Ask the user what already exists and gather references:
+Ask what exists and gather: **existing surfaces** (live URLs or screenshots), **design system/brand** (Figma/Storybook/styleguide links, colors, fonts, component library, UI screenshot), **vocabulary** (domain terms that must not be renamed, with spelling), and **constraints and invariants** (rules, integrations, behaviors to preserve). You may fetch a provided URL and read provided screenshots; record only what the user confirms or a reference clearly shows.
 
-- **Existing surfaces:** live URLs of the current product/screens, or screenshots the user provides.
-- **Design system / brand:** Figma/Storybook/styleguide links, brand colors, fonts, component library, or a screenshot of the current UI.
-- **Vocabulary:** domain terms already in use that must not be renamed (with spelling conventions).
-- **Constraints and invariants:** rules, integrations, or behaviors that already exist and must be preserved.
-
-You may fetch a provided live URL for reference (structure, copy, visible patterns) and read provided screenshots. Do not guess — only record what the user confirms or what a reference clearly shows.
-
-Write the captured state to a dedicated context folder so downstream skills can consume it:
-
-```text
-specs/PROJ-<X>-<theme>/0_context/existing-state.md
-specs/PROJ-<X>-<theme>/0_context/references/        # screenshots, exported style guides, saved links
-```
-
-`existing-state.md` structure:
+Write to `specs/PROJ-<X>-<theme>/0_context/existing-state.md` (references in `0_context/references/`):
 
 ```markdown
 # Existing State — PROJ-<X> <theme>
@@ -171,13 +94,7 @@ specs/PROJ-<X>-<theme>/0_context/references/        # screenshots, exported styl
 - <anything unconfirmed>
 ```
 
-Downstream consumers:
-
-- `visual-companion` uses it to ground layout exploration in the existing shell.
-- `prototyping` uses it in **design-system mode** to adopt existing tokens, components, and patterns (there is no `tailwind.config` to scan on this track).
-- `handoff-package` folds it into the standalone package so external readers see the as-is starting point.
-
-Record in the concept's `Project Context` that `0_context/existing-state.md` exists and is the source of as-is truth.
+`visual-companion` grounds layout exploration in it, `prototyping` uses it in design-system mode (no `tailwind.config` on this track), and `handoff-package` folds it into the package. Record in the concept's `Project Context` that it is the source of as-is truth.
 
 ## Clarification
 
@@ -195,36 +112,22 @@ A stakeholder brief from `clarification` was confirmed by the stakeholder, usual
 
 ## Project Decomposition Gate
 
-Run this gate after clarification and before detailed feature-concept intake. Split by distinct user outcomes, not by a proposed solution's parts.
+Run after clarification and before detailed intake. Concept owns product boundaries; PRDs split behavior inside a PROJ and waves split implementation order, so neither can fix a wrong project cut. Split by distinct user outcomes, not by a proposed solution's parts.
 
-### Why This Exists
+Split into multiple PROJs when two or more hold:
 
-PRDs, user stories, and waves are too late for deciding whether one broad seed is actually multiple PROJs:
+- Independent user goals that can ship, test, or be adopted separately.
+- Different subsystems with different owners, risk profiles, data models, or rollout paths.
+- Foundation/enabling work mixed with user-facing workflows.
+- Multiple audiences whose success criteria differ materially.
+- Several PRDs with weak dependencies between them.
+- Separate UI exploration paths, such as admin tooling plus end-user workflow.
+- A risky or unknown piece that should be isolated first.
+- MVP-critical work mixed with expansion, automation, analytics, migration, support tooling, or polish.
 
-- **PRDs/user stories** split behavior inside an already-approved PROJ. They are good for testable feature slices, not for deciding project identity.
-- **Waves** split implementation order. They are good for dependency management during execution, not for product scoping.
-- **Concept** owns product boundaries. It must decide whether the seed should become one PROJ or multiple PROJs before downstream artifacts inherit the wrong scope.
+Skip the split only for one coherent user outcome, one main audience, and one downstream path. Do not decompose only because a feature is complex; keep one PROJ when the pieces must be designed, shipped, and validated together to create user value.
 
-Skipping this gate is acceptable only when the seed has one coherent user outcome, one main audience, and one downstream path.
-
-### When To Decompose
-
-Split one seed idea into multiple PROJs when two or more of these are true:
-
-- It contains independent user goals that can ship, test, or be adopted separately.
-- It touches different subsystems with different owners, risk profiles, data models, or rollout paths.
-- It mixes foundation/enabling work with user-facing workflows.
-- It includes multiple audiences whose success criteria differ materially.
-- It would naturally produce several PRDs with weak dependency between them.
-- It needs separate UI exploration paths, such as admin tooling plus end-user workflow.
-- It contains a risky or unknown piece that should be isolated before broader product work.
-- One part is clearly MVP-critical while another is expansion, automation, analytics, migration, support tooling, or polish.
-
-Do not decompose only because a feature is complex. Keep it as one PROJ when the pieces must be designed, shipped, and validated together to create user value.
-
-### Decomposition Output
-
-If the seed appears too broad, stop detailed questioning and present a proposed project map:
+If the seed is too broad, stop detailed questioning and propose a map, using temporary labels until approval:
 
 ```markdown
 This seed looks larger than one PROJ. I recommend splitting it into:
@@ -246,265 +149,45 @@ This seed looks larger than one PROJ. I recommend splitting it into:
 Recommended first PROJ: <theme>, because <reason>.
 ```
 
-Use temporary labels such as "PROJ-A candidate" until the user approves the split. Do not allocate real PROJ numbers before approval.
+Ask: "Does this project split match your intent, or should any of these be merged, removed, renamed, or reordered?" A vague yes is not enough while boundaries are unresolved; re-ask with concrete merge/remove/reorder options.
 
-### User Approval Rules
+After approval: allocate real PROJ numbers only now; one folder and concept per PROJ; process concepts one at a time in dependency order if the user wants all of them now; each concept fills `Decomposition Context` (original seed, approved map, this PROJ's role, siblings and boundaries, dependencies and order, scope assigned elsewhere); a PROJ blocked by another gets the next step "wait for PROJ-<X>". If the user rejects decomposition, record why the broader scope is acceptable as one PROJ under `Risks And Trade-Offs`.
 
-Ask the user to approve or correct the split before continuing:
+## Intake
 
-> "Does this project split match your intent, or should any of these be merged, removed, renamed, or reordered?"
+Collect before converging, not all up front: inspect the project first, take problem facts from the clarification source, then ask only for missing or ambiguous inputs.
 
-This is a concrete decision, so a vague "yes" is not enough if the split has unresolved boundaries. Re-ask with specific merge/remove/reorder options when needed.
+**Required:** feature seed; primary users and concrete scenarios; current workflow or pain; success criteria as observable or measurable signals; scope (in, out, later); project boundary; constraints (technical, data, auth, privacy, compliance, mobile/desktop, timeline, operational, deployment).
 
-After approval:
+**Conditional, only when relevant:** data ownership (created, read, updated, deleted, imported, exported, retained); permissions by role; failure handling for external services, database, uploads, model calls, background tasks; migration or compatibility for existing users, data, APIs, URLs, settings, integrations; auditability (logs, history, approvals, rollback); shareability and deep links; volume and performance (counts, sizes, traffic, latency, concurrency); internationalization and time zones.
 
-- Decide whether to create concepts for all approved PROJs now or only the recommended first PROJ.
-- If the user wants all concepts now, process them one at a time in dependency order.
-- Allocate real PROJ numbers only after the split and ordering are approved.
-- Each PROJ gets its own folder and concept doc.
-- Each concept doc must record its sibling PROJs, dependencies, and excluded sibling scope.
-- If one PROJ blocks another, mark the blocked PROJ's next step as "wait for PROJ-<X>" rather than handing it directly to the next skill.
+**Implementation success, product level only:** what makes the delivered feature feel successful to users and stakeholders; what must stay true about the existing product; which constraints would make an otherwise correct implementation unacceptable; which operational failures must be avoided or handled gracefully; which downstream artifact needs special attention. Record answers as success conditions, constraints, risks, or handoff notes — never as a technical design.
 
-### Decomposition In Concept Documents
-
-For every concept created from a decomposed seed, include:
-
-- Original seed idea.
-- Approved decomposition map.
-- This PROJ's role in the map.
-- Sibling PROJs and boundaries.
-- Dependencies and recommended order.
-- What intentionally belongs to another PROJ.
-
-If the user rejects decomposition, document the conscious decision in the concept under `Risks And Trade-Offs`, including why the broader scope is still acceptable as one PROJ.
-
-## Checklist
-
-Create a task for each item and complete them in order:
-
-1. **Explore project context** - inspect docs, specs, routes, components, APIs, recent commits, and relevant agent instructions. On the discovery track with no codebase, run the **Brownfield Context Intake** instead/in addition: capture existing surfaces, design system, vocabulary, and constraints into `0_context/`.
-2. **Clarify the problem** - read a supplied clarification artifact and skip the questions it answers; otherwise gather the problem, users, success factors, non-goals, and constraints without choosing a solution.
-3. **Run project decomposition gate** - if the clarified problem spans multiple independent user outcomes, subsystems, risks, rollout paths, or audiences, propose a multi-PROJ split. If `specs/product-roadmap.md` exists, the cut and the PROJ number are already decided there: take the entry's user outcome, `Depends on`, and boundaries as given, and set its `Status` to `concept`. Only decompose further if this single entry turns out to be more than one PROJ — then split it in the roadmap too, with a changelog line.
-4. **Approve project boundary** - get explicit user approval for one PROJ or an approved multi-PROJ map before feature intake.
-5. **Choose processing order** - for a multi-PROJ map, confirm whether to write only the first concept or write all concepts in dependency order.
-6. **Collect feature-concept intake** - gather required inputs for the current PROJ, using the clarification source and project discovery where possible.
-7. **Research if needed** - browse only for current, niche, regulated, or unfamiliar technical/domain context.
-8. **Clarifying questions** - ask one at a time until remaining concept gaps are covered.
-9. **Controlled exploration** - explore 2-4 viable directions before selecting an approach.
-10. **Assumption playback** - read back every assumption and wait for confirmation/correction.
-11. **Devil's-Advocate pass** - list 3-5 weaknesses, risks, or unresolved tensions and resolve them with the user.
-12. **Explicit clarity confirmation** - ask exactly: "From your perspective, is everything now clear, or are there still unclear or open points?"
-13. **Present feature concept** - section by section, scaled to complexity, and get approval.
-14. **Allocate PROJ-X number and theme slug** - scan `specs/PROJ-*/`, pick next free integer, agree on kebab-case theme.
-15. **Create PROJ folder and state** - create `specs/PROJ-<X>-<theme>/1_concept/`, then run `bash ~/.codex/skills/5_executing/scripts/state.sh init <X> <theme>`. The new file stays `CP1:pending`; only the Step 5 checkpoint subskill may approve it.
-16. **Write concept doc** - `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`.
-17. **Concept self-review** - fix placeholders, contradictions, ambiguity, missing deep-dives, and scope creep.
-18. **User reviews written concept** - wait for approval before transition.
-19. **Repeat or transition** - for multi-PROJ maps, repeat concept creation for the next approved PROJ or transition the current PROJ to visual-companion/requirements-engineer.
-
-## Feature Concept Intake
-
-Collect these inputs before converging on the concept. Do not ask everything up front. Use project inspection first, then ask the user only for missing or ambiguous inputs.
-
-### Auto-Discovered Inputs
-
-Gather from the repository before asking:
-
-- Existing project purpose from `README.md`, `docs/`, `specs/INDEX.md`, and current specs.
-- Existing routes, screens, components, APIs, schemas, and data flows.
-- Existing design or implementation constraints from `AGENTS.md`, docs, Tailwind/theme files, component registry, deployment config, and recent commits.
-- Relevant platform constraints such as Vercel runtime, storage, env vars, cron, analytics, and serverless limits.
-- Prior related decisions in existing PROJ folders.
-
-Summarize discoveries briefly before asking clarifying questions.
-
-### Required User Inputs
-
-These must be known before the concept can be approved. Use the clarification artifact or conversation for the problem facts; do not ask for them again when already clear:
-
-- **Feature seed:** What is the feature idea, problem, or opportunity?
-- **Primary users:** Who uses this, in which concrete scenario?
-- **Current workflow or pain:** What happens today, and where does it break down?
-- **Success criteria:** How will we know the feature is finished and successful? Prefer observable or measurable signals.
-- **Scope boundaries:** What is in scope, out of scope, and explicitly later?
-- **Project boundary:** Is this one coherent PROJ, or should it be split into multiple PROJs with separate outcomes?
-- **Constraints:** Technical, data, auth, privacy, compliance, mobile/desktop, timeline, operational, or deployment constraints.
-
-### Conditional Inputs
-
-Ask only when relevant:
-
-- **Data ownership:** What data is created, read, updated, deleted, imported, exported, or retained?
-- **Permissions:** Which users or roles can see or change what?
-- **Failure handling:** What should happen when an external service, database, upload, model call, or background task fails?
-- **Migration or compatibility:** Does this affect existing users, data, APIs, URLs, saved settings, or integrations?
-- **Auditability:** Do actions need logs, history, approvals, or rollback?
-- **Shareability:** Do screens or objects need deep links?
-- **Volume and performance:** Expected item counts, file sizes, traffic, latency, or concurrency.
-- **Internationalization/timezone:** Languages, locales, currencies, date handling, or time zones.
-
-### High-Level Implementation Success Inputs
-
-Discuss implementation success only at the level needed to guide downstream skills:
-
-- What would make the delivered feature feel successful to users and stakeholders?
-- What must remain true about the existing product while this feature is added?
-- Which constraints would make an otherwise correct implementation unacceptable?
-- Which operational failures must be avoided or handled gracefully?
-- Which downstream artifact needs special attention: UI shape, mockups, PRDs, architecture, wave planning, QA, or documentation?
-
-Do not decide how to implement these points. Record them as product-level success conditions, constraints, risks, or handoff notes.
-
-### Concept-Shaping Inputs
-
-Use these to choose the right direction, not to inflate scope:
-
-- **Concept emphasis:** MVP slice, UX direction, technical feasibility, scope decomposition, or risk reduction. The output remains a buildable concept either way.
-- **Implementation appetite:** small tactical change, solid MVP, extensible foundation, or high-polish workflow.
-- **Risk tolerance:** conservative, balanced, experimental.
-- **Decision priority:** speed, correctness, UX quality, maintainability, cost, compliance, or future extensibility.
+**Shaping, to choose a direction rather than inflate scope (YAGNI):** concept emphasis (MVP slice, UX, feasibility, decomposition, risk reduction), implementation appetite (tactical change, solid MVP, extensible foundation, high polish), risk tolerance (conservative, balanced, experimental), decision priority (speed, correctness, UX, maintainability, cost, compliance, extensibility).
 
 ## Clarifying Questions
 
-Cover these gaps when the clarification source or concept intake has not already answered them:
+Cover only gaps the clarification source and intake left open:
 
-- **Success criteria:** Make unclear outcomes, adoption, guardrails, baselines, or targets concrete.
-- **Scope:** Define what is in, out, and later without changing the clarified non-goals silently.
-- **Users and scenarios:** Fill in missing usage contexts for the chosen direction.
-- **Edge cases:** Ask about consequential failures or exceptions that could change the direction or scope.
-- **Product terms:** Sharpen the language as ambiguities surface, not as a separate round:
-  - *Fuzzy or overloaded term:* propose one precise canonical term ("do you mean the Customer or the User?").
-  - *Conflict with existing language:* when a term contradicts `docs/PRODUCT.md`, `0_context/existing-state.md` (Domain Vocabulary), or earlier answers, call it out immediately and ask which is meant.
-  - *Concrete scenarios:* invent borderline cases that probe the edges between concepts ("does X count as Y?") and make the user decide.
-  - *Contradiction with the code* (brownfield with code): when the user states how something works, check it and surface mismatches.
-  - *Record immediately:* write each resolved term or scenario into `Key Terms And Disputed Scenarios` as it is settled, free of implementation detail. No separate `GLOSSARY.md` and no technical ADRs in this phase.
+- **Success criteria:** make unclear outcomes, adoption, guardrails, baselines, or targets concrete.
+- **Scope:** define in, out, and later without silently changing clarified non-goals.
+- **Users and scenarios:** fill missing usage contexts for the chosen direction.
+- **Edge cases:** consequential failures or exceptions that could change direction or scope.
+- **Product terms**, sharpened as ambiguities surface, not as a separate round: propose one canonical term for a fuzzy or overloaded one ("the Customer or the User?"); call out conflicts with `docs/PRODUCT.md`, `0_context/existing-state.md` (Domain Vocabulary), or earlier answers immediately; invent borderline scenarios ("does X count as Y?") and make the user decide; in a brownfield repo, check stated behavior against the code and surface mismatches. Write each settled term or scenario into `Key Terms And Disputed Scenarios` right away, free of implementation detail — no `GLOSSARY.md`, no technical ADRs.
 
-Prefer multiple-choice questions when helpful. Open-ended questions are fine when the user has useful context that options would bias.
+## Exploration
 
-If the user gives a vague answer, re-ask with concrete options. Do not advance on a vague yes.
+Explore product-level alternatives before converging so the first plausible idea does not win by inertia. Pick the mode from context; ask only if it is genuinely ambiguous: practical options (2-3 realistic approaches), broad exploration then narrowing, briefly a few wild or constraint-breaking options to extract lessons, or progressive flow (broad, cluster, select). Do not target dozens of ideas. When stuck, pivot internally through 3-5 lenses (UX, feasibility, existing-system fit, data ownership, security/privacy, operations, edge cases, cost/latency/runtime, extensibility, what is not being built) — not as a questionnaire. For UI features, identify UI tensions for `visual-companion`; never choose the container.
 
-## Controlled Exploration
+Then propose 2-3 approaches, each with what it is, best fit, trade-offs, scope impact, and main risks. Lead with your recommendation and why, accounting for project context, goals, success criteria, constraints, and out-of-scope boundaries.
 
-Before presenting the concept, explore product-level alternatives deliberately. This prevents the first plausible idea from becoming the concept by inertia.
+**Assumption playback:** "I derived the following assumptions from your answers. Please confirm or correct each one:" followed by a numbered list. Separate confirmed inputs (stated by the user or found in the project), assumptions (need confirmation), and open questions. Corrections trigger follow-up questions, not silent re-derivation.
 
-Choose the exploration mode from project context and user answers. Ask the user only if the right mode is genuinely ambiguous.
-
-- **Practical options:** Generate 2-3 realistic feature approaches with trade-offs.
-- **Broad exploration:** Generate several possible product shapes, then narrow.
-- **Wild alternatives:** Briefly include unusual or constraint-breaking options, then extract practical lessons.
-- **Progressive flow:** Start broad, cluster themes, then select a buildable direction.
-
-Do not target 50-100 ideas. This skill exists to produce a feature concept, so exploration should be enough to reveal better directions without delaying convergence.
-
-For UI features, exploration may identify that the next decision is about interface shape, but must not choose the detailed layout container. Capture likely UI tensions for `visual-companion` instead.
-
-### Perspective Pivots
-
-When the discussion is stuck or too narrow, pivot through 3-5 lenses:
-
-- User experience
-- Technical feasibility
-- Existing system fit
-- Data model and ownership
-- Auth, permissions, security, and privacy
-- Operations, support, and observability
-- Edge cases and failure modes
-- Cost, latency, and deployment/runtime constraints
-- Future extensibility
-- What is intentionally not being built
-
-Use pivots as internal prompts, not as a long questionnaire.
-
-## Approach Proposal
-
-After intake and exploration, propose 2-3 approaches.
-
-For each approach include:
-
-- What it is
-- Best fit
-- Trade-offs
-- Scope impact
-- Main risks
-
-Lead with your recommendation and explain why. The recommendation must account for project context, user goals, success criteria, constraints, and out-of-scope boundaries.
-
-## Assumption Playback
-
-Before the Devil's-Advocate pass, explicitly read back assumptions:
-
-```markdown
-I derived the following assumptions from your answers. Please confirm or correct each one:
-
-1. ...
-2. ...
-3. ...
-```
-
-Wait for the user to confirm or correct each one. Corrections trigger follow-up questions, not silent re-derivation.
-
-Separate:
-
-- **Confirmed inputs:** stated directly by the user or discovered in project files.
-- **Assumptions:** inferred from answers and needing confirmation.
-- **Open questions:** still unresolved.
-
-## Devil's-Advocate Pass
-
-List 3-5 weaknesses, risks, or unresolved tensions in the selected direction.
-
-Examples:
-
-- "The success criterion says 'fast', but we have not defined a threshold. Is under 500ms the target?"
-- "The out-of-scope list excludes admin tools, but support may need a manual recovery path. Is that accepted risk?"
-- "Two personas may update the same object at the same time. We have not chosen conflict behavior."
-- "This depends on durable background work, but the deployment target is serverless. We need a persistence strategy."
-
-The user must resolve each item or explicitly accept it as a conscious risk.
-
-## Explicit Clarity Confirmation
-
-Ask exactly:
-
-> "From your perspective, is everything now clear, or are there still unclear or open points?"
-
-Only an unambiguous answer such as "everything is clear" or "nothing is unclear anymore" lets you proceed. Any vague or partial answer sends you back to clarification.
-
-## Presenting The Feature Concept
-
-Present the concept in sections scaled to complexity. Ask for approval after each section when the concept is large or nuanced.
-
-Cover:
-
-- Original seed and decomposition map, if this came from a broader idea
-- Problem and goal
-- Primary users and scenarios
-- Current workflow or pain
-- Selected direction
-- Scope
-- Out of scope
-- Success criteria
-- Key flows or behaviors
-- Data and permissions, if relevant
-- Error and edge-case behavior
-- Constraints and dependencies
-- High-level implementation success conditions
-- Downstream handoff notes
-- Explored alternatives and why they were not selected
-- Risks and conscious trade-offs
-- Testing focus
-
-Do not over-specify implementation details. Architecture, PRDs, plans, and implementation come later.
+**Devil's-Advocate pass:** list 3-5 weaknesses or tensions, for example an undefined threshold behind "fast", a support recovery path excluded by out-of-scope, concurrent edits without conflict behavior, or durable background work on a serverless target. The user resolves each or accepts it as a conscious risk.
 
 ## Concept Document
 
-After approval, allocate the PROJ folder and write:
-
-```text
-specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md
-```
-
-Use this structure:
+Write after approval. The template is the output contract: downstream skills must be able to proceed from it without repeating discovery.
 
 ```markdown
 # PROJ-<X> Concept - <theme>
@@ -570,10 +253,10 @@ Approved concept
 - Downstream attention needed:
 
 ## Downstream Handoff Notes
-- For visual-companion:
-- Mockup-relevant product inputs:
-- For requirements-engineer:
-- For architecture/planning:
+- For visual-companion: <primary user job and context; information shape (list/detail, form-heavy, review/approval, timeline, dashboard, wizard-like, other); likely UI tensions without choosing a container; mobile importance, deep links, destructive actions, context preservation; UI anti-goals>
+- Mockup-relevant product inputs: <vocabulary, high-level states, content examples, behavior to preserve>
+- For requirements-engineer: <major behaviors; product-level edge cases and failure expectations; constraints PRDs must preserve>
+- For architecture/planning: <constraints with technical implications; data ownership, permission, and external dependency hints; operational risks, durability, latency; existing behavior to preserve; explicit non-goals against overbuilding>
 
 ## Explored Alternatives
 ### Alternative A
@@ -595,15 +278,19 @@ Approved concept
 - Backend/API feature: requirements-engineer
 ```
 
-The concept is the root input for the rest of the chain. Keep it product-level and decision-rich, but do not turn it into PRDs, architecture, or an implementation plan.
+Keep it product-level and decision-rich; no PRDs, architecture, or implementation plan. Commit with `feat(PROJ-<X>): add concept for <theme>`. Git is optional on the discovery track: without a repository, skip the commit (or suggest an optional `git init` for a history of concept and mockup iterations); the file itself is the durable artifact.
 
-Commit with:
+## Self-Review
 
-```bash
-feat(PROJ-<X>): add concept for <theme>
-```
+Before the user reviews it, check the written concept and fix issues inline; ask the user when a fix needs unconfirmed information:
 
-Git is optional on the discovery track. If the workspace is not a git repository, skip the commit (or suggest an optional `git init` first — a version history is useful for tracking concept and mockup iterations). The concept file itself is the durable artifact, committed or not.
+1. **Placeholders:** no `TBD`, `TODO`, empty sections, or vague words standing in for decisions.
+2. **Consistency:** direction, scope, users, success criteria, and risks do not contradict each other.
+3. **Scope:** focused enough for one PROJ, or decomposed with map, siblings, dependencies, and excluded sibling scope documented.
+4. **Ambiguity:** requirements cannot be read in materially different ways; key terms are defined and disputed scenarios settled.
+5. **Coverage:** success criteria, out of scope, and users/scenarios are explicit; rejected alternatives and confirmed assumptions are recorded; unresolved assumptions are not hidden.
+6. **Contract:** every template section, including the downstream handoff notes for the chosen path, is filled.
+7. **Boundary:** nothing from the [Boundary](#boundary) "does not own" list leaked in; implementation success reads as product constraints, risks, or handoff notes, not technical design.
 
 ## Automatic Cross-Review
 
@@ -629,55 +316,15 @@ while findings of any severity remain; stop early when clean. Escalate remaining
 Critical/High findings before transition. Ask only for unresolved product
 decisions. Additional manually requested rounds have no limit.
 
-## Concept Self-Review
+## User Review And Transition
 
-Review the written concept before asking the user to review it:
-
-1. **Placeholder scan:** no `TBD`, `TODO`, empty sections, or vague words standing in for decisions.
-2. **Internal consistency:** selected direction, scope, users, success criteria, and risks do not contradict each other.
-3. **Scope check:** the concept is focused enough for one PROJ, or it has been decomposed.
-4. **Decomposition check:** for broad seeds, the approved project map, sibling PROJs, dependencies, and excluded sibling scope are documented.
-5. **Ambiguity check:** requirements cannot be interpreted in materially different ways.
-   Key product terms are defined, and disputed scenarios are settled, in `Key Terms And Disputed Scenarios`.
-6. **Deep-dive coverage:** success criteria, out-of-scope, and users/scenarios are explicitly documented.
-7. **Exploration record:** rejected/deferred alternatives are captured briefly.
-8. **Assumption record:** confirmed assumptions are documented; unresolved assumptions are not hidden.
-9. **Output contract check:** required downstream inputs are present for `visual-companion` or `requirements-engineer`, and for architecture/planning.
-10. **Downstream boundary check:** none of these have leaked into the concept:
-   - UI container choice such as sidepanel, modal, drawer, wizard, split view, or dedicated page.
-   - Screen list, sitemap, detailed UI states, component reuse decision, visual styling, or UI implementation handoff.
-   - User stories, acceptance criteria, or detailed edge-case matrix.
-   - API design, schema design, package choice, architecture decision, task plan, test plan, file ownership, or production code.
-11. **Implementation success check:** high-level implementation success is documented as product constraints, risks, or handoff notes, not as technical design.
-
-Fix issues inline. If fixing requires information not already confirmed, ask the user.
-
-## User Review Gate
-
-After self-review, ask the user to review the written concept:
+Ask:
 
 > "Concept written and committed to `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`. Automatic cross-review is complete. Please review the concept before we continue. Let me know if you want to make any changes."
 
-Wait for the user's response. If they request changes, update the concept and run self-review again. Only proceed after approval.
+Apply requested changes and self-review again; proceed only after approval. Then:
 
-## Transition
-
-- If the feature has a UI component, invoke `visual-companion`.
-- If the feature is pure backend/API, invoke `requirements-engineer`.
-- If the current PROJ depends on an uncreated or unapproved sibling PROJ, pause transition and create or approve that prerequisite first.
-- Do NOT invoke writing-plans, architecture, executing, QA, documentation, or implementation directly from concept.
-
-## Key Principles
-
-- Feature concept is the endpoint.
-- Ask one question at a time.
-- Inspect the project before asking questions the repo can answer.
-- Split broad seeds into multiple PROJs before detailed intake.
-- Get explicit approval for project boundaries before allocating PROJ numbers.
-- Ask, never assume.
-- Vague answers are non-answers.
-- Explore before converging.
-- Keep exploration bounded by the goal of a buildable concept.
-- Record rejected alternatives.
-- YAGNI ruthlessly.
-- Stop only after deep-dives are covered, assumptions are confirmed, risks are addressed, and the user says nothing important is unclear.
+- UI feature → invoke `visual-companion`. Pure backend/API → invoke `requirements-engineer`.
+- If the PROJ depends on an uncreated or unapproved sibling, create or approve that prerequisite first.
+- For a multi-PROJ map, repeat for the next approved PROJ; later skills run per PROJ unless the user asks to continue several in sequence.
+- Never invoke writing-plans, architecture, executing, QA, documentation, or implementation directly from concept.
