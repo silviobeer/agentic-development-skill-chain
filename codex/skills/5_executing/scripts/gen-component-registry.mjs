@@ -34,7 +34,7 @@
 // React; swap in a parser (or per-stack extractors for Vue SFC / Svelte) when
 // a project needs it.
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -66,11 +66,12 @@ const HEADER = () => [
 const SRC_EXT = /\.(tsx|jsx)$/;
 const SKIP = /\.(test|spec|stories)\.|__tests__|node_modules/;
 
+// Directory links are not followed: one pointing at an ancestor never ends (ELOOP).
 function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) walk(p, out);
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, ent.name);
+    if (ent.isDirectory()) walk(p, out);
     else if (SRC_EXT.test(p) && !SKIP.test(p)) out.push(p);
   }
   return out;
@@ -78,14 +79,16 @@ function walk(dir, out = []) {
 
 // Outermost `components` folders under src/; walk() covers anything nested.
 // The showcase route folder (src/app/dev/components) renders the registry,
-// it is not part of it.
+// it is not part of it. Directory links are searched through no further than
+// walk() does; a `components` link itself is named explicitly, so it counts.
 function componentDirs(root, dir = join(root, "src"), out = []) {
   if (!existsSync(dir)) return out;
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (name === "node_modules" || !statSync(p).isDirectory()) continue;
-    if (name !== "components") componentDirs(root, p, out);
-    else if (!SHOWCASE_DIRS.has(relative(root, p).split(sep).join("/"))) out.push(p);
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, ent.name);
+    if (ent.name === "node_modules") continue;
+    if (ent.name !== "components") {
+      if (ent.isDirectory()) componentDirs(root, p, out);
+    } else if (existsSync(p) && statSync(p).isDirectory() && !SHOWCASE_DIRS.has(relative(root, p).split(sep).join("/"))) out.push(p);
   }
   return out;
 }
@@ -333,6 +336,9 @@ function selftest() {
     mkdirSync(dirname(join(app, rel)), { recursive: true });
     writeFileSync(join(app, rel), body);
   }
+  // Links to an ancestor, one in the folder search and one inside a components/ folder.
+  symlinkSync("../..", join(app, "layout/up"), "dir");
+  symlinkSync("../..", join(app, "layout/components/up"), "dir");
   const cli = (...a) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...a], { cwd: repo, encoding: "utf8" });
   // Showcase anchors are not what this block tests — keep them satisfied.
   writeFileSync(join(app, "app/dev/components/page.tsx"), `export default function Page() {\n  return <><i id="side-menu" /><i id="type-card" /><i id="wizard" /><i id="field" /><i id="top-bar" /><i id="data-grid" /></>\n}\n`);
@@ -344,6 +350,7 @@ function selftest() {
   assert.match(scoped, /\| TypeCard \| `@\/features\/settings\/object-types\/components\/type-card` \|/, "nested feature components must be scanned");
   assert.match(scoped, /\| Wizard \| `@\/lab\/variants\/a-v1\/components\/wizard` \|/, "lab components must be scanned");
   assert.equal(scoped.match(/\| Field \|/g)?.length, 1, "nested components/ folder must be counted once");
+  assert.equal(scoped.match(/\| SideMenu \|/g)?.length, 1, "directory links must not be followed");
   assert.equal(scoped.match(/\| DataGrid \|/g)?.length, 1, "`export const X = memo(function X …)` must be registered once");
   assert.match(scoped, /\| DataGrid \| `@\/layout\/components\/data-grid` \| Memoized grid\. \|/, "the single row must keep the doc block");
   assert.doesNotMatch(scoped, /\| Page \|/, "the showcase route folder must not be scanned");
