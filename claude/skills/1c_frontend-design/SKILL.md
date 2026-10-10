@@ -287,7 +287,7 @@ Write tokens as **classes, not hex palettes** — the implementer needs what to 
 export function Button(props) { … }
 ```
 
-Write the doc block while you write the component, then run `node scripts/gen-component-registry.mjs`. The purpose line and the "not for" hint are the only parts no parser can derive — they belong next to the code, not in a second list. From here on the registry stays current the same way: implementers (P5) write doc blocks, the wave gate verifies with `--check`, P7 curates the prose, never the table.
+Write the doc block while you write the component, then run `node scripts/gen-component-registry.mjs` (nested app root: `<app> --out docs/components.md`). The purpose line and the "not for" hint are the only parts no parser can derive — they belong next to the code, not in a second list. From here on the registry stays current the same way: implementers (P5) write doc blocks, the wave gate verifies with `--check`, P7 curates the prose, never the table.
 
 **Showcase page** — the one artifact that carries the detail, because it costs no context budget and cannot lie: every component with all variants, sizes, and states, in light and dark mode.
 
@@ -318,7 +318,7 @@ The component showcase remains static — no props playground. Interactive exper
 - Confirm the showcase renders the minimum-set `Button` and labeled text `Field`/`Input`, including focus, disabled, and error states
 - Open the showcase page and check every component in light and dark mode
 - Every `## Patterns` entry in `docs/DESIGN-SYSTEM.md` has a `#pattern-<name>` section on the page
-- Run `node scripts/gen-component-registry.mjs --check` — it fails if a component has no doc block, the registry is stale, or a component has no showcase section
+- Run `node scripts/gen-component-registry.mjs --check` (nested app root: `<app> --check --out docs/components.md`) — it fails if a component has no doc block, the registry is stale, or a component has no showcase section
 - Run `curation-caps.sh` (or count lines): `docs/DESIGN-SYSTEM.md` must fit its 80-line cap. If it does not, move detail to the showcase page — never to a second markdown file
 
 ## Extending The Design System
