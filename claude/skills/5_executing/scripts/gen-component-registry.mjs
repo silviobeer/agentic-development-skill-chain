@@ -171,7 +171,9 @@ function collect(root) {
       const re = /(\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*)?(?:export\s+(?:default\s+)?)?(?:function|const)\s+([A-Z]\w*)/g;
       let m;
       while ((m = re.exec(src)) !== null) {
-        if (!exported.has(m[2])) continue;
+        // `export const X = memo(function X …)` matches twice: once with the
+        // doc block, once at the inner `function X` without it.
+        if (!exported.has(m[2]) || found.some((f) => f.name === m[2] && f.file === file)) continue;
         found.push({ name: m[2], import: importPath(root, file), file, ...(parseDoc(m[1]) ?? { purpose: "", variants: "—", sizes: "—", states: "—" }) });
       }
     }
@@ -324,6 +326,7 @@ function selftest() {
     "features/settings/object-types/components/type-card.tsx": "/** One object type. */\nexport function TypeCard() {}\n",
     "lab/variants/a-v1/components/wizard.tsx": "/** Variant-local wizard. */\nexport function Wizard() {}\n",
     "components/form/components/field.tsx": "/** Form field. */\nexport function Field() {}\n",
+    "layout/components/data-grid.tsx": "/** Memoized grid. */\nexport const DataGrid = memo(function DataGrid() {})\n",
     "app/dev/components/page.tsx": "export default function Page() {\n  return null\n}\n",
   };
   for (const [rel, body] of Object.entries(files)) {
@@ -332,7 +335,7 @@ function selftest() {
   }
   const cli = (...a) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...a], { cwd: repo, encoding: "utf8" });
   // Showcase anchors are not what this block tests — keep them satisfied.
-  writeFileSync(join(app, "app/dev/components/page.tsx"), `export default function Page() {\n  return <><i id="side-menu" /><i id="type-card" /><i id="wizard" /><i id="field" /><i id="top-bar" /></>\n}\n`);
+  writeFileSync(join(app, "app/dev/components/page.tsx"), `export default function Page() {\n  return <><i id="side-menu" /><i id="type-card" /><i id="wizard" /><i id="field" /><i id="top-bar" /><i id="data-grid" /></>\n}\n`);
   assert.equal(cli("app", "--out", "docs/components.md").status, 0, "--out run must succeed");
   assert.ok(!existsSync(join(repo, "app", "docs", "components.md")), "--out must not write under the app root");
   const scoped = readFileSync(join(repo, "docs", "components.md"), "utf8");
@@ -341,6 +344,8 @@ function selftest() {
   assert.match(scoped, /\| TypeCard \| `@\/features\/settings\/object-types\/components\/type-card` \|/, "nested feature components must be scanned");
   assert.match(scoped, /\| Wizard \| `@\/lab\/variants\/a-v1\/components\/wizard` \|/, "lab components must be scanned");
   assert.equal(scoped.match(/\| Field \|/g)?.length, 1, "nested components/ folder must be counted once");
+  assert.equal(scoped.match(/\| DataGrid \|/g)?.length, 1, "`export const X = memo(function X …)` must be registered once");
+  assert.match(scoped, /\| DataGrid \| `@\/layout\/components\/data-grid` \| Memoized grid\. \|/, "the single row must keep the doc block");
   assert.doesNotMatch(scoped, /\| Page \|/, "the showcase route folder must not be scanned");
   assert.equal(cli("app", "--out", "docs/components.md", "--check").status, 0, "--check must read the --out target");
   assert.equal(cli("app", "--check").status, 1, "without --out, --check still looks at <root>/docs/components.md");
