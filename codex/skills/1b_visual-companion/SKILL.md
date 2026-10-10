@@ -62,7 +62,7 @@ Then inspect the existing app so the exploration fits what is already there:
 - Routes: `src/app`, `src/pages`, router files
 - Layout shells: app layouts, dashboard layouts, nav components
 - Existing interaction containers: modal, dialog, drawer, sidepanel, sheet, popover, tabs, command palette, wizard/stepper
-- Components: `src/components`, `src/features/*/components`, `docs/components.md`
+- Components: `docs/components.md`, every `components/` folder under `src/` (`src/components`, `src/layout/components`, `src/features/**/components`)
 - Design/system hints: `docs/DESIGN-SYSTEM.md`, `docs/TECHNICAL.md`, `AGENTS.md`, existing CSS/Tailwind/component conventions
 
 Note the design system state explicitly — this is the earliest point where it is

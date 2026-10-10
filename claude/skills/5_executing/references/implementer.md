@@ -98,9 +98,11 @@ Task tool:
     report so the main agent can update progress.md.
 
     ## Components — reuse before create (UI tasks only, HARD RULE)
-    Before creating any component file in `src/components/` or `src/features/*/components/`:
-    1. `grep -rn "export function <Name>" src/components/ src/features/*/components/ 2>/dev/null` — check for exact matches
-    2. `grep -rn "export function.*<Semantic>" src/components/` — check for semantically similar (e.g. `Badge`, `Chip`, `Tag`)
+    Before creating any component file in a `components/` folder under `src/`
+    (`src/components/`, `src/layout/components/`, `src/features/**/components/`, … —
+    the registry scans every outermost one):
+    1. `grep -rn --include='*.tsx' --include='*.jsx' "export function <Name>" src/ | grep /components/` — check for exact matches
+    2. `grep -rn --include='*.tsx' --include='*.jsx' "export function.*<Semantic>" src/ | grep /components/` — check for semantically similar (e.g. `Badge`, `Chip`, `Tag`)
     3. Read `docs/components.md` registry end-to-end
     4. If anything comparable exists → **reuse or extend**, don't create
     5. If truly new → write a doc block above the export, in the SAME commit as the
@@ -108,7 +110,8 @@ Task tool:
          /** Actions. Not for navigation — use Link.
           *  @variants primary|ghost  @sizes sm|md  @states hover|disabled */
          export function Button(…)
-    6. Regenerate: `node scripts/gen-component-registry.mjs` and commit `docs/components.md`
+    6. Regenerate: `node scripts/gen-component-registry.mjs` (nested app root:
+       `<app> --out docs/components.md`) and commit `docs/components.md`
     7. If a `/dev/components` showcase route exists → add the new component there too, with
        its variants and states. QA checks that every registered component renders.
     A component without a doc block, or a stale `docs/components.md`, fails the wave gate.

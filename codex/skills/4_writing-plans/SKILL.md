@@ -22,6 +22,7 @@ Also read the feature's `agent.md` (e.g. `src/features/<feature>/agent.md`) if p
 
 ```bash
 node scripts/gen-component-registry.mjs
+# nested app root: node scripts/gen-component-registry.mjs <app> --out docs/components.md
 ```
 
 `docs/components.md` is generated from code; fix undocumented components in the code, never in the registry.

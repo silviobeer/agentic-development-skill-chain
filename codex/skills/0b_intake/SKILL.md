@@ -77,7 +77,9 @@ they locate, you judge):
   integrations → ARCHITECTURE draft (+ `docs/architecture/` for detail).
 - **QA Hat:** test setup, error-handling patterns, validation, auth →
   test-conventions + security-baseline drafts.
-- **component-scout:** run `node scripts/gen-component-registry.mjs`, then
+- **component-scout:** run `node scripts/gen-component-registry.mjs` (it
+  scans every outermost `components/` folder under `src/`; nested app root:
+  `node scripts/gen-component-registry.mjs <app> --out docs/components.md`), then
   write the missing doc blocks into the components it reports as
   undocumented (purpose + "not for" are interview material, not
   extractable) and regenerate → components.md registry;

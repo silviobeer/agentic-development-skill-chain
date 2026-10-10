@@ -278,7 +278,7 @@ Variant before new component. Procedure: `1c_frontend-design` → Extending The 
 
 Write tokens as **classes, not hex palettes** — the implementer needs what to type. The hex values live in the design language document and in the CSS variables.
 
-**`docs/components.md`** — the component registry. **Do not write it by hand.** Each component carries its own metadata in a doc block above the export, and `scripts/gen-component-registry.mjs` collects them:
+**`docs/components.md`** — the component registry. **Do not write it by hand.** Each component carries its own metadata in a doc block above the export, and `scripts/gen-component-registry.mjs` collects them from every outermost `components/` folder under `src/` (`src/components`, `src/layout/components`, `src/features/**/components`, …; a nested app root writes the repo-root registry with `<app> --out docs/components.md`):
 
 ```tsx
 /** Actions. Not for navigation — use Link.
