@@ -190,7 +190,7 @@ If a build fails, a fix worker gets the verbatim compiler output and the failing
 
 ## CodeRabbit and Smoke Tests
 
-CodeRabbit is mandatory per wave, but it is owned by the wave gate. The lead does not run a second separate per-wave CodeRabbit review. Raw and normalized attempt files are retained, and the decision uses the cumulative open blocking ledger rather than only the latest nondeterministic response.
+CodeRabbit is mandatory per wave unless `wave-gate-config.json` sets `coderabbit.enabled: false` (an optional switch, default on, set only when the user explicitly asks), but it is owned by the wave gate. The lead does not run a second separate per-wave CodeRabbit review. Raw and normalized attempt files are retained, and the decision uses the cumulative open blocking ledger rather than only the latest nondeterministic response. With the switch off, the gate logs `CodeRabbit: DISABLED by wave-gate-config` and records the same line in the PASSED block (never `attempt N ingested`); the build still runs, preflight and setup skip the CodeRabbit tool, auth and config checks, and no automatic code review runs in the wave gate. ACs, regressions, smoke, static checks, build and the PROJ-end Quality Gate remain.
 
 Frontend smoke tests are also owned by the wave gate. They use `agent-browser` against URL and content expectations; a login redirect is not a successful anonymous smoke result.
 

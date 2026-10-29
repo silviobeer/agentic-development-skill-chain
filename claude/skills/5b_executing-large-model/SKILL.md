@@ -237,7 +237,9 @@ expected to choose the concrete steps.
   ask for the flush and end the turn.
 - **Debugging.** Root cause before fix (`5_executing/references/debugging.md`).
   Repeated failures use the Outer Ralph stages in item 6 or the blocked path.
-- **Reviews.** CodeRabbit inside the wave gate and the Quality Gate reviewer
+- **Reviews.** CodeRabbit inside the wave gate (mandatory unless
+  `coderabbit.enabled=false` in `wave-gate-config.json`, a switch the user must
+  ask for) and the Quality Gate reviewer
   (given its role file by path) are the only Step 5 reviews. No minimalism persona, no six-persona panel;
   those belong to Skill 6. Structure and test quality are judged by the
   project's tools (`complexity_cmd`, `arch_rules_cmd`, `mutation_cmd`); a

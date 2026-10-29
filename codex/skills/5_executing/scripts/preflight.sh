@@ -6,6 +6,11 @@
 #   - HARD tool missing/unauth -> exit 1 = stop condition, never skipped silently
 #     (git, gh + auth, claude + live probe, node, jq, coderabbit + auth,
 #      realpath, flock)
+#   - coderabbit + auth are hard unless wave-gate-config.json sets
+#     coderabbit.enabled=false (logged skip). No readable config yet (preflight
+#     can run before the plan exists) means the default applies: CodeRabbit is
+#     required, never waved through. An invalid coderabbit value is a hard stop
+#     and CodeRabbit stays required.
 #   - skippable tool missing   -> logged skip (optional PROJ-end sonar tooling, supabase)
 #   - codex missing/unauth/probe-fail -> NOT fatal: degraded single-provider
 #                                 run, recorded in state.json and flagged in
@@ -80,8 +85,20 @@ agent_browser_contract() {
 
 echo "→ P0 preflight (PROJ-${PROJ}-${THEME})"
 
+# coderabbit.enabled is optional in wave-gate-config.json; default (absent/true/no config) = required.
+CODERABBIT_ENABLED=true
+if [ -f "$GATE_CFG" ] && have jq; then
+  if jq -e 'if has("coderabbit") then (.coderabbit | type=="object" and ((keys - ["enabled"]) | length==0) and ((has("enabled") | not) or (.enabled | type=="boolean"))) else true end' "$GATE_CFG" >/dev/null 2>&1; then
+    CODERABBIT_ENABLED=$(jq -r '.coderabbit.enabled | if type=="boolean" then . else true end' "$GATE_CFG")
+  else
+    say "❌ coderabbit must be an object with an optional boolean 'enabled' (hard — invalid CodeRabbit policy)"
+    HARD_MISSING+=("coderabbit-config")
+  fi
+fi
+
 # --- hard tools ---------------------------------------------------------
 for tool in git gh claude node jq coderabbit unlink; do
+  [ "$tool" != coderabbit ] || [ "$CODERABBIT_ENABLED" = true ] || continue # disabled: logged skip with the auth check below
   if have "$tool"; then say "✓ $tool"; else say "❌ $tool MISSING (hard)"; HARD_MISSING+=("$tool"); fi
 done
 
@@ -121,7 +138,10 @@ CLAUDE_STATE="ok"
 if have gh; then
   if gh auth status >/dev/null 2>&1; then say "✓ gh auth"; else say "❌ gh auth BROKEN (hard)"; HARD_MISSING+=("gh-auth"); fi
 fi
-if have coderabbit; then
+if [ "$CODERABBIT_ENABLED" != true ]; then
+  say "– coderabbit + auth skipped: disabled by wave-gate-config (coderabbit.enabled=false)"
+  SKIPPED+=("coderabbit: disabled by config")
+elif have coderabbit; then
   if coderabbit auth status >/dev/null 2>&1; then
     say "✓ coderabbit auth"
   else

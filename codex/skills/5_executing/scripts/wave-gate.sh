@@ -107,9 +107,19 @@ command -v jq >/dev/null || fail "jq not installed"
 command -v git >/dev/null || fail "git not installed"
 jq -e "$WAVE_KEY" "$CFG" >/dev/null || fail "wave ${WAVE} not configured in $CFG"
 
+# coderabbit.enabled is optional: absent or true keeps the mandatory CodeRabbit review. Any other shape is a
+# config error (64), never a silent skip.
+jq -e 'if has("coderabbit") then (.coderabbit | type=="object" and ((keys - ["enabled"]) | length==0) and ((has("enabled") | not) or (.enabled | type=="boolean"))) else true end' "$CFG" >/dev/null 2>&1 \
+  || { echo "❌ Wave ${WAVE} Gate CONFIG ERROR: coderabbit must be an object with an optional boolean 'enabled' ($CFG)" >&2; exit 64; }
+CODERABBIT_ENABLED=$(jq -r '.coderabbit.enabled | if type=="boolean" then . else true end' "$CFG")
+
 AC_TIMEOUT=$(jq -er '.timeouts.ac_seconds' "$CFG") || fail "timeouts.ac_seconds missing"
 BUILD_TIMEOUT=$(jq -er '.timeouts.build_seconds' "$CFG") || fail "timeouts.build_seconds missing"
-CODERABBIT_TIMEOUT=$(jq -er '.timeouts.coderabbit_seconds' "$CFG") || fail "timeouts.coderabbit_seconds missing"
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  CODERABBIT_TIMEOUT=$(jq -er '.timeouts.coderabbit_seconds' "$CFG") || fail "timeouts.coderabbit_seconds missing"
+else # not required when disabled; still validated below if present (1 is a placeholder that never runs)
+  CODERABBIT_TIMEOUT=$(jq -r '.timeouts.coderabbit_seconds // 1' "$CFG")
+fi
 BROWSER_TIMEOUT=$(jq -er '.timeouts.browser_seconds' "$CFG") || fail "timeouts.browser_seconds missing"
 RALPH_STALL_SECONDS=$(jq -r '.timeouts.ralph_stall_seconds // .timeouts.ac_seconds' "$CFG")
 COMPLEXITY_TIMEOUT=$(jq -r '.timeouts.complexity_seconds // .timeouts.ac_seconds' "$CFG")
@@ -331,9 +341,13 @@ run_auth_budget_negative_control() {
 
 if [[ "$AUTH_BUDGET_NEGATIVE_CONTROL" == true ]]; then run_auth_budget_negative_control; fi
 
-jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null || fail "advisory_severities missing"
-ADVISORY_JSON=$(jq -c "${WAVE_KEY}.advisory_severities | map(ascii_downcase)" "$CFG")
-ADVISORY_LABEL=$(jq -r "${WAVE_KEY}.advisory_severities | if length==0 then \"none\" else join(\",\") end" "$CFG")
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  jq -e "${WAVE_KEY}.advisory_severities | type == \"array\"" "$CFG" >/dev/null || fail "advisory_severities missing"
+  ADVISORY_JSON=$(jq -c "${WAVE_KEY}.advisory_severities | map(ascii_downcase)" "$CFG")
+  ADVISORY_LABEL=$(jq -r "${WAVE_KEY}.advisory_severities | if length==0 then \"none\" else join(\",\") end" "$CFG")
+else # advisory_severities only classifies CodeRabbit findings; ignored when disabled, so the ledger check stays strict
+  ADVISORY_JSON='[]'; ADVISORY_LABEL=none
+fi
 VERIFIED_HEAD=$(git rev-parse --verify HEAD)
 CONFIG_HASH=$(git hash-object "$CFG")
 assert_clean_worktree
@@ -632,11 +646,16 @@ else echo "   (component registry unavailable/not applicable — skipped)"; fi
 
 step "5–6/6 Build and CodeRabbit wave review (last so environmental smoke failures cost no review)"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
-command -v coderabbit >/dev/null || fail "coderabbit not installed"
-resolve_wave_base
-FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
 attempt=1
-while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  command -v coderabbit >/dev/null || fail "coderabbit not installed"
+  resolve_wave_base
+  FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
+  while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
+else
+  echo "⚠ CodeRabbit: DISABLED by wave-gate-config (coderabbit.enabled=false) — no automatic wave code review runs; build still runs"
+  while [[ -e "${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log" ]]; do attempt=$((attempt+1)); done
+fi
 CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
 CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
 BUILD_LOG="${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log"
@@ -649,49 +668,63 @@ COMMAND_CAP=$(jq -r '.resources.max_parallel_commands // 2' "$CFG")
 "${SETSID_BIN[@]}" bash -c 'source "$1"; shift; resource_run "$@"' _ "$SCRIPT_DIR/compat.sh" "$CFG" build "${TIMEOUT_BIN[@]}" --kill-after=5s "$BUILD_TIMEOUT" bash -c "$BUILD_CMD" >"$BUILD_LOG" 2>&1 & BUILD_PID=$!
 BUILD_RC=0
 if [[ "$COMMAND_CAP" == 1 ]]; then wait "$BUILD_PID" || BUILD_RC=$?; BUILD_PID=""; fi
-"${SETSID_BIN[@]}" bash -c 'source "$1"; shift; resource_run "$@"' _ "$SCRIPT_DIR/compat.sh" "$CFG" review "${TIMEOUT_BIN[@]}" --kill-after=5s "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW" 2>"$CR_STDERR" & CR_PID=$!
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  "${SETSID_BIN[@]}" bash -c 'source "$1"; shift; resource_run "$@"' _ "$SCRIPT_DIR/compat.sh" "$CFG" review "${TIMEOUT_BIN[@]}" --kill-after=5s "$CODERABBIT_TIMEOUT" coderabbit review --agent --base-commit "$WAVE_BASE" >"$CR_RAW" 2>"$CR_STDERR" & CR_PID=$!
+fi
 if [[ -n "$BUILD_PID" ]]; then wait "$BUILD_PID" || BUILD_RC=$?; BUILD_PID=""; fi
-CR_RC=0; wait "$CR_PID" || CR_RC=$?; CR_PID=""
+CR_RC=0
+if [[ -n "$CR_PID" ]]; then wait "$CR_PID" || CR_RC=$?; CR_PID=""; fi
 [[ "$BUILD_RC" != 77 && "$CR_RC" != 77 ]] || infra_fail "build/review resource admission failed" 77
-echo "   Build exit ${BUILD_RC}; CodeRabbit exit ${CR_RC}; build/review phase $(( $(date +%s) - started ))s"
-[[ ! -s "$CR_STDERR" ]] || cat "$CR_STDERR" >&2
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  echo "   Build exit ${BUILD_RC}; CodeRabbit exit ${CR_RC}; build/review phase $(( $(date +%s) - started ))s"
+  [[ ! -s "$CR_STDERR" ]] || cat "$CR_STDERR" >&2
+else
+  echo "   Build exit ${BUILD_RC}; CodeRabbit DISABLED (not run); build phase $(( $(date +%s) - started ))s"
+fi
 assert_verified_head; assert_clean_worktree
 [[ "$BUILD_RC" -ne 124 ]] || fail "build timed out (log: $BUILD_LOG)"
 [[ "$BUILD_RC" -eq 0 ]] || { cat "$BUILD_LOG" >&2; fail "build failed with exit ${BUILD_RC} (log: $BUILD_LOG)"; }
 node "$SCRIPT_DIR/quality.mjs" "$PROJ" "$THEME" record-build "$BUILD_LOG" "$VERIFIED_HEAD" "$BUILD_INPUTS"
-: >"$CR_NORMALIZED"
-if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
-  if [[ "$CR_RC" -eq 124 ]]; then
-    fail "CodeRabbit timed out and its output is not valid JSONL (raw: $CR_RAW)"
-  else
-    fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  : >"$CR_NORMALIZED"
+  if ! jq -c 'select(.type=="finding") | {source:"coderabbit",severity:((.severity // null)|if type=="string" then ascii_downcase | if .=="blocker" then "critical" elif .=="major" then "high" elif .=="minor" or .=="trivial" or .=="info" then "low" elif .=="moderate" then "medium" else . end else . end),category:(.category // null),summary:((.codegenInstructions // null)|if type=="string" then gsub("^(\\*\\*)?🤖?[[:space:]]*Prompt for AI Agents:?\\*\\*?[[:space:]]*";"") | sub("^Verify each finding against the latest code and only fix it if needed\\.[[:space:]]*";"") else . end),file:(.fileName // null),line:(.line // .startLine // null),anchor:(.anchor // null)}' "$CR_RAW" >"$CR_NORMALIZED"; then
+    if [[ "$CR_RC" -eq 124 ]]; then
+      fail "CodeRabbit timed out and its output is not valid JSONL (raw: $CR_RAW)"
+    else
+      fail "CodeRabbit output is not valid JSONL (raw: $CR_RAW)"
+    fi
   fi
+  RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
+  NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
+  [[ "$RAW_FINDINGS" -eq "$NORMALIZED_FINDINGS" ]] || fail "CodeRabbit finding count mismatch raw=${RAW_FINDINGS}, normalized=${NORMALIZED_FINDINGS}"
+  jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.severity|IN("critical","high","medium","low")) and (.summary|type=="string" and test("\\S")) and ((.category==null) or (.category|type=="string")) and ((.file==null) or (.file|type=="string")) and ((.line==null) or ((.line|type)=="number" and (.line|floor)==.line)) and ((.anchor==null) or (.anchor|type=="string")))' "$CR_NORMALIZED" >/dev/null \
+    || fail "CodeRabbit emitted invalid finding records (normalized: $CR_NORMALIZED)"
+  [[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
+  [[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
+  if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
+  CR_SCRUBBED=$(mktemp "${CR_RAW}.tmp.XXXXXX")
+  jq -c 'if .type=="review_context" then del(.workingDirectory) else . end' "$CR_RAW" >"$CR_SCRUBBED" && mv "$CR_SCRUBBED" "$CR_RAW"
 fi
-RAW_FINDINGS=$(jq -s '[.[]|select(.type=="finding")]|length' "$CR_RAW")
-NORMALIZED_FINDINGS=$(jq -s 'length' "$CR_NORMALIZED")
-[[ "$RAW_FINDINGS" -eq "$NORMALIZED_FINDINGS" ]] || fail "CodeRabbit finding count mismatch raw=${RAW_FINDINGS}, normalized=${NORMALIZED_FINDINGS}"
-jq -e -s 'all(.[]; (.source=="coderabbit") and (.severity|type=="string") and (.severity|IN("critical","high","medium","low")) and (.summary|type=="string" and test("\\S")) and ((.category==null) or (.category|type=="string")) and ((.file==null) or (.file|type=="string")) and ((.line==null) or ((.line|type)=="number" and (.line|floor)==.line)) and ((.anchor==null) or (.anchor|type=="string")))' "$CR_NORMALIZED" >/dev/null \
-  || fail "CodeRabbit emitted invalid finding records (normalized: $CR_NORMALIZED)"
-[[ "$CR_RC" -eq 124 ]] && fail "CodeRabbit timed out (raw: $CR_RAW)"
-[[ "$CR_RC" -eq 0 ]] || fail "CodeRabbit errored rc=${CR_RC} (raw: $CR_RAW)"
-if jq -e 'select(.type=="error")' "$CR_RAW" >/dev/null; then fail "CodeRabbit emitted an error event (raw: $CR_RAW)"; fi
-CR_SCRUBBED=$(mktemp "${CR_RAW}.tmp.XXXXXX")
-jq -c 'if .type=="review_context" then del(.workingDirectory) else . end' "$CR_RAW" >"$CR_SCRUBBED" && mv "$CR_SCRUBBED" "$CR_RAW"
 
 LEDGER_AVAILABLE=false
 if [[ -f scripts/findings.mjs ]] && command -v node >/dev/null; then LEDGER_AVAILABLE=true; fi
-if [[ "$RAW_FINDINGS" -gt 0 && "$LEDGER_AVAILABLE" == true ]]; then
+if [[ "$CODERABBIT_ENABLED" == true && "$RAW_FINDINGS" -gt 0 && "$LEDGER_AVAILABLE" == true ]]; then
   node scripts/findings.mjs add "$PROJ" "$THEME" --wave "$WAVE" <"$CR_NORMALIZED" >/dev/null || fail "ledger ingestion failed"
 fi
 CUMULATIVE_BLOCKING=0
 if [[ "$LEDGER_AVAILABLE" == true ]]; then
   CUMULATIVE_BLOCKING=$(node scripts/findings.mjs list "$PROJ" "$THEME" | jq --argjson advisory "$ADVISORY_JSON" '[.findings[] | select(.status=="open") | .severity as $s | select(($advisory | index($s) | not))] | length')
-elif [[ "$LEDGER_AVAILABLE" == false ]]; then
+elif [[ "$LEDGER_AVAILABLE" == false && "$CODERABBIT_ENABLED" == true ]]; then
   CUMULATIVE_BLOCKING=$(jq -s --argjson advisory "$ADVISORY_JSON" '[.[] | .severity as $s | select(($advisory | index($s) | not))] | length' "$CR_NORMALIZED")
 fi
 [[ "$CUMULATIVE_BLOCKING" -eq 0 ]] || fail "${CUMULATIVE_BLOCKING} cumulative/current open blocking finding(s) remain after review ingestion"
 assert_verified_head; assert_clean_worktree
 TS=$(now_iso)
+if [[ "$CODERABBIT_ENABLED" == true ]]; then
+  CODERABBIT_LINE="CodeRabbit: attempt ${attempt} ingested; cumulative open blocking findings after ledger status: 0"
+else
+  CODERABBIT_LINE="CodeRabbit: DISABLED by wave-gate-config (coderabbit.enabled=false) — no automatic wave code review ran"
+fi
 WAVE_PLAN="${BASE}/3-4_plan/PROJ-${PROJ}-wave-${WAVE}-plan.md"
 STORIES=$({ [[ -f "$WAVE_PLAN" ]] && awk '/^## /{p=($0=="## User Stories in this Wave")} p' "$WAVE_PLAN" | grep -oE 'PROJ-[A-Za-z0-9-]+-(PRD-[0-9]+|ENG)-US-[0-9]+' | sort -u -t- -k2,2n -k4,4n -k6,6n | paste -sd, - | sed 's/,/, /g'; } || true)
 cat >>"$PROGRESS" <<EOF
@@ -703,7 +736,7 @@ cat >>"$PROGRESS" <<EOF
 - [x] Complexity: ${COMPLEXITY_LINE}
 - [x] Architecture rules: ${ARCH_RULES_LINE}
 - [x] Build: \`${BUILD_CMD}\`
-- [x] CodeRabbit: attempt ${attempt} ingested; cumulative open blocking findings after ledger status: 0
+- [x] ${CODERABBIT_LINE}
 - [x] Component registry: checked
 - [x] Smoke/authenticated E2E: ${ROUTES_STR}
 EOF

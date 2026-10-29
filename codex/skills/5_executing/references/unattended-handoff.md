@@ -21,7 +21,7 @@ choice stays the user's.
 
 Prints `SKIP` (no question: the runner's own P5 lane, or any phase other than
 `P0:done`) or `ASK` plus one line per prerequisite. P0's `chain check preflight` already
-hard-stops on `claude`, `coderabbit` and (frontend waves) `agent-browser`; this checks only what
+hard-stops on `claude`, `coderabbit` (unless `coderabbit.enabled=false`) and (frontend waves) `agent-browser`; this checks only what
 it does not.
 
 ```bash probe

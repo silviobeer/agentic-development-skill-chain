@@ -500,6 +500,64 @@ EOF
   [[ $(jq -r '.findings[0].status' "$CASE/specs/PROJ-1-test/5_progress/findings.json") == deferred ]] || fail "$LABEL: deferred finding was reopened"
   unset CR_FIXTURE
 
+  # coderabbit.enabled: absent/true = unchanged mandatory review; false = loud skip, build stays; anything else = exit 64.
+  case_dir coderabbit-enabled-explicit
+  export CR_CALL_LOG="$TMP/$PLATFORM-cr-explicit"
+  write_config "$(default_config | jq '.coderabbit={enabled:true}')"; commit_case
+  expect_rc 0 run_gate
+  [[ -s "$CR_CALL_LOG" ]] || fail "$LABEL: enabled:true did not run CodeRabbit"
+  grep -q 'CodeRabbit: attempt 1 ingested' "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: enabled:true checklist line changed"
+  ! grep -q 'DISABLED' "$GATE_OUT" || fail "$LABEL: enabled:true reported a skip"
+  case_dir coderabbit-empty-object
+  write_config "$(default_config | jq '.coderabbit={}')"; commit_case
+  expect_rc 0 run_gate
+  grep -q 'CodeRabbit: attempt 1 ingested' "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: {} did not behave like an absent key"
+  for pair in 'del(.timeouts.coderabbit_seconds)|coderabbit_seconds missing' 'del(.waves["1"].advisory_severities)|advisory_severities missing'; do
+    case_dir coderabbit-enabled-still-requires-config
+    write_config "$(default_config | jq "${pair%%|*}")"; commit_case
+    expect_fail run_gate; grep -q "${pair##*|}" "$GATE_OUT" || fail "$LABEL: ${pair%%|*} no longer required while enabled"
+  done
+  unset CR_CALL_LOG
+
+  case_dir coderabbit-disabled
+  rm -f "$CASE/bin/coderabbit"
+  # PATH minus every directory that provides a real coderabbit (the gate must not need it)
+  NOCR_PATH=$(IFS=:; out=""; for d in $PATH; do [[ -x "$d/coderabbit" ]] || out+="${out:+:}$d"; done; printf '%s' "$out")
+  ! PATH="$CASE/bin:$NOCR_PATH" command -v coderabbit >/dev/null || fail "$LABEL: test setup still finds coderabbit"
+  write_config "$(default_config | jq '.coderabbit={enabled:false} | .build_cmd="touch \"$CASE_LOG-build\"" | del(.timeouts.coderabbit_seconds) | del(.waves["1"].advisory_severities)')"; commit_case
+  expect_rc 0 env PATH="$CASE/bin:$NOCR_PATH" bash -c 'cd "$1" && bash "$2" 1 1 test' _ "$CASE" "$GATE"
+  [[ -e "$CASE_LOG-build" ]] || fail "$LABEL: build did not run"
+  grep -Fq 'CodeRabbit: DISABLED by wave-gate-config (coderabbit.enabled=false)' "$GATE_OUT" || fail "$LABEL: skip not logged loudly"
+  PROGRESS_FILE="$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md"
+  grep -Fq -- '- [x] CodeRabbit: DISABLED by wave-gate-config (coderabbit.enabled=false)' "$PROGRESS_FILE" || fail "$LABEL: PASSED block does not say DISABLED"
+  ! grep -q 'ingested' "$PROGRESS_FILE" || fail "$LABEL: fake CodeRabbit evidence in the PASSED block"
+  ! compgen -G "$CASE/specs/PROJ-1-test/5_progress/coderabbit-wave-1-*" >/dev/null || fail "$LABEL: CodeRabbit evidence files created"
+  [[ -s "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" || -e "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" ]] || fail "$LABEL: build log missing"
+  grep -q 'Gate PASSED' "$GATE_OUT" || fail "$LABEL: gate not green"
+
+  case_dir coderabbit-disabled-build-failure
+  write_config "$(default_config | jq '.coderabbit={enabled:false} | .build_cmd="echo build-broke >&2; exit 3"')"; commit_case
+  expect_fail env PATH="$CASE/bin:$NOCR_PATH" bash -c 'cd "$1" && bash "$2" 1 1 test' _ "$CASE" "$GATE"
+  grep -q 'build failed with exit 3' "$GATE_OUT" || fail "$LABEL: build failure not reported while CodeRabbit is disabled"
+  ! grep -q 'Gate — PASSED' "$CASE/specs/PROJ-1-test/5_progress/PROJ-1-progress.md" || fail "$LABEL: failed build certified"
+
+  case_dir coderabbit-disabled-ledger
+  write_config "$(default_config | jq '.coderabbit={enabled:false}')"; cp "$ROOT/$PLATFORM/skills/6_qa/scripts/"findings{,-store}.mjs "$CASE/scripts/"; commit_case
+  printf '%s\n' '{"source":"review","severity":"low","summary":"earlier finding","file":"src/old.ts"}' | (cd "$CASE" && bash "$ROOT/$PLATFORM/skills/5_executing/scripts/chain" findings add 1 test) >/dev/null
+  expect_fail env PATH="$CASE/bin:$NOCR_PATH" bash -c 'cd "$1" && bash "$2" 1 1 test' _ "$CASE" "$GATE"
+  grep -q 'cumulative/current open blocking' "$GATE_OUT" || fail "$LABEL: open ledger finding did not block while CodeRabbit is disabled"
+
+  for invalid in '"false"' 'false' 'null' '[]' '{"enabled":"false"}' '{"enabled":null}' '{"enabled":0}' '{"enabled":false,"bogus":1}' '{"disabled":true}'; do
+    case_dir coderabbit-invalid-config
+    export CR_CALL_LOG="$TMP/$PLATFORM-cr-invalid"; rm -f "$CR_CALL_LOG"
+    write_config "$(default_config | jq --argjson v "$invalid" '.coderabbit=$v | .build_cmd="touch \"$CASE_LOG-build\""')"; commit_case
+    expect_rc 64 run_gate
+    grep -q 'CONFIG ERROR' "$GATE_OUT" || fail "$LABEL: $invalid gave no config error message"
+    [[ ! -e "$CASE_LOG-build" && ! -e "$CR_CALL_LOG" && ! -e "$CASE_LOG" ]] || fail "$LABEL: $invalid did not stop before any work"
+    expect_rc 64 ac_only_gate
+    unset CR_CALL_LOG
+  done
+
   case_dir redirect
   config=$(default_config | jq '.frontend={"dev_url":"http://app.test","dev_cmd":"true","readiness":{"path":"/ready","timeout_seconds":2,"interval_seconds":1},"routes":[{"wave":1,"path":"/account","expected_url":"/account","expected_text":"Account","protected":false}]}')
   write_config "$config"; commit_case; BROWSER_FINAL_URL='http://app.test/login'; BROWSER_TEXT=Account; export BROWSER_FINAL_URL BROWSER_TEXT
