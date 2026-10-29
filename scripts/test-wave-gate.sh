@@ -535,6 +535,14 @@ EOF
   [[ -s "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" || -e "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" ]] || fail "$LABEL: build log missing"
   grep -q 'Gate PASSED' "$GATE_OUT" || fail "$LABEL: gate not green"
 
+  case_dir coderabbit-reenabled-keeps-build-log
+  write_config "$(default_config | jq '.coderabbit={enabled:false} | .build_cmd="echo first-build"')"; commit_case
+  expect_rc 0 env PATH="$CASE/bin:$NOCR_PATH" bash -c 'cd "$1" && bash "$2" 1 1 test' _ "$CASE" "$GATE"
+  write_config "$(default_config | jq '.build_cmd="echo second-build"')"; git -C "$CASE" add -A; git -C "$CASE" commit -qm reenable
+  expect_rc 0 run_gate
+  grep -q first-build "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-1.log" || fail "$LABEL: re-enabled run overwrote the earlier build log"
+  grep -q second-build "$CASE/specs/PROJ-1-test/5_progress/build-wave-1-attempt-2.log" || fail "$LABEL: re-enabled run did not take a fresh attempt number"
+
   case_dir coderabbit-disabled-build-failure
   write_config "$(default_config | jq '.coderabbit={enabled:false} | .build_cmd="echo build-broke >&2; exit 3"')"; commit_case
   expect_fail env PATH="$CASE/bin:$NOCR_PATH" bash -c 'cd "$1" && bash "$2" 1 1 test' _ "$CASE" "$GATE"

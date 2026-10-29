@@ -646,16 +646,16 @@ else echo "   (component registry unavailable/not applicable — skipped)"; fi
 
 step "5–6/6 Build and CodeRabbit wave review (last so environmental smoke failures cost no review)"
 BUILD_CMD=$(jq -r '.build_cmd // empty' "$CFG"); [[ -n "$BUILD_CMD" ]] || fail "build_cmd missing"
-attempt=1
 if [[ "$CODERABBIT_ENABLED" == true ]]; then
   command -v coderabbit >/dev/null || fail "coderabbit not installed"
   resolve_wave_base
   FILES_CHANGED=$(git diff --name-only "${WAVE_BASE}..HEAD" | wc -l | tr -d ' '); [[ "$FILES_CHANGED" -le 150 ]] || fail "CodeRabbit scope ${FILES_CHANGED} exceeds 150 files"
-  while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" ]]; do attempt=$((attempt+1)); done
 else
   echo "⚠ CodeRabbit: DISABLED by wave-gate-config (coderabbit.enabled=false) — no automatic wave code review runs; build still runs"
-  while [[ -e "${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log" ]]; do attempt=$((attempt+1)); done
 fi
+# An attempt number is free only if neither CodeRabbit nor build evidence uses it (a disabled run leaves only a build log).
+attempt=1
+while [[ -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl" || -e "${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl" || -e "${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log" ]]; do attempt=$((attempt+1)); done
 CR_RAW="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}.jsonl"
 CR_NORMALIZED="${BASE}/5_progress/coderabbit-wave-${WAVE}-attempt-${attempt}-normalized.jsonl"
 BUILD_LOG="${BASE}/5_progress/build-wave-${WAVE}-attempt-${attempt}.log"
