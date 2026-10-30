@@ -36,6 +36,7 @@ cat >"$STUB/claude" <<'EOS'
 [ "${1:-}" != auth ] || { [ "${CLAUDE_AUTH_FAIL:-0}" -eq 0 ]; exit; }
 [ -z "${QA_STUB_LOG:-}" ] || printf 'claude\n' >> "$QA_STUB_LOG"
 input="$(cat)"
+[ -z "${QA_PERSONA_LOG:-}" ] || printf '%s\n' "$input" | sed -n 's/^You are \(.*\) — .*/\1/p' >> "$QA_PERSONA_LOG"
 case "$input" in
   *"## Artifact under review:"*) ;;
   *) exit 9 ;;
@@ -57,6 +58,7 @@ cat >"$STUB/codex" <<'EOS'
 [ "$1" = "login" ] && exit 0
 [ -z "${QA_STUB_LOG:-}" ] || printf 'codex\n' >> "$QA_STUB_LOG"
 input="$(cat)"
+[ -z "${QA_PERSONA_LOG:-}" ] || printf '%s\n' "$input" | sed -n 's/^You are \(.*\) — .*/\1/p' >> "$QA_PERSONA_LOG"
 case "$input" in
   *"## Artifact under review: docs/ARCHITECTURE.md"*) ;;
   *) exit 9 ;;
@@ -94,6 +96,34 @@ QA_STUB_LOG="$LOG" review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author
   || die 'claude-authored QA review failed'
 [ "$(xr '.cross_review[-1] | .mode + ":" + .reviewer_provider')" = qa:codex ] && [ "$(workers "$LOG")" -eq 6 ] \
   || die "claude-authored QA must start six codex personas, got $(workers "$LOG")"
+
+# --personas <list>: only the chosen workers run, in canonical order (the first is the probe), the record names them;
+# no list stays six with no `personas` field; unknown names are invalid use.
+LOG="$CASE/qa-subset.log"; PLOG="$CASE/qa-subset.personas"; : >"$PLOG"
+QA_STUB_LOG="$LOG" QA_PERSONA_LOG="$PLOG" review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --persist --personas Takahashi,weber,marcus --round 1 >/dev/null 2>&1 \
+  || die 'subset QA review failed'
+[ "$(workers "$LOG")" -eq 2 ] && [ "$(sed -n 1p "$PLOG")" = 'Marcus Weber' ] && [ "$(sed -n 2p "$PLOG")" = 'Ken Takahashi' ] \
+  || die "subset QA must run weber then takahashi only, got $(tr '\n' ',' <"$PLOG")"
+[ "$(xr '.cross_review[-1] | .mode + ":" + .reviewer_provider + ":" + (.personas | join(","))')" = qa:codex:weber,takahashi ] \
+  || die 'subset QA record must carry the personas array'
+LOG="$CASE/qa-subset-claude.log"
+QA_STUB_LOG="$LOG" CLAUDE_STUB_SEVERITY=medium review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider codex --persist --personas chen --round 1 >/dev/null 2>&1 \
+  || die 'single-persona QA review failed'
+[ "$(workers "$LOG")" -eq 1 ] && [ "$(xr '.cross_review[-1].personas | join(",")')" = chen ] || die 'single-persona QA must start one worker and record it'
+LOG="$CASE/qa-explicit-six.log"
+QA_STUB_LOG="$LOG" review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --persist --personas chen,weber,sharma,mueller,rodriguez,takahashi --round 1 >/dev/null 2>&1 \
+  || die 'explicit six-persona QA review failed'
+[ "$(workers "$LOG")" -eq 6 ] && [ "$(xr '.cross_review[-1] | has("personas")')" = false ] || die 'a full explicit list equals the default: six workers, no personas field'
+LOG="$CASE/qa-badname.log"; : >"$LOG"
+for bad in 'bogus' 'weber,nobody' ',' 'weber,'; do
+  rc=0; QA_STUB_LOG="$LOG" review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --persist --personas "$bad" >"$CASE/badname.out" 2>&1 || rc=$?
+  [ "$rc" -eq 64 ] || die "--personas '$bad' must exit 64 (rc=$rc)"
+done
+[ ! -s "$LOG" ] || die 'an invalid persona list must stop before any worker runs'
+rc=0; review docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-delta --personas weber >/dev/null 2>&1 || rc=$?
+[ "$rc" -eq 64 ] || die "--personas must stay invalid outside qa (rc=$rc)"
+rc=0; review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --joint --personas weber >/dev/null 2>&1 || rc=$?
+[ "$rc" -eq 64 ] || die "--personas must stay invalid with --joint (rc=$rc)"
 
 # A Codex author has no same-provider fallback: fail before any reviewer runs when Claude auth is gone.
 ! out="$(CLAUDE_AUTH_FAIL=1 review docs 97 pre-p0 --artifacts docs/ARCHITECTURE.md --author-provider codex 2>&1)" \

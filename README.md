@@ -172,7 +172,7 @@ automatic cross-review calls, or stop-policy exits.
 | 4 | `writing-plans` | Wave-based implementation plans; hands off to a new Step 5 session, whose CP1 is the joint planning approval |
 | 5 | `executing` | Full-procedure Step 5 for weaker writer models; hosts the CP1 `checkpoint` and P0 `setup` subskills and the framework scripts that `5b` uses too |
 | 5b | `executing-large-model` | **Default Step 5**: CP1 + P0 through the `5_executing` subskills, then the waves with the same gates, state, and QA handoff as `executing`, procedure replaced by intent and invariants |
-| 6 | `qa` | End-to-end QA plus the required opposite-provider six-persona review; read-only finder in framework runs, findings into the ledger |
+| 6 | `qa` | End-to-end QA plus the required opposite-provider six-persona review; read-only finder in framework runs, findings into the ledger. Fast-track PROJs get a risk-scaled QA profile (shallower, not more lenient): a reduced persona panel unless a risk signal or a Critical/High finding escalates to full |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
 

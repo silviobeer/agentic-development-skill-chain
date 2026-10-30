@@ -11,7 +11,7 @@
 #     --artifacts <file...> [--ground-truth <file...>]
 #     [--author-provider claude|codex] [--author-model M] [--author-key K]
 #     [--also-focus <concept|requirements|architecture|plan,...>]
-#     [--joint] [--personas] [--persist] [--require-provider claude|codex]
+#     [--joint] [--personas [chen,weber,...]] [--persist] [--require-provider claude|codex]
 #     [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]
 # Exit: 0 clean/no blocking findings; 3 Critical/High findings; 1 infra error;
 #       64 invalid invocation.
@@ -22,7 +22,7 @@ if [ -f "$_compat_dir/compat.sh" ]; then source "$_compat_dir/compat.sh"; else s
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 usage() {
-  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--also-focus M,...] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
+  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--also-focus M,...] [--joint] [--personas [chen,weber,...]] [--persist] [--require-provider claude|codex] [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
   exit 64
 }
 [ -n "$MODE" ] && [ -n "$PROJ" ] && [ -n "$THEME" ] || usage
@@ -30,6 +30,14 @@ shift 3
 case "$MODE" in concept|requirements|architecture|plan|qa|docs) ;; *) echo "cross-review.sh: unknown mode '$MODE'" >&2; exit 64 ;; esac
 
 ARTIFACTS=(); GROUND_TRUTH=(); DIFF_PATHS=(); ALSO_FOCUS=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
+PERSONA_KEYS=(chen weber sharma mueller rodriguez takahashi); PERSONA_SEL=()
+persona_key() { # last or first name of one of the six QA personas -> canonical key
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    chen|sarah) echo chen ;; weber|marcus) echo weber ;; sharma|priya) echo sharma ;;
+    mueller|thomas) echo mueller ;; rodriguez|elena) echo rodriguez ;; takahashi|ken) echo takahashi ;;
+    *) return 1 ;;
+  esac
+}
 ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-900000}"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -40,7 +48,15 @@ while [ $# -gt 0 ]; do
     --author-provider) AUTHOR_PROVIDER="${2:?}"; EXPLICIT_AUTHOR=1; shift 2 ;;
     --author-model) AUTHOR_MODEL="${2:?}"; shift 2 ;;
     --joint) JOINT=1; shift ;;
-    --personas) QA_PERSONAS=1; shift ;;
+    --personas) QA_PERSONAS=1; shift
+      if [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; then # optional comma list: a subset of the six personas
+        case ",$1," in *,,*) echo "cross-review.sh: --personas list has an empty entry: '$1'" >&2; exit 64 ;; esac
+        IFS=, read -r -a _names <<<"$1"; shift
+        for _n in "${_names[@]}"; do
+          _k="$(persona_key "$_n")" || { echo "cross-review.sh: unknown persona '$_n' (chen, weber, sharma, mueller, rodriguez, takahashi)" >&2; exit 64; }
+          case " ${PERSONA_SEL[*]-} " in *" $_k "*) ;; *) PERSONA_SEL+=("$_k") ;; esac
+        done
+      fi ;;
     --persist) PERSIST_REQUESTED=1; shift ;;
     --require-provider) REQUIRED_PROVIDER="${2:?}"; shift 2 ;;
     --round) ROUND="${2:?}"; shift 2 ;;
@@ -119,7 +135,8 @@ done
 if [ "$DEGRADED_FALLBACK" = true ] && [ "$QA_PERSONAS" -eq 0 ] && [ -n "$AUTHOR_MODEL" ] && [ "$REVIEW_MODEL" = "$AUTHOR_MODEL" ]; then
   echo "cross-review.sh: fallback reviewer equals author model" >&2; exit 1
 fi
-[ "$QA_PERSONAS" -eq 0 ] || [ "$DEGRADED_FALLBACK" = false ] || echo "cross-review (qa): opposite provider unavailable; continuing six QA personas with ${REVIEWERS[0]%%:*} ${REVIEWERS[0]#*:} (degraded, same vendor, strongest model)" >&2
+PANEL_LABEL=six; [ ${#PERSONA_SEL[@]} -eq 0 ] || [ ${#PERSONA_SEL[@]} -eq 6 ] || PANEL_LABEL="${#PERSONA_SEL[@]} selected"
+[ "$QA_PERSONAS" -eq 0 ] || [ "$DEGRADED_FALLBACK" = false ] || echo "cross-review (qa): opposite provider unavailable; continuing ${PANEL_LABEL} QA personas with ${REVIEWERS[0]%%:*} ${REVIEWERS[0]#*:} (degraded, same vendor, strongest model)" >&2
 
 FOCUS_ALL=""
 # The review's own mode first; --also-focus appends the focus of further artifact kinds (one run, one record).
@@ -231,6 +248,12 @@ if [ "$QA_PERSONAS" -eq 1 ]; then
     "Elena Rodriguez — Principal Architect|$RODRIGUEZ_FOCUS "'Also emit exactly one `low` finding with category `retrospective` whose summary is a 5-15 bullet retrospective (what should change for the next PROJ); it counts as a finding, so do not also emit review-clean.'
     "Ken Takahashi — Minimalism Engineer|$TAKAHASHI_FOCUS "'Also emit exactly one `low` finding with category `retrospective` whose summary is a 5-15 bullet retrospective (what to delete, inline, merge or avoid in the next PROJ); it counts as a finding, so do not also emit review-clean.'
   )
+  # No list = all six in canonical order; a subset keeps that order, so its first persona is the probe.
+  PERSONA_IDX=()
+  for i in "${!PERSONA_KEYS[@]}"; do
+    [ ${#PERSONA_SEL[@]} -eq 0 ] || case " ${PERSONA_SEL[*]} " in *" ${PERSONA_KEYS[$i]} "*) ;; *) continue ;; esac
+    PERSONA_IDX+=("$i")
+  done
   run_persona() { # index -> runs one persona worker; rc is the adapter exit code
     local i="$1" persona="${PERSONAS[$1]%%|*}" focus="${PERSONAS[$1]#*|}"
     { cat "$PROMPT_FILE"; printf '\n## Assigned QA persona\nYou are %s. %s\nReview only this discipline; emit the strict machine-readable findings contract.\n' "$persona" "$focus"; } > "$QA_PERSONA_DIR/$i.prompt"
@@ -238,13 +261,12 @@ if [ "$QA_PERSONAS" -eq 1 ]; then
   }
   for panel_attempt in 1 2; do
     OUT_FILES=(); panel_rc=0
-    # The first persona runs alone as a probe: quota or auth exhaustion costs one call, never six.
+    # The first chosen persona runs alone as a probe: quota or auth exhaustion costs one call, never the whole panel.
     # The rest run in batches of the host's max_parallel_commands (default 2): resource_run admits no more,
     # and a queued worker would hit its wait_seconds deadline (exit 77) during a long review.
-    run_persona 0 || panel_rc=$?
+    run_persona "${PERSONA_IDX[0]}" || panel_rc=$?
     cap="$(jq -r '.resources.max_parallel_commands // 2' "$RESOURCE_CONFIG" 2>/dev/null || echo 2)"
     case "$cap" in ''|*[!0-9]*|0) cap=2 ;; esac
-    PERSONA_IDX=("${!PERSONAS[@]}")
     for ((n=1; panel_rc == 0 && n < ${#PERSONA_IDX[@]}; n+=cap)); do
       PERSONA_PIDS=()
       for i in "${PERSONA_IDX[@]:n:cap}"; do run_persona "$i" & PERSONA_PIDS+=($!); done
@@ -254,14 +276,14 @@ if [ "$QA_PERSONAS" -eq 1 ]; then
         if [ "$rc" -ne 0 ] && { [ "$panel_rc" -eq 0 ] || [ "$rc" -eq 64 ] || [ "$rc" -eq 77 ]; }; then panel_rc=$rc; fi
       done
     done
-    [ "$panel_rc" -ne 0 ] || for i in "${!PERSONAS[@]}"; do OUT_FILES+=("$QA_PERSONA_DIR/$i.out"); done
+    [ "$panel_rc" -ne 0 ] || for i in "${PERSONA_IDX[@]}"; do OUT_FILES+=("$QA_PERSONA_DIR/$i.out"); done
     [ "$panel_rc" -ne 0 ] || break
     if [ "$panel_rc" -eq 75 ] && [ "$panel_attempt" -eq 1 ] && [ -z "$REQUIRED_PROVIDER" ] && [ "$DEGRADED_FALLBACK" = false ]; then
       alternative=codex; [ "${REVIEWERS[0]%%:*}" != codex ] || alternative=claude
       if "${alternative}_available"; then
         REVIEWERS=("$alternative:"); [ "$alternative" != claude ] || REVIEWERS=("claude:$REVIEW_MODEL")
         DEGRADED_FALLBACK=true
-        echo "cross-review (qa): runtime provider unavailable; restarting all six personas with $alternative (degraded); failed partial outputs are discarded" >&2
+        echo "cross-review (qa): runtime provider unavailable; restarting all ${PANEL_LABEL} personas with $alternative (degraded); failed partial outputs are discarded" >&2
         continue
       fi
     fi
@@ -299,7 +321,9 @@ if [ "$PERSIST" -eq 0 ]; then
 fi
 REVIEWER_PROVIDER="${REVIEWERS[0]%%:*}"; REVIEWER_MODEL="${REVIEWERS[0]#*:}"; [ ${#REVIEWERS[@]} -eq 2 ] && { REVIEWER_PROVIDER="claude+codex"; REVIEWER_MODEL="$REVIEW_MODEL"; }; [ "$REVIEWER_PROVIDER" = codex ] && REVIEWER_MODEL="codex-default"
 CURRENT="$(bash "$STATE_SH" get "$PROJ" "$THEME" '.cross_review // []' 2>/dev/null || echo '[]')"
-RECORD="$(jq -n --arg mode "$MODE" --argjson round "$ROUND" --arg rp "$REVIEWER_PROVIDER" --arg rm "$REVIEWER_MODEL" --argjson deg "$DEGRADED_FALLBACK" --argjson fa "$FINDINGS_ADDED" --arg at "$(now_iso)" '{mode:$mode,round:$round,reviewer_provider:(if $rp == "claude+codex" then "claude" else $rp end),reviewer_model:$rm,joint:($rp == "claude+codex"),degraded_fallback:$deg,findings_added:$fa,at:$at}')"
+PERSONAS_JSON='[]'  # optional record field: only a subset run lists its personas (absent = all six)
+[ "$QA_PERSONAS" -eq 0 ] || [ ${#PERSONA_IDX[@]} -eq 6 ] || PERSONAS_JSON="$(for i in "${PERSONA_IDX[@]}"; do echo "${PERSONA_KEYS[$i]}"; done | jq -Rcs 'split("\n") | map(select(. != ""))')"
+RECORD="$(jq -n --arg mode "$MODE" --argjson round "$ROUND" --arg rp "$REVIEWER_PROVIDER" --arg rm "$REVIEWER_MODEL" --argjson deg "$DEGRADED_FALLBACK" --argjson fa "$FINDINGS_ADDED" --argjson personas "$PERSONAS_JSON" --arg at "$(now_iso)" '{mode:$mode,round:$round,reviewer_provider:(if $rp == "claude+codex" then "claude" else $rp end),reviewer_model:$rm,joint:($rp == "claude+codex"),degraded_fallback:$deg,findings_added:$fa,at:$at} + (if ($personas | length) > 0 then {personas:$personas} else {} end)')"
 UPDATED="$(jq -c --argjson rec "$RECORD" '. + [$rec]' <<<"$CURRENT")"; bash "$STATE_SH" set "$PROJ" "$THEME" .cross_review "$UPDATED" >/dev/null
 if [ "$BLOCKING" -gt 0 ]; then echo "cross-review (${MODE}, round ${ROUND}): ${BLOCKING} open Critical/High finding(s) in the ledger — BLOCKING."; exit 3; fi
 echo "cross-review (${MODE}, round ${ROUND}): clean — ${FINDINGS_ADDED} non-blocking finding(s) ingested"

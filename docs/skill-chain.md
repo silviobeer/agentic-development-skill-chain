@@ -205,7 +205,7 @@ After decomposition:
 | 4 | writing-plans | Split independently verifiable stories into dependency-ordered waves; use expand–contract for wide migrations |
 | 5b | executing-large-model | Default Step 5: Checkpoint 1 and P0 through `5_executing`'s subskills, then the waves under the same gate and state contracts, with procedure reduced to intent and invariants ([SKILL.md](../claude/skills/5b_executing-large-model/SKILL.md)) |
 | 5 | executing | Full-procedure alternative for weaker writer models; hosts the checkpoint and setup subskills, the framework scripts and the shared references ([SKILL.md](../claude/skills/5_executing/SKILL.md)) |
-| 6 | qa | Run E2E QA, security, the required opposite-provider six-persona review (the only persona panel), simplicity review (what the Step 5 static and mutation gates cannot decide), and mutation-survivor input; strictly read-only finder in framework runs |
+| 6 | qa | Run E2E QA, security, the required opposite-provider six-persona review (the only persona panel), simplicity review (what the Step 5 static and mutation gates cannot decide), and mutation-survivor input; strictly read-only finder in framework runs. A `fast-track-spec` PROJ gets a risk-scaled QA profile (reduced persona panel and probes, escalating to full on any risk signal or Critical/High finding); every other PROJ always gets full QA |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR body rendered from state.json + findings.json and declared external prerequisites in wave-gate-config.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 
