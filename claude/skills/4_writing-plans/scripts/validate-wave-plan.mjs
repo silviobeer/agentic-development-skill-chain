@@ -226,6 +226,12 @@ function validateMain(args) {
   if (Object.hasOwn(config ?? {}, "sonar_required") && typeof config.sonar_required !== "boolean") {
     fail("sonar_required must be boolean when present");
   }
+  if (Object.hasOwn(config ?? {}, "coderabbit")) {
+    const cr = config.coderabbit;
+    if (!cr || typeof cr !== "object" || Array.isArray(cr) || !Object.keys(cr).every((k) => k === "enabled") || (Object.hasOwn(cr, "enabled") && typeof cr.enabled !== "boolean")) {
+      fail("coderabbit must be an object with an optional boolean 'enabled'");
+    }
+  }
   if (!isText(config?.sonar_cmd)) {
     fail("sonar_cmd must be a non-empty top-level string");
   }

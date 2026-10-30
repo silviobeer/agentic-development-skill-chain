@@ -93,7 +93,7 @@ Before doing implementation work:
      returned `.worktree.path`.
    - `P0:done` (fresh PROJ) or `P5:*` (resume) → continue below. The phase
      runner arrives here directly; its P0 lane already ran setup.
-   - All preflights (permissions, `.coderabbit.yaml`, Supabase/browser/CLI +
+   - All preflights (permissions, `.coderabbit.yaml` unless `coderabbit.enabled=false`, Supabase/browser/CLI +
      auth) belong to setup's `chain check preflight`; do NOT re-run them here.
    - Verify the current directory is `.worktree.path` from state. P0 owns the
      persistent PROJ worktree and the runner re-executes there; do not implement
@@ -106,8 +106,8 @@ Before doing implementation work:
    - Then mark the phase if needed: if state shows `P0:done`, run `bash scripts/chain state transition <X> <theme> P5 running`.
 2. **Standalone fallback (no state.json — manual run without the framework):**
    run the legacy preflights inline before wave 1: (a) `.coderabbit.yaml` at
-   repo root (copy `~/.codex/skills/5_executing/references/coderabbit-template.yaml`,
-   adjust `path_filters`); (b) tool checks — `jq`, `coderabbit`, Playwright MCP
+   repo root, unless `coderabbit.enabled=false` (copy `~/.codex/skills/5_executing/references/coderabbit-template.yaml`,
+   adjust `path_filters`); (b) tool checks — `jq`, `coderabbit` (unless disabled), Playwright MCP
    (`browser_navigate`, `browser_snapshot`, …) when `wave-gate-config.json`
    has `frontend_routes`, Supabase CLI/MCP when the project uses Supabase.
    Any hard tool missing → STOP.
@@ -148,7 +148,7 @@ The script validates:
 4. **Component registry** — `chain render registry --check` passes where applicable.
 5. **Static checks (optional)** — `complexity_cmd` and `arch_rules_cmd`, run last in the AC pass (`--ac-only` and the full gate) once the ACs are green; contract in `4_writing-plans/references/wave-gate-config.md`. Absent keys are skipped and noted in the PASSED block.
 6. **Build** — `build_cmd` from config exits 0; runs in parallel with CodeRabbit as the last phase.
-7. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger.
+7. **CodeRabbit** — every attempt archives raw and normalized evidence, validates the finding count, ingests it, and then requires zero cumulative open blocking findings in the ledger. With `coderabbit.enabled=false` in `wave-gate-config.json` (default on; set only on explicit user request) this review is skipped loudly: the gate logs `CodeRabbit: DISABLED by wave-gate-config`, the PASSED block says the same instead of `attempt N ingested`, and the build still runs. No automatic code review then runs in the wave gate; ACs, regressions, smoke, static checks, build and the PROJ-end Quality Gate remain.
 
 The wave gate does not run Sonar. The top-level `sonar_cmd` runs once, at the PROJ-end Quality Gate (Step 9) after all waves pass — not per wave.
 
@@ -161,7 +161,7 @@ On success the script appends a `### Wave N Gate — PASSED` block with timestam
 
 **If a framework helper is missing:** run `bash ~/.codex/skills/5_executing/scripts/chain sync` to restore the managed inventory, resolve any reported conflicts, and commit before running the gate. Standalone runs use the same synchronization before their first wave.
 
-**If jq, coderabbit, or agent-browser are missing:** the script prints a clear error and exits non-zero. Install them, do not work around the gate.
+**If jq, coderabbit, or agent-browser are missing:** the script prints a clear error and exits non-zero. Install them, do not work around the gate. (`coderabbit` is not required when `coderabbit.enabled=false`.)
 
 **Belt-and-braces enforcement:** In Codex, enforce this in the main orchestration loop: before starting any Wave N with N > 1, verify `### Wave N-1 Gate — PASSED` exists in `5_progress/PROJ-<X>-progress.md`. The `chain gate wave` script is the primary gate.
 </HARD-GATE>
@@ -563,7 +563,7 @@ After a wave worker completes or a recovery stage exposes a durable learning, wr
 ### 7. Wave review with CodeRabbit CLI
 
 <HARD-GATE>
-CodeRabbit is MANDATORY, but it is run by `chain gate wave`, not as a separate pre-gate command. Do NOT run a second per-wave review outside the gate.
+CodeRabbit is MANDATORY, except when `wave-gate-config.json` sets `coderabbit.enabled=false`. It is run by `chain gate wave`, not as a separate pre-gate command. Do NOT run a second per-wave review outside the gate, and do NOT substitute a manual review for a disabled CodeRabbit.
 If CodeRabbit fails to execute (e.g., not installed, auth error), the gate exits non-zero. Fix the tool/auth problem and rerun the gate.
 </HARD-GATE>
 

@@ -40,7 +40,7 @@ expect_failure() {
   fi
 }
 
-for expression in '.coverage_cmd="npm run coverage"' '.build_artifacts=[]' '.lint_cmd=42' '.complexity_cmd=""' '.arch_rules_cmd=7' '.mutation_cmd=[]' '.sonar_required="false"' '.sonar_required=null' '.sonar_required=1' '.app_root="/abs"' '.app_root="../up"' '.app_root=3' '.worktree_links=[]' '.worktree_links=[{path:"a",target:"../b"}]' '.worktree_links=[{path:"a"}]' '.resources={test_workers:0}' '.resources={max_parallel_commands:0}' '.resources=false' '.resources=null' '.resources={wait_seconds:-1}' '.resources={bogus:1}' '.resources=[]' '.resources={min_available_mb:"1g"}'; do
+for expression in '.coverage_cmd="npm run coverage"' '.build_artifacts=[]' '.lint_cmd=42' '.complexity_cmd=""' '.arch_rules_cmd=7' '.mutation_cmd=[]' '.sonar_required="false"' '.sonar_required=null' '.sonar_required=1' '.app_root="/abs"' '.app_root="../up"' '.app_root=3' '.worktree_links=[]' '.worktree_links=[{path:"a",target:"../b"}]' '.worktree_links=[{path:"a"}]' '.resources={test_workers:0}' '.resources={max_parallel_commands:0}' '.resources=false' '.resources=null' '.resources={wait_seconds:-1}' '.resources={bogus:1}' '.resources=[]' '.resources={min_available_mb:"1g"}' '.coderabbit=false' '.coderabbit=null' '.coderabbit="off"' '.coderabbit=[]' '.coderabbit={enabled:"false"}' '.coderabbit={enabled:null}' '.coderabbit={enabled:0}' '.coderabbit={enabled:false,bogus:1}'; do
   prepare_case plan-valid.md config-valid.json
   jq "$expression" "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
   mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
@@ -55,6 +55,19 @@ run_validator >"$CASE/output" 2>&1 || { cat "$CASE/output" >&2; echo "valid app_
 jq '.resources={min_available_mb:2048,max_memory_psi_full_avg10:10,wait_seconds:0,test_workers:2,max_parallel_commands:2}' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
 mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
 run_validator >"$CASE/output" 2>&1 || { cat "$CASE/output" >&2; echo "valid resources rejected" >&2; exit 1; }
+
+for coderabbit in '{}' '{"enabled":true}' '{"enabled":false}'; do
+  prepare_case plan-valid.md config-valid.json
+  jq --argjson cr "$coderabbit" '.coderabbit=$cr' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+  mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+  run_validator >"$CASE/output" 2>&1 || { cat "$CASE/output" >&2; echo "valid coderabbit switch rejected: $coderabbit" >&2; exit 1; }
+done
+
+prepare_case plan-valid.md config-valid.json
+jq '.coderabbit={enabled:"no"}' "$CASE/plan/wave-gate-config.json" >"$CASE/config.tmp"
+mv "$CASE/config.tmp" "$CASE/plan/wave-gate-config.json"
+run_validator >"$CASE/output" 2>&1 && { echo "invalid coderabbit switch accepted" >&2; exit 1; }
+grep -F "coderabbit must be an object with an optional boolean 'enabled'" "$CASE/output" >/dev/null || { cat "$CASE/output" >&2; echo "coderabbit switch rejected for the wrong reason" >&2; exit 1; }
 
 for required in true false; do
   prepare_case plan-valid.md config-valid.json

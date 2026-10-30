@@ -1058,7 +1058,7 @@ port allocation. Mode 3 stays disabled until this passes.
 | `claude` | Claude phase lane + provider-opposite review via `claude -p` | ✅ hard |
 | `node` | hooks (the optional external wave-gate-enforcer) + scripts (ledger, rendering) | ✅ hard |
 | `jq` | `chain gate wave`, `chain findings`, `chain state` | ✅ hard |
-| `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component) |
+| `coderabbit` | wave review (`--agent --base-commit`) | ✅ hard (gate component); skipped, logged, when `wave-gate-config.json` sets `coderabbit.enabled: false` |
 | `codex` | Codex phase lane + provider-opposite review via `codex exec` | 🟡 preferred, degradable — missing/unauthenticated → single-provider run with model-opposite review, flagged in report + PR body, never silent |
 | `agent-browser` | smoke tests in the wave gate, browser E2E in P6 | ✅ hard for frontend waves; backend-only: unused |
 | `sonar_cmd` dependencies | project-defined local scan + secrets check, once per PROJ at the PROJ-end Quality Gate — no wave gate runs it | ✅ hard through the configured command |

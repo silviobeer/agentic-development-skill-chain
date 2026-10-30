@@ -197,7 +197,7 @@ Field rules:
 
 ### 4. Write `wave-gate-config.json`
 
-Write `3-4_plan/wave-gate-config.json` from the example and judgment rules in [references/wave-gate-config.md](references/wave-gate-config.md). The validator enforces structure.
+Write `3-4_plan/wave-gate-config.json` from the example and judgment rules in [references/wave-gate-config.md](references/wave-gate-config.md). The validator enforces structure. The optional `coderabbit: { "enabled": false }` switch (default on; it turns the wave gate's automatic CodeRabbit review off) is documented there: never set it on your own, only when the user explicitly asks for it.
 
 ### 5. Self-review and validate
 
@@ -256,7 +256,7 @@ Present waves, stories per wave, execution mode, and the cross-review result. Do
 
 Say once, then end the turn:
 
-> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). Open a new session, then `/5b_executing-large-model` (or `/5_executing` on a weaker model): it runs CP1 and P0 (branch + preflight) through the Step 5 subskills; the setup subskill installs the gate scripts and preflights `jq`, `coderabbit`, and browser tooling in the PROJ worktree. Quality Gate and QA follow the last wave automatically.
+> "Plans complete in `specs/PROJ-<X>-<theme>/3-4_plan/` (wave plans + `wave-gate-config.json`). Open a new session, then `/5b_executing-large-model` (or `/5_executing` on a weaker model): it runs CP1 and P0 (branch + preflight) through the Step 5 subskills; the setup subskill installs the gate scripts and preflights `jq`, `coderabbit` (unless `coderabbit.enabled=false`), and browser tooling in the PROJ worktree. Quality Gate and QA follow the last wave automatically.
 >
 > Once P0 is done, Step 5 asks whether to run P5 to a PR unattended or continue interactively."
 

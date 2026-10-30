@@ -227,7 +227,10 @@ chooses it on the user's behalf.
 
 ### 3. CodeRabbit config preflight
 
-If `.coderabbit.yaml`/`.coderabbit.yml` is missing at repo root, copy
+If `coderabbit.enabled` is `false` in `wave-gate-config.json`, skip this step:
+copy nothing (the `Bash(coderabbit review*)` allowlist entry stays; it is
+harmless unused). Otherwise, if `.coderabbit.yaml`/`.coderabbit.yml` is missing
+at repo root, copy
 `~/.claude/skills/5_executing/references/coderabbit-template.yaml` to
 `.coderabbit.yaml` and include it in the setup commit.
 
@@ -435,7 +438,7 @@ re-executes itself there once, and starts every later phase from that path. The
 - [ ] `specs/.../context/` has `workers/wave-N/` (one file per story) and `roles/wave-N/` for every wave; nothing recorded in state.json
 - [ ] `ground-file.md` written (only assumptions docs/ does not state)
 - [ ] `scripts/` + `templates/` contain the framework copies, executable
-- [ ] `.coderabbit.yaml` present at repo root
+- [ ] `.coderabbit.yaml` present at repo root (not required when `coderabbit.enabled=false`)
 - [ ] One safe negative control was observed red, restored, and recorded
 - [ ] Setup committed on the PROJ branch: the checkpoint commit before the negative control, then the seal commit
 
