@@ -8,11 +8,12 @@
 #
 # `fast` needs the fast-track marker AND no risk signal. Anything unreadable, empty or
 # doubtful is `full`: the check only ever narrows QA when it can prove the change is small
-# and boring. Signals are matched on added AND removed lines (a deleted auth guard counts)
-# of non-spec, non-test files, on the hunk context (the enclosing function git prints after
-# `@@`) and on the file path; the patterns are deliberately broad (a false `full` costs QA
-# time, a false `fast` costs coverage). It is a heuristic filter, not a proof: it cannot see
-# a risky change inside a function whose name and path carry no signal word.
+# and boring. Signals are matched on added AND removed lines (a deleted auth guard counts) of non-spec,
+# non-test, non-Markdown files, on the hunk context (the enclosing function git prints after `@@`) and on the
+# file path. Comment lines stay in the scan: `//go:build`, `#if` and `/* */` directives carry behavior. The
+# patterns are deliberately broad (a false `full` costs QA time, a false `fast` costs coverage). It is a
+# heuristic filter, not a proof: it cannot see a risky change inside a function whose name and path carry no
+# signal word.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,8 +56,9 @@ fi
 git rev-parse --verify --quiet "$BASE_SHA^{commit}" >/dev/null || { full "base commit $BASE_SHA is not in this repository"; finish; }
 git merge-base --is-ancestor "$BASE_SHA" HEAD 2>/dev/null || { full "base commit $BASE_SHA is not an ancestor of HEAD"; finish; }
 
-# Production code only: specs and tests never carry the risk.
-EXCLUDES=(':(exclude)specs/**' ':(exclude)**/*.test.*' ':(exclude)**/*.spec.*' ':(exclude)**/__tests__/**' ':(exclude)**/tests/**' ':(exclude)**/test/**' ':(exclude)**/*_test.*' ':(exclude)**/test_*.*')
+# Production code only: specs, tests and Markdown prose never carry the risk (a docs-only diff has nothing to assess
+# and reads `full`). Only `.md` counts as prose: MDX components and code files under docs/ are executable and stay scanned.
+EXCLUDES=(':(exclude)specs/**' ':(exclude,glob)**/*.md' ':(exclude)**/*.test.*' ':(exclude)**/*.spec.*' ':(exclude)**/__tests__/**' ':(exclude)**/tests/**' ':(exclude)**/test/**' ':(exclude)**/*_test.*' ':(exclude)**/test_*.*')
 RANGE="$BASE_SHA..HEAD"
 DIFF_OPTS=(--no-color --no-ext-diff --no-renames)
 
@@ -101,7 +103,7 @@ function scan(text, sign,    t) {
   if (t ~ /innerhtml|v-html|dangerouslysetinnerhtml|\|[[:space:]]*safe|mark_safe|html_safe/) note("user input rendered (unescaped HTML sink)", sign)
   if (t ~ /auth|admin|role|owner|forbidden|guard|session|permission|csrf|password|jwt|access|allow|deny|grant|permit|login|logout|signin|signup|credential|token|secret|acl|policy|(^|[^0-9])40[13]([^0-9]|$)/) note("auth/session/permission path", sign)
   if (t ~ /insert into|update [a-z0-9_."`]+ set|delete from|create table|alter table|drop table|\.(insert|upsert|update|delete|destroy|save|create|createmany|bulkcreate|insertmany|insertone|updatemany|updateone|deletemany|deleteone|replaceone|persist)\(/) note("data persisted or deleted", sign)
-  if (t ~ /\.(get|post|put|patch|delete|options|head|all|use|route)\([[:space:]]*["'`]\/|\.route\(|@(get|post|put|patch|delete|route|requestmapping|getmapping|postmapping|controller)\(|@[a-z_]+\.route\(|export (async )?function (get|post|put|patch|delete)([^a-z]|$)|export const (get|post|put|patch|delete)([^a-z]|$)|(^|[^a-z_.])path\(|urlpatterns|procedure|defineeventhandler|map(get|post|put|patch|delete)\(/) note("endpoint or route handler", sign)
+  if (t ~ /\.(get|post|put|patch|delete|options|head|all|use|route)\([[:space:]]*["'`]\/|\.route\(|@(get|post|put|patch|delete|route|requestmapping|getmapping|postmapping|controller)\(|@[a-z_]+\.route\(|#\[[a-z_:]*(get|post|put|patch|delete|route)\(|export (async )?function (get|post|put|patch|delete)([^a-z]|$)|export const (get|post|put|patch|delete)([^a-z]|$)|(^|[^a-z_.])path\(|urlpatterns|procedure|defineeventhandler|map(get|post|put|patch|delete)\(/) note("endpoint or route handler", sign)
 }
 /^diff --git / { hdr = 1; file = ""; next }
 hdr && /^\+\+\+ / { p = substr($0, 5); if (p != "/dev/null") file = substr(p, 3); next }

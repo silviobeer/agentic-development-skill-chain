@@ -24,6 +24,8 @@ for provider in claude codex; do
   printf 'export function canAccess(user) {\n  const ok = false;\n  return ok;\n}\n' >src/lib.js
   printf 'export const allowed = false;\n' >src/access.ts
   printf 'const server = 1;\n' >src/server.js
+  printf '//go:build auth\npackage gate\n\nfunc Run() {}\n' >src/gate.go
+  printf 'class Worker {\n  void Execute() {\n#if REQUIRE_LOGIN\n    CheckLogin();\n#endif\n  }\n}\n' >src/worker.cs
   printf '{\n  "name": "fixture",\n  "version": "1.0.0",\n  "scripts": { "test": "node --test" },\n  "dependencies": { "left-pad": "^1.0.0" }\n}\n' >package.json
   git add -A; git commit -qm base; BASE="$(git rev-parse HEAD)"
   risk() { bash scripts/chain check risk 95 fixture "$@"; }
@@ -98,6 +100,36 @@ for provider in claude codex; do
   expect csproj-dep full 'dependency: manifest changed'
   fresh orm-create;        printf 'export const add = (db, v) => db.item.create({ data: v });\n' >src/store.ts
   expect orm-create full 'data persisted'
+
+  # calibration (read-only runs over four sibling repos): Markdown prose carries no behavior
+  fresh docs-prose;        mkdir -p docs src/auth; printf '# Auth\nPOST /login stores the session token for the admin role.\napp.post("/x", h)\n' >docs/auth.md; printf 'See owner and allow lists.\n' >src/auth/README.md; printf 'export const wave = (n) => `hi ${n}`;\n' >src/wave.js
+  expect docs-prose fast 'no risk signal'
+  fresh docs-only;         mkdir -p docs; printf 'session token\n' >docs/guide.md; printf '# Notes\n' >NOTES.md
+  expect docs-only full 'no production-code change'
+  # comment lines stay in the scan: build directives, preprocessor lines and annotations carry behavior (review rounds 3 to 5)
+  fresh comment-words;     printf '// guard: check the session role before the admin may access it\nexport const wave = (n) => `hi ${n}`;\n' >src/wave.js
+  expect comment-words full 'auth/session/permission'
+  fresh go-build-tag;      printf '//go:build !auth\npackage gate\n\nfunc Run() {}\n' >src/gate.go
+  expect go-build-tag full 'auth/session/permission'
+  fresh code-and-comment;  printf 'export const f = (user) => { if (!user.isAdmin) return 403; }; // guard\n' >src/wave.js
+  expect code-and-comment full 'auth/session/permission'
+  # review round 3: executable files must not hide behind the docs/MDX path, and code after a closed comment still counts
+  fresh mdx-component;     printf 'export const Demo = ({ v }) => <div dangerouslySetInnerHTML={{ __html: v }} />;\n' >src/Demo.mdx; printf 'export const wave = (n) => `hi ${n}`;\n' >src/wave.js
+  expect mdx-component full 'unescaped HTML sink'
+  fresh docs-code;         mkdir -p docs/api; printf 'app.post("/transfer", handler);\n' >docs/api/server.js; printf 'export const wave = (n) => `hi ${n}`;\n' >src/wave.js
+  expect docs-code full 'endpoint or route handler'
+  fresh code-after-block;  printf '/* note */ db.item.create({ data: v });\n' >src/wave.js
+  expect code-after-block full 'data persisted'
+  fresh code-after-close;  printf '/**\n * note\n */ db.item.create({ data: v });\n' >src/wave.js
+  expect code-after-close full 'data persisted'
+  fresh code-after-html;   printf '<!-- note --> <div v-html="x"></div>\n' >src/view.vue
+  expect code-after-html full 'unescaped HTML sink'
+  fresh preproc-directive; printf 'class Worker {\n  void Execute() {\n#if false\n    CheckLogin();\n#endif\n  }\n}\n' >src/worker.cs
+  expect preproc-directive full 'auth/session/permission'
+  fresh rust-attribute;    printf '#[get("/greet")]\nasync fn greet() {}\n' >src/greet.rs
+  expect rust-attribute full 'endpoint or route handler'
+  fresh shebang-flag;      printf '#!/usr/bin/env node\nconst token = process.env.TOKEN;\n' >src/cli.js
+  expect shebang-flag full 'auth/session/permission'
 
   # no marker and a missing concept are full, always
   fresh no-marker;     printf '# Concept\n\n## Handoff Readiness\n- Delivery track: full chain (in-repo build)\n' >specs/PROJ-95-fixture/1_concept/PROJ-95-concept.md; printf 'export const x = 1;\n' >src/x.js

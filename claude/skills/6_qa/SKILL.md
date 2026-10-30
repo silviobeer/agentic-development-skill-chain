@@ -135,7 +135,8 @@ run records it in the QA summary and runs the panel itself).
    copy: run `chain sync`), the profile is `full`.
 2. **What the script decides.** `fast` only when the concept's `Handoff Readiness` carries
    `Authored via: fast-track-spec` (no marker or no readable concept means `full`, always)
-   and none of these shows up in non-spec, non-test files, matched on added and removed
+   and none of these shows up in non-spec, non-test, non-Markdown files (`.md` is prose; MDX, code
+   under `docs/` and comment lines are scanned, since `//go:build` and `#if` carry behavior), matched on added and removed
    lines (a deleted guard counts as much as a new one), on the enclosing function git
    prints for each hunk, and on the file path: an auth/session/permission/access path;
    an endpoint or route handler; user input persisted or rendered unescaped; a migration
