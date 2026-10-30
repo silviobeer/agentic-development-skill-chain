@@ -44,7 +44,7 @@ Write all three artifacts in English (a mixed-language set is awkward and the ar
 
 ### 1. Preconditions and context
 
-`docs/PRODUCT.md` must exist, else stop and route to `chain-guide` (baseline first). Read `docs/PRODUCT.md`, the roadmap entry if any, `docs/ARCHITECTURE.md` (§ Stack and load-bearing parts) and `docs/GUIDELINES.md`. Spawn one read-only Explore agent for the area the task touches (routes, components, API/schema entry points, PROJs touching the same area, recent commits) and keep only its short answer. A supplied clarification artifact or stakeholder brief replaces the matching questions.
+`docs/PRODUCT.md` must exist, else stop and route to `chain-guide` (baseline first). Read `docs/PRODUCT.md`, the roadmap entry if any, `docs/ARCHITECTURE.md` (§ Stack and load-bearing parts) and `docs/GUIDELINES.md`. Spawn one read-only Explore agent for the area the task touches (routes, components, API/schema entry points, PROJs touching the same area, recent commits) and keep only its short answer, including the source paths supporting reuse and placement claims for the review in step 7. A supplied clarification artifact or stakeholder brief replaces the matching questions; retain its path for that review.
 
 ### 2. One interview
 
@@ -106,7 +106,7 @@ bash $CHAIN review architecture <X> <theme> \
   --author-provider <current-writer> --persist --round 1
 ```
 
-Drop ground-truth paths that do not exist. Keep the mode `architecture` and `--persist`: CP1's fast path reads that record (findings land in `3-4_plan/findings.json`). Reconcile findings of any severity (rewrite the artifact as if right the first time, no narrated corrections) and re-review with `--round 2`, then `--round 3`, while findings remain; stop when clean. Remaining Critical/High findings after round 3, or exit `1`, block the handoff and go to the user; ask only about unresolved product decisions.
+Drop ground-truth paths that do not exist. Add any supplied clarification artifact or stakeholder brief to `--ground-truth`, together with the existing source files that support the architecture decisions (named extension points, reused components and patterns), including relevant paths from the Explore answer. Pass the actual files so the read-only reviewer can verify the claims. Keep the mode `architecture` and `--persist`: CP1's fast path reads that record (findings land in `3-4_plan/findings.json`). Reconcile findings of any severity (rewrite the artifact as if right the first time, no narrated corrections) and re-review with `--round 2`, then `--round 3`, while findings remain; stop when clean. Remaining Critical/High findings after round 3, or exit `1`, block the handoff and go to the user; ask only about unresolved product decisions.
 
 ### 8. User review and handoff
 

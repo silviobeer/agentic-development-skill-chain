@@ -98,7 +98,7 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
    - `2b_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `3-4_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `3-4_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
-8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/chain state get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1; `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
+8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/chain state get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1 only once wave plans exist; otherwise recommend the next missing producing step from the artifact scan above (architecture present but no wave plans → `writing-plans`); `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
 9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Do not read the file: `grep -c "Gate — PASSED" <progress.md>` against the number of wave plans.
    - Count equals the number of wave plans? → step 5 done
    - Any `2_PRDs/PROJ-<X>-PRD-*.md` has a `## QA Test Results` section, or `state.json` is at `P6:done` or later? → step 6 done
