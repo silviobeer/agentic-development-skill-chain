@@ -30,6 +30,9 @@ flowchart LR
   S1B -->|brownfield| S1D
   S1D -->|concept affected or candidates open| S1E[1e concept-sync]
   S1D --> S2
+  S0 -.small bounded change.-> S1F[1f fast-track-spec]
+  S1F --> S4
+  S1F -.fit gate fails.-> S1
   S1E --> S2
   S2 -.on request, either track.-> S2B[2b handoff-package]
   S2 -.discovery: Linear handoff.-> DEV([developer / external experts])
@@ -193,6 +196,7 @@ After decomposition:
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff; with several carried-forward candidates, prototype each until one remains |
 | 1e | concept-sync | Reconcile iterated mockup changes and the chosen candidate direction back into the concept; set delivery track |
+| 1f | fast-track-spec | Compressed entry for a small, bounded, non-bug change: thin concept, one PRD and the architecture in one session, one interview, one cross-review; standard artifacts, so Step 4 onward is unchanged; escalates to `concept` when the fit gate fails |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery endpoint or requested full-chain export) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |

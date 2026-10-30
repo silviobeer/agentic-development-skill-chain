@@ -120,6 +120,13 @@ checked against what is supplied, so a PRD left out is a requirement nobody
 reviews. If a referenced input does not exist, omit it; do not invent a
 replacement.
 
+`--also-focus <concept|requirements|architecture|plan,...>` appends the review
+focus of further artifact kinds to the primary mode's, so one run reviews a
+combined set (used by `fast-track-spec`: `architecture --also-focus
+concept,requirements`). The mode stays the primary one: it picks the ledger
+folder and the `.cross_review[]` record that CP1's fast path reads. Not valid
+for `qa` or `docs`.
+
 After P0, omit `--author-provider` and use `--author-key` to resolve authorship
 from state.json. That is the persistent gate path: findings are added only via
 `chain findings`, and the round is appended only via `chain state`.

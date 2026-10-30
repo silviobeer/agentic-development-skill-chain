@@ -84,6 +84,21 @@ for round in 0 -1 1.5 01 invalid; do
   [ "$rc" -eq 64 ] || { cat "$CASE/out" >&2; exit 1; }
 done
 
+# --also-focus: one review, extra artifact kinds' criteria in the prompt, record mode stays the primary one.
+run_arch() { PATH="$CASE/bin:$PATH" PROMPT_CAPTURE="$CASE/prompt" bash "$SCRIPT" architecture 1 test --artifacts artifact.md --author-provider claude --round 1 "$@"; }
+run_arch >"$CASE/out" 2>&1
+! grep -q 'Testability: Given/When/Then' "$CASE/prompt"
+run_arch --also-focus concept,requirements >"$CASE/out" 2>&1
+grep -q 'Testability: Given/When/Then' "$CASE/prompt"
+grep -q 'Boundary discipline: do not smuggle PRDs' "$CASE/prompt"
+grep -q 'Decision completeness' "$CASE/prompt"
+for bad in "qa" "bogus" "architecture" "concept,docs"; do
+  rc=0; run_arch --also-focus "$bad" >"$CASE/out" 2>&1 || rc=$?
+  [ "$rc" -eq 64 ] || { echo "--also-focus $bad should exit 64 (got $rc)" >&2; cat "$CASE/out" >&2; exit 1; }
+done
+rc=0; PATH="$CASE/bin:$PATH" PROMPT_CAPTURE="$CASE/prompt" bash "$SCRIPT" docs 1 test --artifacts artifact.md --author-provider claude --also-focus concept >"$CASE/out" 2>&1 || rc=$?
+[ "$rc" -eq 64 ] || { echo "--also-focus must be rejected for docs" >&2; exit 1; }
+
 # Manual rounds beyond the automatic limit work before and after state exists.
 run_review 4000 --round 4 >"$CASE/out" 2>&1
 mkdir -p specs/PROJ-1-test
@@ -92,6 +107,9 @@ for round in 4 100; do
   run_review 4000 --round "$round" --persist >"$CASE/out" 2>&1
   [ "$(jq -r '.cross_review[-1].round' specs/PROJ-1-test/state.json)" -eq "$round" ]
 done
+
+run_arch --also-focus concept,requirements --persist >"$CASE/out" 2>&1
+[ "$(jq -r '.cross_review[-1].mode' specs/PROJ-1-test/state.json)" = architecture ] || { cat "$CASE/out" >&2; exit 1; }
 
 # Degraded fallback: Codex unavailable → strongest Claude model that is not the author model; QA personas take the strongest even when it is the author.
 mkdir -p "$CASE/nocodex"

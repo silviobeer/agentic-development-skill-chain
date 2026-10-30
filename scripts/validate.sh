@@ -14,6 +14,7 @@ CORE_SKILLS=(
   1c_frontend-design
   1d_prototyping
   1e_concept-sync
+  1f_fast-track-spec
   2b_handoff-package
   2c_review-reconcile
   2e_handoff-refinement

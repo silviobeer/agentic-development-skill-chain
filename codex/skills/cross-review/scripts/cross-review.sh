@@ -10,6 +10,7 @@
 #   cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme>
 #     --artifacts <file...> [--ground-truth <file...>]
 #     [--author-provider claude|codex] [--author-model M] [--author-key K]
+#     [--also-focus <concept|requirements|architecture|plan,...>]
 #     [--joint] [--personas] [--persist] [--require-provider claude|codex]
 #     [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]
 # Exit: 0 clean/no blocking findings; 3 Critical/High findings; 1 infra error;
@@ -21,20 +22,21 @@ if [ -f "$_compat_dir/compat.sh" ]; then source "$_compat_dir/compat.sh"; else s
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-}"; PROJ="${2:-}"; THEME="${3:-}"
 usage() {
-  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
+  echo "Usage: cross-review.sh <concept|requirements|architecture|plan|qa|docs> <proj-x> <theme> --artifacts <file...> [--ground-truth <file...>] [--author-provider claude|codex] [--author-model M] [--author-key K] [--also-focus M,...] [--joint] [--personas] [--persist] [--require-provider claude|codex] [--round N] [--diff-base SHA] [--diff-paths <git-pathspec...>] [--timeout S]" >&2
   exit 64
 }
 [ -n "$MODE" ] && [ -n "$PROJ" ] && [ -n "$THEME" ] || usage
 shift 3
 case "$MODE" in concept|requirements|architecture|plan|qa|docs) ;; *) echo "cross-review.sh: unknown mode '$MODE'" >&2; exit 64 ;; esac
 
-ARTIFACTS=(); GROUND_TRUTH=(); DIFF_PATHS=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
+ARTIFACTS=(); GROUND_TRUTH=(); DIFF_PATHS=(); ALSO_FOCUS=(); AUTHOR_KEY=""; AUTHOR_PROVIDER=""; AUTHOR_MODEL=""
 ROUND=1; DIFF_BASE=""; TIMEOUT=600; JOINT=0; QA_PERSONAS=0; PERSIST_REQUESTED=0; REQUIRED_PROVIDER=""; EXPLICIT_AUTHOR=0; MAX_CONTEXT_BYTES="${CROSS_REVIEW_MAX_CONTEXT_BYTES:-900000}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --artifacts) shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do ARTIFACTS+=("$1"); shift; done ;;
     --ground-truth) shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do GROUND_TRUTH+=("$1"); shift; done ;;
     --author-key) AUTHOR_KEY="${2:?}"; shift 2 ;;
+    --also-focus) IFS=, read -r -a ALSO_FOCUS <<<"${2:?}"; shift 2 ;;
     --author-provider) AUTHOR_PROVIDER="${2:?}"; EXPLICIT_AUTHOR=1; shift 2 ;;
     --author-model) AUTHOR_MODEL="${2:?}"; shift 2 ;;
     --joint) JOINT=1; shift ;;
@@ -53,6 +55,10 @@ done
 [[ "$ROUND" =~ ^[1-9][0-9]*$ ]] || { echo "cross-review.sh: --round must be a positive integer" >&2; exit 64; }
 [[ "$MAX_CONTEXT_BYTES" =~ ^[0-9]+$ ]] || { echo "cross-review.sh: CROSS_REVIEW_MAX_CONTEXT_BYTES must be a non-negative integer" >&2; exit 64; }
 [ "$QA_PERSONAS" -eq 0 ] || { [ "$MODE" = qa ] && [ "$JOINT" -eq 0 ]; } || { echo "cross-review.sh: --personas is only valid for qa without --joint" >&2; exit 64; }
+[ ${#ALSO_FOCUS[@]} -eq 0 ] || case "$MODE" in qa|docs) echo "cross-review.sh: --also-focus is not valid for $MODE" >&2; exit 64 ;; esac
+for m in ${ALSO_FOCUS[@]+"${ALSO_FOCUS[@]}"}; do
+  case "$m" in concept|requirements|architecture|plan) [ "$m" != "$MODE" ] || { echo "cross-review.sh: --also-focus repeats mode '$m'" >&2; exit 64; } ;; *) echo "cross-review.sh: --also-focus takes concept|requirements|architecture|plan, got '$m'" >&2; exit 64 ;; esac
+done
 case "$AUTHOR_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --author-provider must be claude or codex" >&2; exit 64 ;; esac
 case "$REQUIRED_PROVIDER" in ""|claude|codex) ;; *) echo "cross-review.sh: --require-provider must be claude or codex" >&2; exit 64 ;; esac
 
@@ -115,8 +121,11 @@ if [ "$DEGRADED_FALLBACK" = true ] && [ "$QA_PERSONAS" -eq 0 ] && [ -n "$AUTHOR_
 fi
 [ "$QA_PERSONAS" -eq 0 ] || [ "$DEGRADED_FALLBACK" = false ] || echo "cross-review (qa): opposite provider unavailable; continuing six QA personas with ${REVIEWERS[0]%%:*} ${REVIEWERS[0]#*:} (degraded, same vendor, strongest model)" >&2
 
+FOCUS_ALL=""
+# The review's own mode first; --also-focus appends the focus of further artifact kinds (one run, one record).
+for FOCUS_MODE in "$MODE" ${ALSO_FOCUS[@]+"${ALSO_FOCUS[@]}"}; do
 FOCUS=""
-case "$MODE" in
+case "$FOCUS_MODE" in
   concept) FOCUS='- Product coherence: goal, users, scope, non-goals, success criteria and risks agree.\n- Buildability: no decision-critical ambiguity is deferred or disguised as a later concern.\n- Boundary discipline: do not smuggle PRDs, UI design, architecture or implementation plans into the concept.\n- Grounding: claims about the existing product agree with the supplied context.\n- Cap-gaming: flag load-bearing scope, success criteria or constraints removed to fit the 150-line cap while trivia remains.' ;;
   requirements) FOCUS='- Coverage and traceability: every approved concept, role, flow, state, constraint and mockup contract is represented exactly once; flag omissions, contradictions and invented scope.\n- Testability: Given/When/Then and acceptance criteria are observable, unambiguous, independently verifiable and include meaningful negative outcomes.\n- Edge behavior: permissions, empty and invalid data, failures, retries, limits, concurrency and security-sensitive paths have explicit expected behavior where relevant.\n- Cross-PRD consistency: identifiers, terminology, dependencies, preconditions and outcomes agree across the full PRD set.\n- Boundary discipline: requirements state product behavior and non-functional constraints without prematurely choosing architecture or implementation.' ;;
   architecture) FOCUS='- Decision completeness: architecture resolves the cross-cutting choices required by the concept and PRDs.\n- Feasibility: proposed data, integrations, APIs, ownership and operations fit the supplied system truth.\n- Traceability: no requirement or constraint is silently lost, contradicted, or overbuilt.\n- Risk: identify unsafe assumptions, missing failure paths, migration concerns, and non-functional gaps.\n- Baseline changes: every decision that contradicts or changes docs/ARCHITECTURE.md (stack, boundaries, data ownership, invariants) carries a Changes baseline line naming that section, and its Summary says what it supersedes; flag silent contradictions.\n- Summary fidelity: each decision'"'"'s and key flow'"'"'s Summary line is the only text implementers receive; flag one that drops, softens or contradicts a binding part of its decision or flow diagram, and an Affects list that omits a PRD it constrains.' ;;
@@ -124,6 +133,9 @@ case "$MODE" in
   qa) FOCUS='- Evidence integrity: QA claims are tied to supplied browser/test evidence, not implementation assertions. A clean change-stream hash can cover many tracked files; distinguish no net endpoint changes from zero matched paths. Matching endpoints do not prove absence of transient reverted writes, untracked-file content changes, ignored/excluded changes or HEAD movement.\n- Adversarial coverage: acceptance criteria, edge cases, security and regressions have meaningful attempts and negative controls.\n- Finding quality: severity, reproduction and anchors are actionable; do not silently downgrade a release-blocking result.\n- Release decision: reject READY when supplied evidence or the implementation diff leaves a Critical/High risk unaddressed.' ;;
   docs) FOCUS='- Trap placement: for every new GUIDELINES Trap, require evidence of a default wrong path or expensive/QA-invisible damage, plus a project-specific trigger, alternative and reason; reject generic role-rule duplicates, and route ordinary antipattern checks and Known Debt to review-checklist.\n- Factual accuracy: every statement describes supplied ground truth, not merely plans.\n- Stale claims: flag renamed, removed, or changed modules and flows.\n- Cap-gaming: flag load-bearing truth removed to meet a size cap while trivia remains.\n- Wrong promotions: reject durable rules promoted from one-off incidents.\n- Current state, not chronicle: docs/ARCHITECTURE.md describes the system as it is now; flag per-PROJ or "built in PROJ-n" sections and Changes baseline lines of the PROJ architecture whose section was not updated.' ;;
 esac
+if [ "$FOCUS_MODE" = "$MODE" ]; then FOCUS_ALL="$FOCUS"; else FOCUS_ALL+="\n\nAlso review the ${FOCUS_MODE} artifact(s) among the artifacts under review with these ${FOCUS_MODE}-mode criteria:\n${FOCUS}"; fi
+done
+FOCUS="$FOCUS_ALL"
 
 MATERIAL=""
 append_numbered() { # <kind> <path>

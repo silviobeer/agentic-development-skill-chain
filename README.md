@@ -64,6 +64,7 @@ flowchart TD
     HP["2b · handoff-package<br/>immutable dated package for external<br/>UI/UX experts and developers"]:::opt
     RR["2c · review-reconcile<br/>resolves review gaps point by point,<br/>updates PRDs, concept and mockups"]:::opt
     ARCH["3 · architecture<br/>PROJ-level technical design<br/>across all PRDs"]
+    FAST["1f · fast-track-spec<br/>small bounded change: concept, one PRD<br/>and architecture in one session"]:::opt
     WP["4 · writing-plans<br/>splits stories into dependency-ordered<br/>waves + wave-gate config"]
   end
 
@@ -77,6 +78,9 @@ flowchart TD
   PROTO -->|concept affected or candidates open| SYNC --> REQ
   PROTO --> REQ
   CONCEPT -->|backend / API only| REQ
+  GUIDE -.->|small bounded change| FAST
+  FAST --> WP
+  FAST -.->|fit gate fails| CONCEPT
   REQ -->|full chain| ARCH --> WP
   REQ -.->|discovery: Linear handoff| DEV(["external experts / developer via Linear"])
   REQ -.->|on request, either track| HP
@@ -160,6 +164,7 @@ automatic cross-review calls, or stop-policy exits.
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff; narrows carried-forward candidates to one |
 | 1e | `concept-sync` (opt) | Reconcile iterated mockups and the chosen candidate direction back into the concept |
+| 1f | `fast-track-spec` (opt) | Compressed entry for a small, bounded, non-bug change: thin concept, one PRD and the architecture in one session with one interview and one cross-review; the standard artifacts, so Step 4 onward is unchanged. Escalates to `concept` when the task is bigger |
 | 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases, required opposite-provider review before handoff |
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |
@@ -175,7 +180,7 @@ A bare number is a main-line step; a letter suffix is a variant at the same
 stage — `1b`–`1e` are a sequence inside the UI branch, `2b`/`2c`
 optional forks after Step 2 (`2b` packages PRDs for external experts on
 either track; `2c` runs when a developer review returns gaps and
-reconciles them back into PRDs, concept and mockups), `0a`/`0b`/`0c` alternative entry paths. Checkpoint 1 and P0 setup are
+reconciles them back into PRDs, concept and mockups), `0a`/`0b`/`0c` alternative entry paths, `1f` a compressed entry path that replaces steps 1–3 for a small change. Checkpoint 1 and P0 setup are
 subskills in `5_executing/subskills/`, not steps of their own; `5b` is the
 default Step 5 and `5` its full-procedure fallback. Skills with no number are not steps (see below). Inside
 `specs/PROJ-<X>-<theme>/`, each subfolder carries the number of the skill
