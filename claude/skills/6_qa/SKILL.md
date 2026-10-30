@@ -127,18 +127,25 @@ before the dev server or any browser work, and record it in the finder report as
 `QA profile: fast|full — <reason>` plus `QA panel: all|<comma list>` (an interactive
 run records it in the QA summary and runs the panel itself).
 
-1. **Default.** `fast` only when `specs/PROJ-<X>-<theme>/1_concept/PROJ-<X>-concept.md`
-   carries `Authored via: fast-track-spec` in `Handoff Readiness`. No marker (or no
-   readable concept) means `full`, always.
-2. **Risk signals.** With the marker, read `git diff "$(bash scripts/chain state get <X> <theme> .base_sha)"..HEAD --stat`
-   (not the full diff), the architecture's Decisions/Dependencies and the PRDs. Any of
-   these, or any doubt, means `full`: an auth/session/permission path touched; a new
-   endpoint or route handler; user input persisted or rendered; a migration or schema
-   change; a new dependency; a diff clearly larger than the PRD story count suggests.
-   The stat cannot show what changed inside a file, so also grep the added and
-   removed lines (a deleted guard is a signal too) for the same signals, e.g. `git diff <base>..HEAD -U0 -- . ':(exclude)specs/**' ':(exclude)**/*.test.*' | grep -E '^[-+]' | grep -vE '^(\+\+\+|---) ' | grep -iE 'innerHTML|v-html|auth|admin|role|owner|forbidden|40[13]|guard|session|permission|csrf|password|insert|update|delete|create table|alter table|router|\.(get|post|put|patch)\('`.
-   Adapt the pattern to the project's stack. A hit counts as a signal unless the line is
-   plainly unrelated (a comment, an unrelated identifier); when unsure, `full`.
+1. **Verdict from the script.** Run `bash scripts/chain check risk <X> <theme>` (it reads
+   `state.json` `.base_sha`; `--base <sha>` overrides). Line 1 is `fast` or `full`, every
+   further line a reason: record that verdict and its first reason as
+   `QA profile: <verdict> — <reason>`. Do not re-derive it by hand and do not argue a
+   `full` down. If the command is missing or exits non-zero (a project with an old helper
+   copy: run `chain sync`), the profile is `full`.
+2. **What the script decides.** `fast` only when the concept's `Handoff Readiness` carries
+   `Authored via: fast-track-spec` (no marker or no readable concept means `full`, always)
+   and none of these shows up in non-spec, non-test files, matched on added and removed
+   lines (a deleted guard counts as much as a new one), on the enclosing function git
+   prints for each hunk, and on the file path: an auth/session/permission/access path;
+   an endpoint or route handler; user input persisted or rendered unescaped; a migration
+   or schema change; any change to a dependency manifest or lockfile; a diff larger than
+   the PRD story count suggests (150 changed lines or 5 files per story); an empty,
+   unreadable or non-ancestor diff. The patterns are broad on purpose and live in
+   the helper behind `chain check risk`; widen them there (with a case in
+   `scripts/test-risk-check.sh`), not in this prose. It is a filter, not a proof: a risky
+   edit inside code whose function name and path carry no signal word still reads `fast`,
+   which is why the panel keeps Weber and Takahashi and a Critical/High finding escalates.
 3. **Escalation, one way.** After the finder pass, any Critical/High finding raises a
    `fast` profile to `full`: re-record the line, run the steps below that `fast`
    narrowed at full depth, and the panel uses all six personas. The fast panel is a
