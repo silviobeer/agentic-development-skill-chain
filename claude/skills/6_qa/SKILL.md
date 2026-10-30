@@ -151,7 +151,7 @@ run records it in the QA summary and runs the panel itself).
    narrowed at full depth, and the panel uses all six personas. The fast panel is a
    second evaluation point: when its command exits 3 (open Critical/High from the
    panel), run the personas it skipped with one more `--personas <the skipped ones> --persist --round 1`
-   call, and note the escalation in the final output. The controller cannot re-run the
+   call, and note the escalation in the final output. That call's `this call: N Critical/High finding(s)` line says whether the escalation personas found anything themselves; its exit code and the `open Critical/High` count stay ledger-wide. The controller cannot re-run the
    finder's narrowed probes (§3 to §6), so that path widens the panel only. A profile
    never goes down.
 

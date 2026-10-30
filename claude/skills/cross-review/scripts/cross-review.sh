@@ -315,6 +315,7 @@ if [ -n "$FINDING_LINES" ]; then printf '%s\n' "$FINDING_LINES" | node "$LEDGER"
 BLOCKING="$(node "$LEDGER" list "$PROJ" "$THEME" | jq '[.findings[]? | select(.status == "open") | select(.severity == "critical" or .severity == "high") | select(.source == "cross-review" or ((.sources // []) | index("cross-review")))] | length')"
 if [ "$PERSIST" -eq 0 ]; then
   [ -z "$FINDING_LINES" ] || printf '%s\n' "$FINDING_LINES"
+  echo "cross-review (${MODE}): this call: ${ROUND_BLOCKING} Critical/High finding(s)" >&2
   [ "$BLOCKING" -eq 0 ] || { echo "cross-review (${MODE}): ${BLOCKING} open blocking finding(s)" >&2; exit 3; }
   echo "cross-review (${MODE}): findings saved in the stage folder; ${FINDINGS_ADDED} reported" >&2
   exit 0
@@ -325,5 +326,6 @@ PERSONAS_JSON='[]'  # optional record field: only a subset run lists its persona
 [ "$QA_PERSONAS" -eq 0 ] || [ ${#PERSONA_IDX[@]} -eq 6 ] || PERSONAS_JSON="$(for i in "${PERSONA_IDX[@]}"; do echo "${PERSONA_KEYS[$i]}"; done | jq -Rcs 'split("\n") | map(select(. != ""))')"
 RECORD="$(jq -n --arg mode "$MODE" --argjson round "$ROUND" --arg rp "$REVIEWER_PROVIDER" --arg rm "$REVIEWER_MODEL" --argjson deg "$DEGRADED_FALLBACK" --argjson fa "$FINDINGS_ADDED" --argjson personas "$PERSONAS_JSON" --arg at "$(now_iso)" '{mode:$mode,round:$round,reviewer_provider:(if $rp == "claude+codex" then "claude" else $rp end),reviewer_model:$rm,joint:($rp == "claude+codex"),degraded_fallback:$deg,findings_added:$fa,at:$at} + (if ($personas | length) > 0 then {personas:$personas} else {} end)')"
 UPDATED="$(jq -c --argjson rec "$RECORD" '. + [$rec]' <<<"$CURRENT")"; bash "$STATE_SH" set "$PROJ" "$THEME" .cross_review "$UPDATED" >/dev/null
+echo "cross-review (${MODE}, round ${ROUND}): this call: ${ROUND_BLOCKING} Critical/High finding(s)"
 if [ "$BLOCKING" -gt 0 ]; then echo "cross-review (${MODE}, round ${ROUND}): ${BLOCKING} open Critical/High finding(s) in the ledger — BLOCKING."; exit 3; fi
 echo "cross-review (${MODE}, round ${ROUND}): clean — ${FINDINGS_ADDED} non-blocking finding(s) ingested"

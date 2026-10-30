@@ -145,6 +145,7 @@ mkdir -p specs/PROJ-99-panel specs/PROJ-98-panel-clean; chain state init 99 pane
 # Fast panel (weber,takahashi) reports a High -> exit 3; the escalation call runs the complementary four.
 rc=0; PANEL_HIGH=Weber panel 99 panel --personas weber,takahashi >"$CASE/panel1.out" 2>&1 || rc=$?
 [ "$rc" -eq 3 ] && grep -q '1 open Critical/High' "$CASE/panel1.out" || die "fast panel with an open High must exit 3 with one blocking finding (rc=$rc)"
+grep -q 'this call: 1 Critical/High' "$CASE/panel1.out" || die 'the fast panel must report its own High as this call: 1'
 rc=0; panel 99 panel --personas chen,sharma,mueller,rodriguez >"$CASE/panel2.out" 2>&1 || rc=$?
 [ "$(qa_records 'length' 99-panel)" -eq 2 ] || die 'both panel calls must land in .cross_review[]'
 [ "$(qa_records '[.[].personas[]] | sort | join(",")' 99-panel)" = '"chen,mueller,rodriguez,sharma,takahashi,weber"' ] \
@@ -153,13 +154,20 @@ rc=0; panel 99 panel --personas chen,sharma,mueller,rodriguez >"$CASE/panel2.out
 [ "$(qa_records '.[1].findings_added' 99-panel)" -eq 0 ] || die 'the escalation panel found nothing and must record findings_added 0'
 # Known property, pinned on purpose: the exit code and BLOCKING count come from the whole ledger, not from this call.
 # The escalation call exits 3 even though its own personas were clean, because the first panel's High is still open.
+# The separate `this call:` line is how the controller tells that apart: 0 here, ledger 1.
 [ "$rc" -eq 3 ] && grep -q '1 open Critical/High' "$CASE/panel2.out" || die "the escalation call counts the first panel's open High (rc=$rc)"
+grep -q 'this call: 0 Critical/High' "$CASE/panel2.out" || die 'a clean escalation panel must report this call: 0 next to the ledger count'
 rc=0; PANEL_HIGH=Sharma panel 99 panel --personas sharma >"$CASE/panel3.out" 2>&1 || rc=$?
 [ "$rc" -eq 3 ] && grep -q '2 open Critical/High' "$CASE/panel3.out" || die "a High from the escalation panel must add to the ledger count (rc=$rc)"
+grep -q 'this call: 1 Critical/High' "$CASE/panel3.out" || die 'the escalation panel High must show as this call: 1 (ledger 2)'
 # Control: a clean fast panel leaves nothing open, so the complementary call exits 0 as well.
 rc=0; panel 98 panel-clean --personas weber,takahashi >/dev/null 2>&1 || rc=$?; [ "$rc" -eq 0 ] || die "clean fast panel must exit 0 (rc=$rc)"
-rc=0; panel 98 panel-clean --personas chen,sharma,mueller,rodriguez >/dev/null 2>&1 || rc=$?; [ "$rc" -eq 0 ] || die "clean escalation panel must exit 0 (rc=$rc)"
+rc=0; panel 98 panel-clean --personas chen,sharma,mueller,rodriguez >"$CASE/panel-clean2.out" 2>&1 || rc=$?; [ "$rc" -eq 0 ] || die "clean escalation panel must exit 0 (rc=$rc)"
+grep -q 'this call: 0 Critical/High' "$CASE/panel-clean2.out" || die 'a clean panel must report this call: 0'
 [ "$(qa_records 'length' 98-panel-clean)" -eq 2 ] || die 'clean panels must both be recorded'
+# The non-persisted stage path prints the same per-call line (stderr) before its ledger-wide verdict.
+PANEL_HIGH=Weber PATH="$PSTUB:$PATH" bash scripts/chain review qa 98 panel-clean --artifacts docs/ARCHITECTURE.md --author-provider codex --personas weber >"$CASE/stage-nopersist.out" 2>&1 || true
+grep -q 'this call: 1 Critical/High' "$CASE/stage-nopersist.out" || die 'a non-persisted review must report this call: 1 for its own High'
 
 # A Codex author has no same-provider fallback: fail before any reviewer runs when Claude auth is gone.
 ! out="$(CLAUDE_AUTH_FAIL=1 review docs 97 pre-p0 --artifacts docs/ARCHITECTURE.md --author-provider codex 2>&1)" \
