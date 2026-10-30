@@ -1,6 +1,6 @@
 ---
 name: chain-guide
-description: "Context-aware guide through the 0-to-8 skill chain. Use when: (1) the user asks where they are or what to do next, (2) the user is unsure which skill to use, (3) starting a new feature or project, (4) the user says /chain-guide or /help. Detects current progress by checking existing files and recommends the next step."
+description: "Context-aware guide through the 0-to-8 skill chain. Use when: (1) the user asks where they are or what to do next, (2) the user is unsure which skill to use, (3) starting a new feature, task or project, (4) the user says /chain-guide or /help. Detects current progress by checking existing files and recommends the next step."
 ---
 
 # 0-to-8 Chain Guide
@@ -80,6 +80,8 @@ ordering, and each entry's `Status`. A PROJ whose dependency is not
 no `specs/PROJ-<X>-<theme>/` folder yet are the natural candidates for
 **concept** (1).
 
+**New tasks:** when the user names a task, apply [New-Task Triage](#new-task-triage) first; otherwise continue with the scan below.
+
 Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
 1. `1_concept/PROJ-<X>-concept.md` — concept written? → step 1 done
@@ -102,13 +104,26 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
 11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
 
+## New-Task Triage
+
+When the user names a new task (as the skill argument, or in answer to "What do you want to do?"), advise which flow fits before routing by state. It applies after external receiver routing and Rule 0: a missing baseline comes first. A bare call in a repo with no PROJ asks that question once; a bare call where PROJs exist reports state as usual and does not ask. "Where am I?" is not a new task.
+
+Advisory only: name the recommendation with a one-line reason (and the runner-up when it is close), and let the user overrule it. Infer from the description; ask only what it leaves open, one question at a time. End with the copyable start prompt from Session Boundary. If PROJs are in progress, list them after the recommendation (see Multiple PROJs); the user chooses.
+
+| The task is | Recommend |
+|---|---|
+| A reported defect, regression, wrong behavior, or "why did the tests miss this" | **bugfixing** (`/bugfixing`): outside the chain, creates no PROJ |
+| Free-form exploration of an idea in code before committing to a concept | **vibecoder** (`/vibecoder`) |
+| A survey of larger refactors or architecture drift, no code change requested | **refactor-dreamer** |
+| A new feature or product change (anything else) | The chain: **concept** (`/1_concept`). A `planned` roadmap entry that matches becomes that PROJ |
+
 ## Respond to the User
 
 Tell the user the detected state (artifact path) and the next step, in one or two sentences:
 
 | Detected state | Next step |
 |---|---|
-| No PROJ folder | **concept** (`/1_concept`) — it allocates PROJ-X and the folder. If a stakeholder must still explain the problem, **clarification** (`/1a_clarification`) first; a `specs/_clarification/*-stakeholder_brief.md` no concept cites → `/1_concept <brief path>` when confirmed, else list its blocking open questions |
+| No PROJ folder | A task was named: [New-Task Triage](#new-task-triage). Otherwise **concept** (`/1_concept`) — it allocates PROJ-X and the folder. If a stakeholder must still explain the problem, **clarification** (`/1a_clarification`) first; a `specs/_clarification/*-stakeholder_brief.md` no concept cites → `/1_concept <brief path>` when confirmed, else list its blocking open questions |
 | Concept, UI feature, nothing further | **visual-companion** (1b) before design, mockups and PRDs |
 | Concept, backend/API feature | **requirements-engineer** (2) |
 | Visual Companion exists, no design language/mockups/PRDs | Follow a `## Design System State` decision in `layout-decision.md` ("skip knowingly" → **prototyping** with greyscale wireframes). Else greenfield: **frontend-design** (1c) → **prototyping** (1d) → **requirements-engineer** (2); hybrid with gaps: 1c lightly, then 1d, 2; brownfield: 1d, then 2 |

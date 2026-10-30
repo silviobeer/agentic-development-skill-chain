@@ -183,7 +183,7 @@ After decomposition:
 
 | Step | Skill | Purpose |
 |---|---|---|
-| 0 | chain-guide | Detect current PROJ state and recommend the next step |
+| 0 | chain-guide | Detect current PROJ state and recommend the next step; advise which flow fits a new task |
 | 0a | product-vision | New product: `docs/PRODUCT.md` (what/who/non-goals) + the numbered PROJ map with dependencies |
 | 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
