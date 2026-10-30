@@ -5,6 +5,8 @@ description: "Create and curate human-readable project documentation after QA pa
 
 # Documentation
 
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number) when this skill starts and again in its final report, and show its line unchanged; if it prints nothing or fails, continue without it.
+
 ## External handoff inputs (conditional)
 
 When `external-handoff.json` exists, use [the receiving input contract](../2e_handoff-refinement/references/input-contract.md) for requirement lookup instead of the local PRD paths below. Link the immutable baseline and explicit product responses with their version/hash provenance; keep engineering constraints and proposals distinguishable. Document implemented, verified behavior in this repository and name outstanding integration dependencies. Never edit received artifacts or present engineering assumptions, local seals, open PRs or unverified cross-repo behavior as accepted product truth.

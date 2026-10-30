@@ -17,6 +17,7 @@ actual input artifact paths and any blockers. The next session reads those
 artifacts rather than relying on chat history. Do not create a separate session-context file.
 If blocked, name the owning skill and issue in the prompt; do not claim readiness.
 If the track is complete, report completion without inventing a next step.
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number, or `new` while none is allocated yet) when this session starts and again just before the handoff prompt, and show its line unchanged; if it prints nothing or fails, continue without it.
 
 
 Turn a UI concept into **multiple rough, clickable layout approaches** so the team can decide what the interface should broadly feel like before requirements are written.

@@ -5,6 +5,8 @@ description: "Run P8 delivery for a finished PROJ: probe merge conflicts against
 
 # Delivery — P8: Conflict Probe, PR, CI, Checkpoint 2
 
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number) when this skill starts and again in its final report, and show its line unchanged; if it prints nothing or fails, continue without it.
+
 ## External handoff inputs (conditional)
 
 For `external-handoff.json`, read [the receiving input contract](../2e_handoff-refinement/references/input-contract.md). Revalidate pinned inputs and applicable blockers before delivery. Record repository key, baseline/response revision, external dependencies, compatible implementation revisions, release order and integration evidence in the delivery evidence supplied to the existing renderer; PR bodies and reports still come only from template scripts.

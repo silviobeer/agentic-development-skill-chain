@@ -5,6 +5,8 @@ description: "Execute implementation plans user-story by user-story using agent 
 
 # Executing
 
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number) when this skill starts and again in its final report, and show its line unchanged; if it prints nothing or fails, continue without it.
+
 ## External handoff inputs (conditional)
 
 For `external-handoff.json`, read [the receiving input contract](../2e_handoff-refinement/references/input-contract.md). Verify input hashes, accepted team revision, repository scope and applicable readiness before CP1, setup and resumed work. References below to authoritative PRDs mean the resolved product baseline plus explicit approved responses in this mode; engineering constraints remain separately traceable. Never edit received PRDs, translate source ACs, or use a model review/CP1 decision as product approval. Send newly found product gaps through `handoff-refinement`; block affected tasks pending an explicit response and revalidate affected artifacts. Unresolved product questions cannot be auto-deferred as engineering debt.

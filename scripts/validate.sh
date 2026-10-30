@@ -159,7 +159,7 @@ check_identical "$ROOT/claude/skills/vibecoder/SKILL.md" \
   "$ROOT/codex/skills/vibecoder/SKILL.md"
 check_identical "$ROOT/claude/skills/1a_clarification/SKILL.md" \
   "$ROOT/codex/skills/1a_clarification/SKILL.md"
-for f in 5_executing/scripts/chain 5_executing/scripts/preflight.sh 5_executing/scripts/sync-framework.mjs 5_executing/templates/decisions.md.tmpl \
+for f in 5_executing/scripts/chain 0_chain-guide/scripts/chain-status.mjs 5_executing/scripts/preflight.sh 5_executing/scripts/sync-framework.mjs 5_executing/templates/decisions.md.tmpl \
          4_writing-plans/scripts/validate-wave-plan.mjs \
          2_requirements-engineer/scripts/validate-prds.mjs 3_architecture/scripts/validate-architecture.mjs \
          5_executing/scripts/compile-context.mjs 5_executing/scripts/story-slice.mjs \
@@ -243,6 +243,7 @@ harness delivery-workspace node "$ROOT/scripts/test-delivery-workspace.mjs"
 harness document-validators node "$ROOT/scripts/test-document-validators.mjs"
 harness wave-plan-validator bash "$ROOT/scripts/test-wave-plan-validator.sh"
 harness chain-dispatcher    bash "$ROOT/scripts/test-chain-dispatcher.sh"
+harness chain-status        bash "$ROOT/scripts/test-chain-status.sh"
 harness chain-refs          node "$ROOT/scripts/check-chain-refs.mjs"
 harness chain-refs-test     bash "$ROOT/scripts/test-chain-refs.sh"
 harness delivery            bash "$ROOT/scripts/test-delivery.sh"

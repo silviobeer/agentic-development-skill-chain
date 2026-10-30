@@ -1,0 +1,19 @@
+No PROJ yet · track: full chain
+👉 0   baseline               run bootstrap (0c); skip it on the discovery track
+⬜ 1   concept
+🔹 1a  clarification
+🔹 1b  visual-companion
+🔹 1c  frontend-design
+🔹 1d  prototyping
+🔹 1e  concept-sync
+⬜ 2   requirements-engineer
+🔹 2b  handoff-package
+🔹 2c  review-reconcile
+⬜ 3   architecture
+⬜ 4   writing-plans
+⬜ 5   executing
+⬜ 6   qa
+⬜ 7   documentation
+⬜ 8   delivery
+Next skill: 0c_bootstrap
+✅ done · 👉 current · ⬜ pending · ➖ skipped · 🔹 optional · ⛔ blocked

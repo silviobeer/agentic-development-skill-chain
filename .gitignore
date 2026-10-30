@@ -8,3 +8,4 @@ tmp/
 dist/
 build/
 specs/
+!scripts/fixtures/chain-status/*/tree/specs/
