@@ -254,7 +254,9 @@ starts with `1_concept` (optionally fed by a `1a_clarification`
 stakeholder brief), optionally follows the UI branch
 (`1b_visual-companion` → optional `1c_frontend-design` →
 `1d_prototyping` → optional `1e_concept-sync`), and then runs
-`2_requirements-engineer`. On the product-discovery track it may continue
+`2_requirements-engineer`. A small, bounded, non-bug change may instead take the
+compressed entry `1f_fast-track-spec`, which writes the standard concept, one PRD and
+the architecture in one session and hands off to `4_writing-plans`. On the product-discovery track it may continue
 through `2b_handoff-package` and `2c_review-reconcile`, then stops; P3–P8
 never run. Only a full-chain PROJ enters P2d/P3 below. Existing generated
 `2b_handoff/` package runs remain immutable and are unrelated to the

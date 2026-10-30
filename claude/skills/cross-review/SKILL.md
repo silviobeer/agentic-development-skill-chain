@@ -38,7 +38,7 @@ explanations may use the user's language.
 | `requirements` | the complete `2_PRDs/PROJ-<X>-PRD-*.md` set | concept and UI traceability, story/AC testability, edge behavior, cross-PRD consistency, architecture leakage |
 | `architecture` | `3-4_plan/PROJ-<X>-architecture.md` | decisions, feasibility, traceability, risk, Summary fidelity |
 | `plan` | wave plans and gate config | executability, coverage, sequencing, scope |
-| `qa` | QA summary/evidence plus implementation diff | evidence integrity, adversarial coverage, finding quality, release decision; `--personas` runs six isolated discipline reviewers |
+| `qa` | QA summary/evidence plus implementation diff | evidence integrity, adversarial coverage, finding quality, release decision; `--personas` runs six isolated discipline reviewers (or the subset named by `--personas <list>`) |
 | `docs` | curated documentation | factual truth, staleness, cap-gaming, durable-rule quality, every new Trap against [the trap test](../../../CONCEPT.md#trap-test-and-rule-placement) |
 
 Supply source artifacts that establish truth through `--ground-truth`; the
@@ -119,6 +119,22 @@ the architecture and the same PRDs. Feasibility and traceability are only
 checked against what is supplied, so a PRD left out is a requirement nobody
 reviews. If a referenced input does not exist, omit it; do not invent a
 replacement.
+
+`--also-focus <concept|requirements|architecture|plan,...>` appends the review
+focus of further artifact kinds to the primary mode's, so one run reviews a
+combined set (used by `fast-track-spec`: `architecture --also-focus
+concept,requirements`). The mode stays the primary one: it picks the ledger
+folder and the `.cross_review[]` record that CP1's fast path reads. Not valid
+for `qa` or `docs`.
+
+`--personas [chen,weber,...]` (QA only, never with `--joint`) takes an optional
+comma list of the six personas, by last or first name, case-insensitive: `chen`,
+`weber`, `sharma`, `mueller`, `rodriguez`, `takahashi`. No list runs all six, as
+before. A subset runs in canonical order (the first chosen persona is the
+quota probe), keeps the batching by `resources.max_parallel_commands`, and adds a
+`personas` array to the `.cross_review[]` record (absent = all six). An unknown or
+empty name exits 64 before any worker starts. `6_qa` § QA Profile chooses the
+subset for fast-track PROJs.
 
 After P0, omit `--author-provider` and use `--author-key` to resolve authorship
 from state.json. That is the persistent gate path: findings are added only via

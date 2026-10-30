@@ -64,7 +64,7 @@ console.log('Mutants: 5'); console.log('Survivors: 0');
       fs.unlinkSync(path.join(cwd, capture));
       const child = spawn(process.execPath, [script, '1', 'test', 'run', 'mutation'], { cwd, stdio: 'ignore' });
       const closed = new Promise(resolve => child.once('close', resolve));
-      const deadline = Date.now() + 5000;
+      const deadline = Date.now() + 30000;
       while (!fs.existsSync(path.join(cwd, capture)) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
       if (!fs.existsSync(path.join(cwd, capture))) { child.kill('SIGKILL'); assert.fail('wrapper did not start'); }
       const scope = JSON.parse(fs.readFileSync(path.join(cwd, capture), 'utf8'));

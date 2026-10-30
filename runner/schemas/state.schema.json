@@ -193,6 +193,7 @@
           "reviewer_model": { "type": "string" },
           "degraded_fallback": { "type": "boolean", "description": "true when model-opposite within the surviving provider (opposite provider unavailable)" },
           "findings_added": { "type": "integer" },
+          "personas": { "type": "array", "items": { "type": "string" }, "description": "Optional. QA persona subset that ran (e.g. weber, takahashi) when the panel was narrowed by --personas <list>; absent means all six." },
           "at": { "type": "string" }
         }
       }

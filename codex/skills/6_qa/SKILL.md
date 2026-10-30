@@ -120,6 +120,59 @@ Fixing is outside QA's role unless the user explicitly asks this session to fix 
 
 ## Workflow
 
+### QA Profile (evaluate first)
+
+A risk-scaled profile for fast-track PROJs: shallower, not more lenient. Decide it
+before the dev server or any browser work, and record it in the finder report as
+`QA profile: fast|full — <reason>` plus `QA panel: all|<comma list>` (an interactive
+run records it in the QA summary and runs the panel itself).
+
+1. **Verdict from the script.** Run `bash scripts/chain check risk <X> <theme>` (it reads
+   `state.json` `.base_sha`; `--base <sha>` overrides). Line 1 is `fast` or `full`, every
+   further line a reason: record that verdict and its first reason as
+   `QA profile: <verdict> — <reason>`. Do not re-derive it by hand and do not argue a
+   `full` down. If the command is missing or exits non-zero (a project with an old helper
+   copy: run `chain sync`), the profile is `full`.
+2. **What the script decides.** `fast` only when the concept's `Handoff Readiness` carries
+   `Authored via: fast-track-spec` (no marker or no readable concept means `full`, always)
+   and none of these shows up in non-spec, non-test, non-Markdown files (`.md` is prose; MDX, code
+   under `docs/` and comment lines are scanned, since `//go:build` and `#if` carry behavior), matched on added and removed
+   lines (a deleted guard counts as much as a new one), on the enclosing function git
+   prints for each hunk, and on the file path: an auth/session/permission/access path;
+   an endpoint or route handler; user input persisted or rendered unescaped; a migration
+   or schema change; any change to a dependency manifest or lockfile; a diff larger than
+   the PRD story count suggests (150 changed lines or 5 files per story); a binary file;
+   uncommitted production changes; an empty, unreadable or non-ancestor diff. The patterns are broad on purpose and live in
+   the helper behind `chain check risk`; widen them there (with a case in
+   `scripts/test-risk-check.sh`), not in this prose. It is a filter, not a proof: a risky
+   edit inside code whose function name and path carry no signal word still reads `fast`,
+   which is why the panel keeps Weber and Takahashi and a Critical/High finding escalates.
+3. **Escalation, one way.** After the finder pass, any Critical/High finding raises a
+   `fast` profile to `full`: re-record the line, run the steps below that `fast`
+   narrowed at full depth, and the panel uses all six personas. The fast panel is a
+   second evaluation point: when its command exits 3 (open Critical/High from the
+   panel), run the personas it skipped with one more `--personas <the skipped ones> --persist --round 1`
+   call, and note the escalation in the final output. That call's `this call: N Critical/High finding(s)` line says whether the escalation personas found anything themselves; its exit code and the `open Critical/High` count stay ledger-wide. The controller cannot re-run the
+   finder's narrowed probes (§3 to §6), so that path widens the panel only. A profile
+   never goes down.
+
+**`fast` contents.** Everything not listed here is unchanged: the read-only finder,
+the findings ledger, severity rules, the READY rule (no open Critical/High), the
+finder-report contract (`Production-ready recommendation`), the Simplicity Gate,
+and the Sonar and mutation inputs.
+
+- Browser E2E (§2): unchanged, once per story flow.
+- Adversarial and security (§3, §4): the PRDs' edge cases plus the security checks the diff touches.
+- UI consistency (§5): registry check and token grep on changed files, only if a story touches UI.
+- Regression (§6): only flows named in the PRDs' Dependencies and edge cases.
+- Persona panel: baseline Weber and Takahashi; add Chen when a security path is touched,
+  Sharma for data or list performance, Mueller for async or external calls.
+  Rodriguez (cross-wave) is skipped. Takahashi still emits his `retrospective` finding.
+
+`QA panel:` lists the chosen personas (`weber,takahashi,chen`); the panel command in
+§ Required Persona Cross-Review takes them as `--personas <list>`. `all` or a missing
+line means the plain `--personas`, all six.
+
 ## Quality Gates And Review Sources
 
 QA has six release gates:
@@ -130,11 +183,11 @@ QA has six release gates:
 - Sonar quality input: consume Skill 5 Sonar results when present; never make QA rerun Sonar from scratch.
 - Severity merge: all confirmed Critical/High bugs block release, regardless of which stream found them.
 
-The opposite-provider persona review is a diff-level review source, not a separate QA workflow. Its findings are normal QA bugs once deduplicated and severity-assigned. Retrospectives are advisory; bug findings are not.
+The opposite-provider persona review is a diff-level review source, not a separate QA workflow; the QA Profile above sets how many personas it runs. Its findings are normal QA bugs once deduplicated and severity-assigned. Retrospectives are advisory; bug findings are not.
 
 ### Required Persona Cross-Review (Codex QA)
 
-QA's persona review is the opposite-provider panel below; there is no in-session panel. **Framework run (state.json exists):** the read-only finder skips this section; the P6 controller runs the panel on the stored finder report before triage. When this QA skill runs interactively in Codex, it is not complete until six independent opposite-provider persona workers have reviewed the QA evidence. After documenting QA results and before making a release recommendation, run:
+QA's persona review is the opposite-provider panel below; there is no in-session panel. **Framework run (state.json exists):** the read-only finder skips this section; the P6 controller runs the panel on the stored finder report before triage. When this QA skill runs interactively in Codex, it is not complete until the independent opposite-provider persona workers the QA Profile calls for (six for `full`) have reviewed the QA evidence. After documenting QA results and before making a release recommendation, run:
 
 ```bash
 BASE="specs/PROJ-<X>-<theme>"
@@ -156,7 +209,7 @@ bash scripts/chain review qa <X> <theme> \
   --round 1
 ```
 
-The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). Claude is the opposite provider here. If it is missing or unauthenticated, the script prints a visible degraded-mode notice, records `degraded_fallback: true`, and runs the same six personas as six separate Codex workers; tell the user that independent-provider review was unavailable. Critical/High findings enter `findings.json` through `chain findings` and block the release decision. Rodriguez and Takahashi also emit one `low` finding with category `retrospective` (their retrospective); it is not a defect and does not keep the loop running. The panel runs once per QA pass; fixes are not re-reviewed by the panel. Fix orchestration stays with the P6 controller (or, interactively, the user's fix session): one opposite-provider reviewer checks each fix batch against the findings it claims to fix (`chain review qa` without `--personas`), up to three rounds per finding. Then escalate remaining Critical/High findings and report or defer Medium/Low.
+The workers are Chen (security), Weber (architecture), Sharma (performance), Mueller (reliability), Rodriguez (cross-wave architecture), and Takahashi (minimalism). With `QA panel: <list>` other than `all`, add that list after `--personas` (`--personas weber,takahashi,chen`); the review record then names the personas that ran. Without a list, all six run. Claude is the opposite provider here. If it is missing or unauthenticated, the script prints a visible degraded-mode notice, records `degraded_fallback: true`, and runs the same six personas as six separate Codex workers; tell the user that independent-provider review was unavailable. Critical/High findings enter `findings.json` through `chain findings` and block the release decision. Rodriguez and Takahashi also emit one `low` finding with category `retrospective` (their retrospective); it is not a defect and does not keep the loop running. The panel runs once per QA pass (a fast panel that exits 3 gets the one escalation call described in § QA Profile); fixes are not re-reviewed by the panel. Fix orchestration stays with the P6 controller (or, interactively, the user's fix session): one opposite-provider reviewer checks each fix batch against the findings it claims to fix (`chain review qa` without `--personas`), up to three rounds per finding. Then escalate remaining Critical/High findings and report or defer Medium/Low.
 
 Quota/rate-limit exhaustion during inference also means provider unavailability,
 even when authentication passes. `cross-review` runs the first persona alone as a probe, then the other five in parallel batches of `resources.max_parallel_commands` (default 2),
@@ -176,7 +229,7 @@ unrecorded earlier endpoint.
 
 ### 0. Start Dev Server
 
-Before any browser testing, ensure the dev server is running:
+Evaluate the QA Profile first. Before any browser testing, ensure the dev server is running:
 
 ```bash
 npm run dev
@@ -332,7 +385,7 @@ Critical/High simplicity findings gate production-readiness the same way functio
 
 ### 7. Document Results
 
-**Framework run (state.json exists): do not edit PRDs or progress.md (read-only finder).** Print the QA summary (per-AC results, Simplicity Gate, Spec vs Standards, Sonar input, Mutation input, and AGENTS.md candidates) as your final output, followed by the finding JSON lines; the runner or in-session driver stores the text as `5_progress/qa-finder-<ts>.md` and ingests the lines. The persona `retrospective` findings reach the ledger through the controller's persona panel.
+**Framework run (state.json exists): do not edit PRDs or progress.md (read-only finder).** Print the QA summary (the `QA profile:` and `QA panel:` lines first, then per-AC results, Simplicity Gate, Spec vs Standards, Sonar input, Mutation input, and AGENTS.md candidates) as your final output, followed by the finding JSON lines; the runner or in-session driver stores the text as `5_progress/qa-finder-<ts>.md` and ingests the lines. The persona `retrospective` findings reach the ledger through the controller's persona panel.
 
 **Interactive linear run (no external-handoff marker):** for each PRD tested, append a `## QA Test Results` section to that PRD file (`specs/PROJ-<X>-<theme>/2_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`) using `references/test-template.md` as the format. Write the same summary sections under `## QA Results` in `5_progress/PROJ-<X>-progress.md`, and append the persona `retrospective` findings verbatim under `## PROJ Retrospective`, each prefixed with the persona name.
 
@@ -415,7 +468,8 @@ Report to the user:
 - Simplicity gate findings and whether any release-blocking complexity remains
 - Sonar quality input: ran/skipped, blocking findings promoted to QA bugs
 - Mutation quality input: ran/skipped, surviving mutants promoted to QA bugs
-- **QA persona cross-review:** provider, degraded status, round result
+- **QA profile:** fast or full, with the reason
+- **QA persona cross-review:** provider, degraded status, personas run, round result
 - Screenshots taken during testing
 - **AGENTS.md candidates:** count + one-line summary of each, plus reminder that Skill 7 will ask for approval before merging.
 - Production-ready recommendation: YES or NO

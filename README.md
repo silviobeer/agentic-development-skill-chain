@@ -64,6 +64,7 @@ flowchart TD
     HP["2b · handoff-package<br/>immutable dated package for external<br/>UI/UX experts and developers"]:::opt
     RR["2c · review-reconcile<br/>resolves review gaps point by point,<br/>updates PRDs, concept and mockups"]:::opt
     ARCH["3 · architecture<br/>PROJ-level technical design<br/>across all PRDs"]
+    FAST["1f · fast-track-spec<br/>small bounded change: concept, one PRD<br/>and architecture in one session"]:::opt
     WP["4 · writing-plans<br/>splits stories into dependency-ordered<br/>waves + wave-gate config"]
   end
 
@@ -77,6 +78,9 @@ flowchart TD
   PROTO -->|concept affected or candidates open| SYNC --> REQ
   PROTO --> REQ
   CONCEPT -->|backend / API only| REQ
+  GUIDE -.->|small bounded change| FAST
+  FAST --> WP
+  FAST -.->|fit gate fails| CONCEPT
   REQ -->|full chain| ARCH --> WP
   REQ -.->|discovery: Linear handoff| DEV(["external experts / developer via Linear"])
   REQ -.->|on request, either track| HP
@@ -150,7 +154,7 @@ automatic cross-review calls, or stop-policy exits.
 
 | Step | Skill | What it does |
 |------|-------|--------------|
-| 0 | `chain-guide` | Detect project state, route to the right next step |
+| 0 | `chain-guide` | Detect project state, route to the right next step; advise which flow fits a new task |
 | 0a | `product-vision` | Once per product, new build: interview into `docs/PRODUCT.md` (what/who/non-goals) and cut the product into a numbered PROJ map in `specs/product-roadmap.md` |
 | 0b | `intake` | Once per repo: bootstrap the curated docs baseline from a code scan (provenance-marked drafts) + developer interview, reconciled via checkpoint, sealed as a commit |
 | 0c | `bootstrap` | Once per project, new build: decide the stack into `docs/ARCHITECTURE.md` § Stack, run the real scaffold, verify build/test green, write root `AGENTS.md` + `CLAUDE.md` pointer |
@@ -160,6 +164,7 @@ automatic cross-review calls, or stop-policy exits.
 | 1c | `frontend-design` (opt) | Design system — tokens, component catalog, showcase page |
 | 1d | `prototyping` (UI req.) | HTML sitemap + component-based or standalone HTML mockups + implementation handoff; narrows carried-forward candidates to one |
 | 1e | `concept-sync` (opt) | Reconcile iterated mockups and the chosen candidate direction back into the concept |
+| 1f | `fast-track-spec` (opt) | Compressed entry for a small, bounded, non-bug change: thin concept, one PRD and the architecture in one session with one interview and one cross-review; the standard artifacts, so Step 4 onward is unchanged. Escalates to `concept` when the task is bigger |
 | 2 | `requirements-engineer` | PRDs: user stories, acceptance criteria, edge cases, required opposite-provider review before handoff |
 | 2b | `handoff-package` (opt) | Standalone zippable package for external experts |
 | 2c | `review-reconcile` (opt) | Resolve PRD review gaps point by point |
@@ -167,7 +172,7 @@ automatic cross-review calls, or stop-policy exits.
 | 4 | `writing-plans` | Wave-based implementation plans; hands off to a new Step 5 session, whose CP1 is the joint planning approval |
 | 5 | `executing` | Full-procedure Step 5 for weaker writer models; hosts the CP1 `checkpoint` and P0 `setup` subskills and the framework scripts that `5b` uses too |
 | 5b | `executing-large-model` | **Default Step 5**: CP1 + P0 through the `5_executing` subskills, then the waves with the same gates, state, and QA handoff as `executing`, procedure replaced by intent and invariants |
-| 6 | `qa` | End-to-end QA plus the required opposite-provider six-persona review; read-only finder in framework runs, findings into the ledger |
+| 6 | `qa` | End-to-end QA plus the required opposite-provider six-persona review; read-only finder in framework runs, findings into the ledger. Fast-track PROJs get a risk-scaled QA profile (shallower, not more lenient): a reduced persona panel unless a risk signal or a Critical/High finding escalates to full |
 | 7 | `documentation` | Human docs + curation of the long-lived `docs/` baseline behind form and truth gates |
 | 8 | `delivery` | Conflict probe, PR with rendered body, CI fix loop, CP2 comment reconcile |
 
@@ -175,7 +180,7 @@ A bare number is a main-line step; a letter suffix is a variant at the same
 stage — `1b`–`1e` are a sequence inside the UI branch, `2b`/`2c`
 optional forks after Step 2 (`2b` packages PRDs for external experts on
 either track; `2c` runs when a developer review returns gaps and
-reconciles them back into PRDs, concept and mockups), `0a`/`0b`/`0c` alternative entry paths. Checkpoint 1 and P0 setup are
+reconciles them back into PRDs, concept and mockups), `0a`/`0b`/`0c` alternative entry paths, `1f` a compressed entry path that replaces steps 1–3 for a small change. Checkpoint 1 and P0 setup are
 subskills in `5_executing/subskills/`, not steps of their own; `5b` is the
 default Step 5 and `5` its full-procedure fallback. Skills with no number are not steps (see below). Inside
 `specs/PROJ-<X>-<theme>/`, each subfolder carries the number of the skill

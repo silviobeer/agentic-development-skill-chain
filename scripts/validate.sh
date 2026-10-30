@@ -14,6 +14,7 @@ CORE_SKILLS=(
   1c_frontend-design
   1d_prototyping
   1e_concept-sync
+  1f_fast-track-spec
   2b_handoff-package
   2c_review-reconcile
   2e_handoff-refinement
@@ -172,7 +173,7 @@ for f in 5_executing/scripts/chain 5_executing/scripts/preflight.sh 5_executing/
          cross-review/scripts/review-with-codex.sh cross-review/templates/cross-review-prompt.md.tmpl \
          5_executing/templates/agent-md-entry.md.tmpl \
          5_executing/scripts/gen-component-registry.mjs 5_executing/scripts/quality.mjs \
-         6_qa/scripts/findings.mjs \
+         6_qa/scripts/findings.mjs 6_qa/scripts/risk-check.sh \
          8_delivery/scripts/delivery.sh 5_executing/scripts/render.mjs \
          5_executing/templates/morning-report.md.tmpl 5_executing/templates/stop-report.md.tmpl \
          8_delivery/templates/pr-body.md.tmpl; do
@@ -273,6 +274,7 @@ harness quality             node "$ROOT/scripts/test-quality.mjs"
 harness mutation-file-list  node "$ROOT/scripts/test-mutation-file-list.mjs"
 harness cross-review        bash "$ROOT/scripts/test-cross-review.sh"
 harness cross-review-routing bash "$ROOT/scripts/test-cross-review-routing.sh"
+harness risk-check           bash "$ROOT/scripts/test-risk-check.sh"
 harness review-with-claude  bash "$ROOT/scripts/test-review-with-claude.sh"
 harness review-with-codex   bash "$ROOT/scripts/test-review-with-codex.sh"
 harness component-registry  node "$ROOT/codex/skills/5_executing/scripts/gen-component-registry.mjs" --selftest

@@ -30,6 +30,9 @@ flowchart LR
   S1B -->|brownfield| S1D
   S1D -->|concept affected or candidates open| S1E[1e concept-sync]
   S1D --> S2
+  S0 -.small bounded change.-> S1F[1f fast-track-spec]
+  S1F --> S4
+  S1F -.fit gate fails.-> S1
   S1E --> S2
   S2 -.on request, either track.-> S2B[2b handoff-package]
   S2 -.discovery: Linear handoff.-> DEV([developer / external experts])
@@ -183,7 +186,7 @@ After decomposition:
 
 | Step | Skill | Purpose |
 |---|---|---|
-| 0 | chain-guide | Detect current PROJ state and recommend the next step |
+| 0 | chain-guide | Detect current PROJ state and recommend the next step; advise which flow fits a new task |
 | 0a | product-vision | New product: `docs/PRODUCT.md` (what/who/non-goals) + the numbered PROJ map with dependencies |
 | 0b | intake | Existing codebase: bootstrap the curated `docs/` baseline by scan + interview, sealed via the checkpoint bootstrap variant |
 | 0c | bootstrap | New build: stack into `docs/ARCHITECTURE.md` § Stack, real scaffold with build/test verified green, root `AGENTS.md` + `CLAUDE.md` pointer |
@@ -193,6 +196,7 @@ After decomposition:
 | 1c | frontend-design | Define the design system for greenfield or hybrid UI work: tokens, component catalog, and the `/dev/components` showcase |
 | 1d | prototyping | Create component mockups in the PROJ folder using the existing app runtime, or standalone HTML without one; track iterations and runtime details in the handoff; with several carried-forward candidates, prototype each until one remains |
 | 1e | concept-sync | Reconcile iterated mockup changes and the chosen candidate direction back into the concept; set delivery track |
+| 1f | fast-track-spec | Compressed entry for a small, bounded, non-bug change: thin concept, one PRD and the architecture in one session, one interview, one cross-review; standard artifacts, so Step 4 onward is unchanged; escalates to `concept` when the fit gate fails |
 | 2 | requirements-engineer | Write PRDs, user stories, acceptance criteria, and edge cases; pass the required opposite-provider review before full-chain or Linear handoff |
 | 2b | handoff-package | Assemble a standalone, zippable handoff package for external UI/UX experts and developers (discovery endpoint or requested full-chain export) |
 | 2c | review-reconcile | Resolve PRD review gaps point by point; defer engineering items to a developer meeting (discovery endpoint or requested full-chain export) |
@@ -201,7 +205,7 @@ After decomposition:
 | 4 | writing-plans | Split independently verifiable stories into dependency-ordered waves; use expand–contract for wide migrations |
 | 5b | executing-large-model | Default Step 5: Checkpoint 1 and P0 through `5_executing`'s subskills, then the waves under the same gate and state contracts, with procedure reduced to intent and invariants ([SKILL.md](../claude/skills/5b_executing-large-model/SKILL.md)) |
 | 5 | executing | Full-procedure alternative for weaker writer models; hosts the checkpoint and setup subskills, the framework scripts and the shared references ([SKILL.md](../claude/skills/5_executing/SKILL.md)) |
-| 6 | qa | Run E2E QA, security, the required opposite-provider six-persona review (the only persona panel), simplicity review (what the Step 5 static and mutation gates cannot decide), and mutation-survivor input; strictly read-only finder in framework runs |
+| 6 | qa | Run E2E QA, security, the required opposite-provider six-persona review (the only persona panel), simplicity review (what the Step 5 static and mutation gates cannot decide), and mutation-survivor input; strictly read-only finder in framework runs. A `fast-track-spec` PROJ gets a risk-scaled QA profile (reduced persona panel and probes, escalating to full on any risk signal or Critical/High finding); every other PROJ always gets full QA |
 | 7 | documentation | Curate feature and technical docs, then merge approved AGENTS.md candidates |
 | 8 | delivery | Conflict probe against main, PR body rendered from state.json + findings.json and declared external prerequisites in wave-gate-config.json, bounded CI fix loop, Checkpoint 2 comment reconcile |
 

@@ -30,6 +30,7 @@ findings||findings.mjs|Record
 quality||quality.mjs|Record
 quality|seal|quality.mjs|Gate|seal
 gate|wave|wave-gate.sh|Gate
+check|risk|risk-check.sh|Gate
 check|inputs|resolve-inputs.mjs|Gate
 check|prds|validate-prds.mjs|Gate
 check|architecture|validate-architecture.mjs|Gate

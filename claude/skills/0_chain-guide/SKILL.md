@@ -1,6 +1,6 @@
 ---
 name: chain-guide
-description: "Context-aware guide through the 0-to-8 skill chain. Use when: (1) the user asks where they are or what to do next, (2) the user is unsure which skill to use, (3) starting a new feature or project, (4) the user says /chain-guide or /help. Detects current progress by checking existing files and recommends the next step."
+description: "Context-aware guide through the 0-to-8 skill chain. Use when: (1) the user asks where they are or what to do next, (2) the user is unsure which skill to use, (3) starting a new feature, task or project, (4) the user says /chain-guide or /help. Detects current progress by checking existing files and recommends the next step."
 ---
 
 # 0-to-8 Chain Guide
@@ -33,6 +33,7 @@ Detect where the user is in the 0-to-8 skill chain and tell them what to do next
 | 1c | frontend-design (opt) | Visual design language, greenfield or hybrid gaps → `1c_design/design-language.md` |
 | 1d | prototyping (UI required) | Sitemap + mockups + `implementation-handoff.md` + `iteration-log.md` in `1d_prototypes/` |
 | 1e | concept-sync (opt) | Reconcile iterated mockups and the chosen candidate back into the concept (`Concept Sync Log`, `Handoff Readiness`) |
+| 1f | fast-track-spec (small bounded change) | Compressed entry path: thin concept + ONE PRD + architecture in one session, one interview, one cross-review → the standard artifacts of 1, 2 and 3; escalates to `concept` when the fit gate fails |
 | 2 | requirements-engineer | PRDs `2_PRDs/PROJ-<X>-PRD-<Y>-<desc>.md`: stories, ACs, edge cases; Linear handoff mode for the discovery track |
 | 2b | handoff-package (opt) | Standalone zippable package for external UI/UX experts and developers → `2b_handoff/YYYY-MM-DD-handoff*/` |
 | 2c | review-reconcile (opt) | Resolve PRD review gaps point by point → `2_PRDs/<prd>-review-decisions.md` + `review-changelog.md` |
@@ -45,7 +46,7 @@ Detect where the user is in the 0-to-8 skill chain and tell them what to do next
 | 7 | documentation | Conditionally `README.md`, `docs/PROJECT.md`, `docs/TECHNICAL.md`; merges approved `AGENTS.md` candidates |
 | 8 | delivery (P8) | Conflict probe, PR via `gh` with rendered body, CI fix loop (max 3), Checkpoint 2 comment reconcile |
 
-**Reading the numbers.** A bare number is a main-line step; a letter suffix is a variant at the same stage. `0a`/`0b`/`0c` are entry paths (0a+0c new build, 0b existing codebase — run one baseline path, not both); `1b`–`1e` run in sequence in the UI branch; `2b`/`2c` are optional product-side forks after requirements (`2b` packages PRDs for external experts on either track; `2c` reconciles returned review gaps into PRDs, concept and mockups); `2e` is the engineering-side receiving step for an external handoff (it replaces the `1_concept` entry and feed Step 3 in the production repo); `5b` is the default Step 5 and `5` its full-procedure fallback. Checkpoint 1 and P0 are subskills of Step 5, not steps. A skill without a number is not a step: `cross-review` is a mechanism invoked by producing skills (after concept, requirements, architecture, plans, P6 QA, P7 docs) and never routed to directly; `bugfixing` (reported defect, regression, "why did tests miss this"), `refactor-dreamer`, `sonar-cli`, `vibecoder`, `supabase-local-dev`, `update-chain` run outside the chain and create no PROJ.
+**Reading the numbers.** A bare number is a main-line step; a letter suffix is a variant at the same stage. `0a`/`0b`/`0c` are entry paths (0a+0c new build, 0b existing codebase — run one baseline path, not both); `1b`–`1e` run in sequence in the UI branch; `2b`/`2c` are optional product-side forks after requirements (`2b` packages PRDs for external experts on either track; `2c` reconciles returned review gaps into PRDs, concept and mockups); `1f` is a compressed entry path: it writes the artifacts of 1, 2 and 3 in one session — run it instead of them, not in addition — and hands off to 4; `2e` is the engineering-side receiving step for an external handoff (it replaces the `1_concept` entry and feed Step 3 in the production repo); `5b` is the default Step 5 and `5` its full-procedure fallback. Checkpoint 1 and P0 are subskills of Step 5, not steps. A skill without a number is not a step: `cross-review` is a mechanism invoked by producing skills (after concept, requirements, architecture, plans, P6 QA, P7 docs) and never routed to directly; `bugfixing` (reported defect, regression, "why did tests miss this"), `refactor-dreamer`, `sonar-cli`, `vibecoder`, `supabase-local-dev`, `update-chain` run outside the chain and create no PROJ.
 
 Each PROJ has its folder `specs/PROJ-<X>-<theme>/`; each subfolder carries the number of the skill that writes it (architecture and plans share `3-4_plan/`). Progress is one file, `5_progress/PROJ-<X>-progress.md`. Framework runs add machine state `state.json` (only via `scripts/chain state`) and stage-local findings ledgers (`<stage>/findings.json`, aggregated by `scripts/chain findings list`) (only via `scripts/chain findings`).
 
@@ -80,6 +81,8 @@ ordering, and each entry's `Status`. A PROJ whose dependency is not
 no `specs/PROJ-<X>-<theme>/` folder yet are the natural candidates for
 **concept** (1).
 
+**New tasks:** when the user names a task, apply [New-Task Triage](#new-task-triage) first; otherwise continue with the scan below.
+
 Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
 
 1. `1_concept/PROJ-<X>-concept.md` — concept written? → step 1 done
@@ -95,12 +98,26 @@ Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
    - `2b_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
 7. `3-4_plan/PROJ-<X>-architecture.md` exists → step 3 done
 8. `3-4_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
-8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/chain state get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1; `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
+8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/chain state get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1 only once wave plans exist; otherwise recommend the next missing producing step from the artifact scan above (architecture present but no wave plans → `writing-plans`); `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
 9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Do not read the file: `grep -c "Gate — PASSED" <progress.md>` against the number of wave plans.
    - Count equals the number of wave plans? → step 5 done
    - Any `2_PRDs/PROJ-<X>-PRD-*.md` has a `## QA Test Results` section, or `state.json` is at `P6:done` or later? → step 6 done
 10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
 11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
+
+## New-Task Triage
+
+When the user names a new task (as the skill argument, or in answer to "What do you want to do?"), advise which flow fits before routing by state. It applies after external receiver routing and Rule 0: a missing baseline comes first. A bare call in a repo with no PROJ asks that question once; a bare call where PROJs exist reports state as usual and does not ask. "Where am I?" is not a new task.
+
+Advisory only: name the recommendation with a one-line reason (and the runner-up when it is close), and let the user overrule it. Infer from the description; ask only what it leaves open, one question at a time. End with the copyable start prompt from Session Boundary. If PROJs are in progress, list them after the recommendation (see Multiple PROJs); the user chooses.
+
+| The task is | Recommend |
+|---|---|
+| A reported defect, regression, wrong behavior, or "why did the tests miss this" | **bugfixing** (`/bugfixing`): outside the chain, creates no PROJ |
+| Free-form exploration of an idea in code before committing to a concept | **vibecoder** (`/vibecoder`) |
+| A survey of larger refactors or architecture drift, no code change requested | **refactor-dreamer** |
+| A small, well-bounded, non-bug change: one PRD and a handful of stories, no new screen or layout, no open product decision, no stack or baseline change, and not a discovery-track task (the PRD goes to an external developer in Linear: use **concept**, steps 3 to 7 do not apply) | **fast-track-spec** (`/1f_fast-track-spec`): thin concept, PRD and architecture in one session, then writing-plans. It escalates to `concept` itself if the task proves bigger; name **concept** as runner-up when scope is unclear |
+| A new feature or product change (anything else) | The chain: **concept** (`/1_concept`). A `planned` roadmap entry that matches becomes that PROJ |
 
 ## Respond to the User
 
@@ -108,7 +125,7 @@ Tell the user the detected state (artifact path) and the next step, in one or tw
 
 | Detected state | Next step |
 |---|---|
-| No PROJ folder | **concept** (`/1_concept`) — it allocates PROJ-X and the folder. If a stakeholder must still explain the problem, **clarification** (`/1a_clarification`) first; a `specs/_clarification/*-stakeholder_brief.md` no concept cites → `/1_concept <brief path>` when confirmed, else list its blocking open questions |
+| No PROJ folder | A task was named: [New-Task Triage](#new-task-triage). Otherwise **concept** (`/1_concept`) — it allocates PROJ-X and the folder. If a stakeholder must still explain the problem, **clarification** (`/1a_clarification`) first; a `specs/_clarification/*-stakeholder_brief.md` no concept cites → `/1_concept <brief path>` when confirmed, else list its blocking open questions |
 | Concept, UI feature, nothing further | **visual-companion** (1b) before design, mockups and PRDs |
 | Concept, backend/API feature | **requirements-engineer** (2) |
 | Visual Companion exists, no design language/mockups/PRDs | Follow a `## Design System State` decision in `layout-decision.md` ("skip knowingly" → **prototyping** with greyscale wireframes). Else greenfield: **frontend-design** (1c) → **prototyping** (1d) → **requirements-engineer** (2); hybrid with gaps: 1c lightly, then 1d, 2; brownfield: 1d, then 2 |
