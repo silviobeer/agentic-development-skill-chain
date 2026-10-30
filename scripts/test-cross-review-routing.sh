@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cross-review routing against PATH-shimmed claude/codex: opposite-provider
-# routing in both directions, six separate QA persona workers, auth preflight,
-# degraded fallbacks, pre-P0 runs without state.json, the requirements size
+# routing in both directions, six separate QA persona workers, the fast-panel
+# escalation call, auth preflight, degraded fallbacks, pre-P0 runs without state.json, the requirements size
 # cap, manual rounds, same-model refusal and the degraded flag in the morning
 # report. No provider calls.
 set -euo pipefail
@@ -124,6 +124,42 @@ rc=0; review docs 96 stage2 --artifacts docs/ARCHITECTURE.md --author-key docs-d
 [ "$rc" -eq 64 ] || die "--personas must stay invalid outside qa (rc=$rc)"
 rc=0; review qa 96 stage2 --artifacts docs/ARCHITECTURE.md --author-provider claude --joint --personas weber >/dev/null 2>&1 || rc=$?
 [ "$rc" -eq 64 ] || die "--personas must stay invalid with --joint (rc=$rc)"
+
+# Panel escalation (6_qa § QA Profile): a fast panel that exits 3 is followed by one more call for the skipped personas.
+# Persona-aware stub: only the persona named in PANEL_HIGH reports a high finding, everyone else is clean.
+PSTUB="$CASE/panel-stub"; mkdir -p "$PSTUB"
+cat >"$PSTUB/claude" <<'EOS'
+#!/bin/sh
+[ "${1:-}" != auth ] || exit 0
+input="$(cat)"
+who="$(printf '%s\n' "$input" | sed -n 's/^You are \(.*\) — .*/\1/p' | head -1)"
+case "$who" in
+  *"${PANEL_HIGH:-@@none@@}"*) printf '{"is_error":false,"structured_output":{"findings":[{"severity":"high","category":"panel-high","file":"docs/ARCHITECTURE.md","line":2,"summary":"%s finding"}]}}\n' "$who" ;;
+  *) printf '{"is_error":false,"structured_output":{"findings":[{"severity":"low","category":"review-clean","file":"docs/ARCHITECTURE.md","line":1,"summary":"no findings"}]}}\n' ;;
+esac
+EOS
+chmod +x "$PSTUB/claude"; cp "$STUB/codex" "$PSTUB/codex"
+panel() { PATH="$PSTUB:$PATH" bash scripts/chain review qa "$1" "$2" --artifacts docs/ARCHITECTURE.md --author-provider codex --persist --round 1 "${@:3}"; }
+qa_records() { jq -c "[.cross_review[] | select(.mode == \"qa\")] | $1" "specs/PROJ-$2/state.json"; }
+mkdir -p specs/PROJ-99-panel specs/PROJ-98-panel-clean; chain state init 99 panel >/dev/null; chain state init 98 panel-clean >/dev/null
+# Fast panel (weber,takahashi) reports a High -> exit 3; the escalation call runs the complementary four.
+rc=0; PANEL_HIGH=Weber panel 99 panel --personas weber,takahashi >"$CASE/panel1.out" 2>&1 || rc=$?
+[ "$rc" -eq 3 ] && grep -q '1 open Critical/High' "$CASE/panel1.out" || die "fast panel with an open High must exit 3 with one blocking finding (rc=$rc)"
+rc=0; panel 99 panel --personas chen,sharma,mueller,rodriguez >"$CASE/panel2.out" 2>&1 || rc=$?
+[ "$(qa_records 'length' 99-panel)" -eq 2 ] || die 'both panel calls must land in .cross_review[]'
+[ "$(qa_records '[.[].personas[]] | sort | join(",")' 99-panel)" = '"chen,mueller,rodriguez,sharma,takahashi,weber"' ] \
+  && [ "$(qa_records '.[0].personas + .[1].personas | length - (unique | length)' 99-panel)" -eq 0 ] \
+  || die 'the two panel records must name disjoint personas that together cover all six'
+[ "$(qa_records '.[1].findings_added' 99-panel)" -eq 0 ] || die 'the escalation panel found nothing and must record findings_added 0'
+# Known property, pinned on purpose: the exit code and BLOCKING count come from the whole ledger, not from this call.
+# The escalation call exits 3 even though its own personas were clean, because the first panel's High is still open.
+[ "$rc" -eq 3 ] && grep -q '1 open Critical/High' "$CASE/panel2.out" || die "the escalation call counts the first panel's open High (rc=$rc)"
+rc=0; PANEL_HIGH=Sharma panel 99 panel --personas sharma >"$CASE/panel3.out" 2>&1 || rc=$?
+[ "$rc" -eq 3 ] && grep -q '2 open Critical/High' "$CASE/panel3.out" || die "a High from the escalation panel must add to the ledger count (rc=$rc)"
+# Control: a clean fast panel leaves nothing open, so the complementary call exits 0 as well.
+rc=0; panel 98 panel-clean --personas weber,takahashi >/dev/null 2>&1 || rc=$?; [ "$rc" -eq 0 ] || die "clean fast panel must exit 0 (rc=$rc)"
+rc=0; panel 98 panel-clean --personas chen,sharma,mueller,rodriguez >/dev/null 2>&1 || rc=$?; [ "$rc" -eq 0 ] || die "clean escalation panel must exit 0 (rc=$rc)"
+[ "$(qa_records 'length' 98-panel-clean)" -eq 2 ] || die 'clean panels must both be recorded'
 
 # A Codex author has no same-provider fallback: fail before any reviewer runs when Claude auth is gone.
 ! out="$(CLAUDE_AUTH_FAIL=1 review docs 97 pre-p0 --artifacts docs/ARCHITECTURE.md --author-provider codex 2>&1)" \
