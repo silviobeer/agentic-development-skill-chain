@@ -1,0 +1,11 @@
+No PROJ yet · track: external handoff (receiving)
+➖ 0   baseline               per code repo, owned by handoff-refinement
+👉 2e  handoff-refinement
+⬜ 3   architecture
+⬜ 4   writing-plans
+⬜ 5   executing
+⬜ 6   qa
+⬜ 7   documentation
+⬜ 8   delivery
+Next skill: 2e_handoff-refinement
+✅ done · 👉 current · ⬜ pending · ➖ skipped · 🔹 optional · ⛔ blocked

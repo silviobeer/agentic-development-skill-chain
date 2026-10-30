@@ -5,6 +5,8 @@ description: "Default Step 5 of the chain: run Checkpoint 1 and P0 setup through
 
 # Executing — large-model variant (default Step 5)
 
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number) when this skill starts and again in its final report, and show its line unchanged; if it prints nothing or fails, continue without it.
+
 ## External handoff inputs (conditional)
 
 For `external-handoff.json`, follow [the receiving input contract](../2e_handoff-refinement/references/input-contract.md) and `5_executing`'s external-input rules before CP1/setup or resume. The resolved baseline, explicit approved responses and separately identified engineering criteria replace local PRD lookup below. Never supersede a worker slice by an assumed product decision: verify the pinned response, repair derived artifacts and recompile. Received files and source AC text remain immutable.

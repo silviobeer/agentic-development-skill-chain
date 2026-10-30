@@ -33,6 +33,7 @@ actual input artifact paths and any blockers. The next session reads those
 artifacts rather than relying on chat history. Do not create a separate session-context file.
 If blocked, name the owning skill and issue in the prompt; do not claim readiness.
 If the track is complete, report completion without inventing a next step.
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this PROJ's number, or `new` while none is allocated yet) when this session starts and again just before the handoff prompt, and show its line unchanged; if it prints nothing or fails, continue without it.
 
 
 After PRDs are written (and often after they were handed to a developer), a review comes back: a list of gaps, contradictions, ambiguities, and questions on the PRDs. This skill works through that review **point by point**, decides each item with the product owner or defers it to a developer meeting, and reconciles the agreed outcomes back into the PRDs, the concept, and the mockups — so the artifacts again match what was actually decided.

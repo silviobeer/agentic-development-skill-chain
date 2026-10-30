@@ -11,6 +11,7 @@ const inventory = [
   ["3_architecture/scripts/validate-architecture.mjs", "scripts/validate-architecture.mjs"],
   ...["validate-wave-plan.mjs", "document-parser.mjs", "resolve-inputs.mjs"].map(name => [`4_writing-plans/scripts/${name}`, `scripts/${name}`]),
   ["3_architecture/scripts/architecture-parser.mjs", "scripts/architecture-parser.mjs"],
+  ["0_chain-guide/scripts/chain-status.mjs", "scripts/chain-status.mjs"],
   ...["chain", "render.mjs", "integration-status.mjs", "compile-context.mjs", "story-slice.mjs", "state.sh", "preflight.sh", "env-local.sh", "compat.sh", "worktree.sh", "migration-drift-check.sh", "sync-framework.mjs"].map(name => [`5_executing/scripts/${name}`, `scripts/${name}`]),
   ...["backend-implementer", "explore", "frontend-implementer", "implementer", "micro-fixer", "reviewer"].map(name => [`5_executing/manifests/roles/${name}.md`, `templates/roles/${name}.md`]),
   ...["decisions", "morning-report", "stop-report"].map(name => [`5_executing/templates/${name}.md.tmpl`, `templates/${name}.md.tmpl`]),

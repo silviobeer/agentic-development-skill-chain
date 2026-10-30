@@ -45,6 +45,7 @@ render|slice|story-slice.mjs|Renderer
 render|registry|gen-component-registry.mjs|Renderer
 render|pr|render.mjs|Renderer|pr
 render|report|render.mjs|Renderer|report
+status||chain-status.mjs|Renderer
 worktree||worktree.sh|Environment
 sync||sync-framework.mjs|Environment
 review||cross-review.sh|Review

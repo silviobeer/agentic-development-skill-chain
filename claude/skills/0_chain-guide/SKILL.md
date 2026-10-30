@@ -80,31 +80,20 @@ ordering, and each entry's `Status`. A PROJ whose dependency is not
 no `specs/PROJ-<X>-<theme>/` folder yet are the natural candidates for
 **concept** (1).
 
-Scan `specs/PROJ-*/` folders to find the latest PROJ. For each PROJ, check:
+**Step detection:** run `bash ~/.claude/skills/5_executing/scripts/chain status` from the workspace root and use its output; do not re-derive the state from the files. It is the single home of the detection rules: which artifacts mark each step (0–8, 1a–1e, 2b, 2c, 2e) done, legacy folder names and flat old-style paths (`specs/PROJ-*-spec.md`, `-plan.md`, `specs/concepts/`), `state.json` phase and status after Checkpoint 1, wave gates in `progress.md`, QA results and the documentation commit order. It reads only; it never writes `state.json`, a ledger or an artifact. Its default view lists one line per PROJ when there are several, then the step checklist (✅ done, 👉 current, ⬜ pending, ➖ skipped, 🔹 optional, ⛔ blocked) of the most advanced unfinished PROJ; `chain status <X>` shows another PROJ. A discovery PROJ with PRDs reports complete at step 2: do not recommend architecture; optionally suggest `handoff-package` (2b). A `⛔` step points to `5_progress/stop-report.md`.
 
-1. `1_concept/PROJ-<X>-concept.md` — concept written? → step 1 done
-2. `1b_visual-companion/layout-decision.md` + `layout-exploration.html` — visual companion present? → step 1b done
-   - `layout-decision.md` lists `Carried Forward` → several candidates are still live; step 1d is not done whatever exists in `1d_prototypes/`; recommend `prototyping` (1d) until one remains.
-3. Project-mode detection: prefer `1b_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
-4. `1c_design/design-language.md` exists → step 1c done
-5. `1d_prototypes/sitemap.html` + `1d_prototypes/implementation-handoff.md` + the screen sources referenced by the handoff — mockups and UI handoff present? → step 1d done. For legacy handoffs without screen references, check the screen HTML files (the sitemap alone is not a screen). Do not require HTML screens for component mode or a currently running server to recognize completed artifacts.
-   - `1d_prototypes/iteration-log.md` with any entry marked `Affects concept: yes` **and** the concept has no `Concept Sync Log` entry covering that iteration → concept drifted, recommend `concept-sync` (1e) before requirements.
-   - The concept still lists `Candidate Directions` and `layout-decision.md` has a `Selected Direction` → recommend `concept-sync` (1e) before requirements.
-   - Concept contains a `Concept Sync Log` → step 1e done (`Handoff Readiness` alone does not count: `concept` writes it at approval).
-6. `2_PRDs/PROJ-<X>-PRD-*.md` — at least one PRD? → step 2 done. If `Handoff Readiness` is `discovery (Linear handoff)`, this PROJ is on the discovery track and is **complete at step 2** — do not recommend architecture. Optionally suggest `handoff-package` (2b) for an external standalone deliverable.
-   - `2b_handoff/*/README.md` exists → step 2b done; the latest dated handoff package is assembled.
-7. `3-4_plan/PROJ-<X>-architecture.md` exists → step 3 done
-8. `3-4_plan/PROJ-<X>-wave-*-plan.md` files exist → step 4 done (count waves by file glob)
-8b. `state.json` exists → framework run; read `.phase` + `.status` via `bash ~/.claude/skills/5_executing/scripts/chain state get <X> <theme> '.phase + ":" + .status'`: `CP1:pending`/`CP1:running` → step 5 at Checkpoint 1; `CP1:approved`/`P0:running` → step 5 at P0 setup; `P0:done` → P0 complete; `P5:*`–`P8:*` → that phase is running/done; `*:blocked` → run parked, point to `5_progress/stop-report.md`
-9. `5_progress/PROJ-<X>-progress.md` exists → step 5 running or done. Do not read the file: `grep -c "Gate — PASSED" <progress.md>` against the number of wave plans.
-   - Count equals the number of wave plans? → step 5 done
-   - Any `2_PRDs/PROJ-<X>-PRD-*.md` has a `## QA Test Results` section, or `state.json` is at `P6:done` or later? → step 6 done
-10. Check `docs/PROJECT.md` for the current PROJ **and** that the latest `docs(PROJ-<X>): Update project documentation` commit is newer than the latest `feat(PROJ-<X>-PRD-<Y>)`/`test(PROJ-<X>)` commit → step 7 done. Skill 7 may additionally update `README.md`, `docs/TECHNICAL.md`, approved `AGENTS.md` entries, and pointer-only `CLAUDE.md`, but only `docs/PROJECT.md` is guaranteed to exist.
-11. For back-compat, also check flat old-style paths (`specs/PROJ-*-spec.md`, `specs/PROJ-*-plan.md`, `specs/concepts/`) — treat as legacy, still recognise but recommend the new structure for new work.
+The External receiver routing and Rule 0 above take precedence: the script applies both (a `delivery-workspace.json` marker or an `external-handoff.json` keeps handoff-refinement current until the refinement project README marks its current run `ready for architecture`; before a framework run starts, a missing baseline is the current step on the full chain), but if its output ever disagrees with them, follow these rules and report the mismatch.
+
+What the script cannot decide stays a judgment here:
+- Whether a concept-only PROJ is a UI feature (then **visual-companion** 1b before requirements) or backend/API (then **requirements-engineer** 2).
+- Project mode for 1c/1d: prefer `1b_visual-companion/layout-decision.md` → `Project Mode`. Fallback: scan for existing app shell/components/tokens. If no reusable app shell, component set, design tokens, or real screens exist → greenfield. If existing screens/components/tokens/navigation meaningfully constrain the feature → brownfield. If some structure exists but important design/component gaps remain → hybrid.
+- Whether the 1d screens referenced by `implementation-handoff.md` are complete (the script checks `sitemap.html` + `implementation-handoff.md`; component mode needs no HTML screens).
+- A legacy concept without a `Delivery track` line in `Handoff Readiness` reports the full chain: ask once whether it is discovery.
+- Flat old-style paths: recognise them, but recommend the current structure for new work.
 
 ## Respond to the User
 
-Tell the user the detected state (artifact path) and the next step, in one or two sentences:
+Start with the `chain status --short` line, then tell the user the detected state (artifact path) and the next step, in one or two sentences:
 
 | Detected state | Next step |
 |---|---|
@@ -133,7 +122,7 @@ Tell the user the detected state (artifact path) and the next step, in one or tw
 
 ## Multiple PROJs
 
-List each PROJ with its current step (`PROJ-1-auth: Step 5 (executing) — wave 2 of 3`) and recommend the most advanced one first (finish what's started).
+List each PROJ with the line `chain status` prints for it (`PROJ-1 · 👉 Step 5/8 Executing · next: qa`) and recommend the most advanced one first (finish what's started).
 
 ## Reference Skills
 

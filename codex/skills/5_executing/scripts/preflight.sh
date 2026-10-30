@@ -280,7 +280,7 @@ const { execFileSync } = require("child_process");
 const path = "biome.json";
 const raw = fs.readFileSync(path, "utf8");
 const config = JSON.parse(raw);
-const ignored = [".claude/settings.json", "scripts/compile-context.mjs", "scripts/story-slice.mjs", "scripts/validate-wave-plan.mjs", "scripts/validate-prds.mjs", "scripts/validate-architecture.mjs", "scripts/document-parser.mjs", "scripts/resolve-inputs.mjs", "scripts/integration-status.mjs", "scripts/architecture-parser.mjs", "scripts/gen-component-registry.mjs", "scripts/findings.mjs", "scripts/findings-store.mjs", "scripts/render.mjs", "scripts/sync-framework.mjs", "scripts/quality.mjs", ".skillchain-helpers.json"];
+const ignored = [".claude/settings.json", "scripts/compile-context.mjs", "scripts/story-slice.mjs", "scripts/validate-wave-plan.mjs", "scripts/validate-prds.mjs", "scripts/validate-architecture.mjs", "scripts/document-parser.mjs", "scripts/resolve-inputs.mjs", "scripts/integration-status.mjs", "scripts/architecture-parser.mjs", "scripts/gen-component-registry.mjs", "scripts/findings.mjs", "scripts/findings-store.mjs", "scripts/render.mjs", "scripts/chain-status.mjs", "scripts/sync-framework.mjs", "scripts/quality.mjs", ".skillchain-helpers.json"];
 config.files ??= {};
 // Biome 2 removed `files.ignore` in favour of negated patterns in
 // `files.includes`, and rejects the old key outright — writing it makes
@@ -310,7 +310,7 @@ fs.writeFileSync(path, JSON.stringify(config, null, indent) + "\n");
 NODE
   say "✓ Biome ignores merged for framework-owned files"
 elif [ ! -f biome.jsonc ]; then
-  printf '%b\n' '{' '\t"files": {' '\t\t"includes": [' '\t\t\t"**",' '\t\t\t"!.claude/settings.json",' '\t\t\t"!scripts/compile-context.mjs",' '\t\t\t"!scripts/story-slice.mjs",' '\t\t\t"!scripts/validate-wave-plan.mjs",' '\t\t\t"!scripts/validate-prds.mjs",' '\t\t\t"!scripts/validate-architecture.mjs",' '\t\t\t"!scripts/document-parser.mjs",' '\t\t\t"!scripts/resolve-inputs.mjs",' '\t\t\t"!scripts/integration-status.mjs",' '\t\t\t"!scripts/architecture-parser.mjs",' '\t\t\t"!scripts/gen-component-registry.mjs",' '\t\t\t"!scripts/findings.mjs",' '\t\t\t"!scripts/findings-store.mjs",' '\t\t\t"!scripts/render.mjs"' '\t\t]' '\t}' '}' > biome.json
+  printf '%b\n' '{' '\t"files": {' '\t\t"includes": [' '\t\t\t"**",' '\t\t\t"!.claude/settings.json",' '\t\t\t"!scripts/compile-context.mjs",' '\t\t\t"!scripts/story-slice.mjs",' '\t\t\t"!scripts/validate-wave-plan.mjs",' '\t\t\t"!scripts/validate-prds.mjs",' '\t\t\t"!scripts/validate-architecture.mjs",' '\t\t\t"!scripts/document-parser.mjs",' '\t\t\t"!scripts/resolve-inputs.mjs",' '\t\t\t"!scripts/integration-status.mjs",' '\t\t\t"!scripts/architecture-parser.mjs",' '\t\t\t"!scripts/gen-component-registry.mjs",' '\t\t\t"!scripts/findings.mjs",' '\t\t\t"!scripts/findings-store.mjs",' '\t\t\t"!scripts/render.mjs",' '\t\t\t"!scripts/chain-status.mjs"' '\t\t]' '\t}' '}' > biome.json
   say "✓ Biome ignores created for framework-owned files"
 else
   say "⚠ biome.jsonc detected — add framework-owned scripts + .claude/settings.json to files.ignore before the setup commit"

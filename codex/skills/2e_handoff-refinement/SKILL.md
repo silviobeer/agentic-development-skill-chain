@@ -7,6 +7,8 @@ description: "Receive a versioned product handoff, inspect affected code reposit
 
 Refine a product-owned handoff into evidence-backed engineering inputs without taking ownership of its product requirements. This optional receiving workflow precedes architecture; the linear chain needs no additional files or approvals.
 
+Show progress: run `bash ~/.claude/skills/5_executing/scripts/chain status --short <X>` (Codex: `~/.codex/skills/5_executing/scripts/chain`; `<X>` is this refinement project's PROJ number, or `new` while none exists yet) when this skill starts and again just before its closing prompt, and show its line unchanged; if it prints nothing or fails, continue without it.
+
 ## References
 
 - [input-contract.md](references/input-contract.md) — the `external-handoff.json` schema, authority rules and resolver checks. During refinement you need § Storage and ownership and § Inventory; the remaining sections are for downstream consumers.
