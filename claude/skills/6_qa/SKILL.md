@@ -141,8 +141,8 @@ run records it in the QA summary and runs the panel itself).
    prints for each hunk, and on the file path: an auth/session/permission/access path;
    an endpoint or route handler; user input persisted or rendered unescaped; a migration
    or schema change; any change to a dependency manifest or lockfile; a diff larger than
-   the PRD story count suggests (150 changed lines or 5 files per story); an empty,
-   unreadable or non-ancestor diff. The patterns are broad on purpose and live in
+   the PRD story count suggests (150 changed lines or 5 files per story); a binary file;
+   uncommitted production changes; an empty, unreadable or non-ancestor diff. The patterns are broad on purpose and live in
    the helper behind `chain check risk`; widen them there (with a case in
    `scripts/test-risk-check.sh`), not in this prose. It is a filter, not a proof: a risky
    edit inside code whose function name and path carry no signal word still reads `fast`,

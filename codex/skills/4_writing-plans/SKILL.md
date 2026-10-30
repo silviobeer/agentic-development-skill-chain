@@ -56,7 +56,7 @@ All under `specs/PROJ-<X>-<theme>/`:
 |---|---|
 | `3-4_plan/PROJ-<X>-architecture.md` | cross-cutting decisions (data model, tech, dependencies) |
 | `2_PRDs/PROJ-<X>-PRD-*.md` | user stories and ACs |
-| `1d_prototypes/implementation-handoff.md` (UI PROJs) | project mode, reuse, new component candidates, tokens, interaction contract, mockup tolerance |
+| `1d_prototypes/implementation-handoff.md` (UI PROJs with prototypes) | project mode, reuse, new component candidates, tokens, interaction contract, mockup tolerance. A fast-track PROJ has no prototypes: the PRD's `UI Implementation Notes` (components to reuse) carry the same reuse information |
 | `3-4_plan/PROJ-<X>-migration-design.md` (if present) | migration SQL/trigger detail — cite by decision, never copy |
 
 Before processing the inputs, run both structure gates:
@@ -237,7 +237,7 @@ Fix plan-only issues inline and re-validate; return PRD or architecture defects 
 Right after the validator passes, in the same turn and without asking, review the **complete** set:
 
 ```bash
-bash scripts/chain review plan <X> <theme> \
+bash ~/.codex/skills/5_executing/scripts/chain review plan <X> <theme> \
   --artifacts specs/PROJ-<X>-<theme>/3-4_plan/PROJ-<X>-wave-*-plan.md \
     specs/PROJ-<X>-<theme>/3-4_plan/wave-gate-config.json \
     specs/PROJ-<X>-<theme>/api-contracts.md \

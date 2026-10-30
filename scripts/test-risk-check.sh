@@ -131,6 +131,19 @@ for provider in claude codex; do
   fresh shebang-flag;      printf '#!/usr/bin/env node\nconst token = process.env.TOKEN;\n' >src/cli.js
   expect shebang-flag full 'auth/session/permission'
 
+  # review of PR #34: schema files outside migration dirs, binary files and uncommitted work cannot read as fast
+  fresh schema-file;       mkdir -p src/db; printf 'export const customers = pgTable("customers", { note: text("note") });\n' >src/db/schema.ts
+  expect schema-file full 'migration/schema: A src/db/schema.ts'
+  fresh binary-file;       printf '\000\001\002\377' >src/module.wasm
+  expect binary-file full 'binary file changed'
+  fresh dirty-tree;        printf 'export const wave = (n) => `hi ${n}`;\n' >src/wave.js; git add -A; git commit -qm dirty-tree
+  printf 'export function handle(user) {\n  return 200;\n}\n' >src/handler.js
+  [ "$(risk --base "$BASE" | sed -n 1p)" = full ] && risk --base "$BASE" | grep -q 'uncommitted production-code' || die "$provider: an uncommitted guard removal must read full"
+  git checkout -q -- src/handler.js; printf 'x\n' >src/new-untracked.js
+  risk --base "$BASE" | grep -q 'uncommitted production-code' || die "$provider: an untracked production file must read full"
+  rm src/new-untracked.js
+  [ "$(risk --base "$BASE" | sed -n 1p)" = fast ] || die "$provider: a clean tree must stay fast again"
+
   # no marker and a missing concept are full, always
   fresh no-marker;     printf '# Concept\n\n## Handoff Readiness\n- Delivery track: full chain (in-repo build)\n' >specs/PROJ-95-fixture/1_concept/PROJ-95-concept.md; printf 'export const x = 1;\n' >src/x.js
   expect no-marker full 'no .Authored via: fast-track-spec. marker'
@@ -141,7 +154,7 @@ for provider in claude codex; do
   fresh marker-formatted;  printf '# Concept\n\n## Handoff Readiness\n- `Delivery track: full chain (in-repo build)`\n- `Authored via: fast-track-spec`\n\n## Next Step\n- x\n' >specs/PROJ-95-fixture/1_concept/PROJ-95-concept.md; printf 'export const x = 1;\n' >src/x.js
   expect marker-formatted fast 'no risk signal'
   fresh marker-inline;     printf '# Concept\n\n## Handoff Readiness\n- `Delivery track: full chain (in-repo build)`; `Authored via: fast-track-spec`\n' >specs/PROJ-95-fixture/1_concept/PROJ-95-concept.md; printf 'export const x = 1;\n' >src/x.js
-  expect marker-inline fast 'no risk signal'
+  expect marker-inline full 'no .Authored via: fast-track-spec. marker'
   fresh no-concept;    rm specs/PROJ-95-fixture/1_concept/PROJ-95-concept.md; printf 'export const x = 1;\n' >src/x.js
   expect no-concept full 'no readable concept'
 

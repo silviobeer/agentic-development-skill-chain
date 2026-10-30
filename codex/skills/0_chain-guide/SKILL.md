@@ -116,7 +116,7 @@ Advisory only: name the recommendation with a one-line reason (and the runner-up
 | A reported defect, regression, wrong behavior, or "why did the tests miss this" | **bugfixing** (`/bugfixing`): outside the chain, creates no PROJ |
 | Free-form exploration of an idea in code before committing to a concept | **vibecoder** (`/vibecoder`) |
 | A survey of larger refactors or architecture drift, no code change requested | **refactor-dreamer** |
-| A small, well-bounded, non-bug change: one PRD and a handful of stories, no new screen or layout, no open product decision, no stack or baseline change | **fast-track-spec** (`/1f_fast-track-spec`): thin concept, PRD and architecture in one session, then writing-plans. It escalates to `concept` itself if the task proves bigger; name **concept** as runner-up when scope is unclear |
+| A small, well-bounded, non-bug change: one PRD and a handful of stories, no new screen or layout, no open product decision, no stack or baseline change, and not a discovery-track task (the PRD goes to an external developer in Linear: use **concept**, steps 3 to 7 do not apply) | **fast-track-spec** (`/1f_fast-track-spec`): thin concept, PRD and architecture in one session, then writing-plans. It escalates to `concept` itself if the task proves bigger; name **concept** as runner-up when scope is unclear |
 | A new feature or product change (anything else) | The chain: **concept** (`/1_concept`). A `planned` roadmap entry that matches becomes that PROJ |
 
 ## Respond to the User

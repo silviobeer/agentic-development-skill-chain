@@ -69,7 +69,7 @@ Present the verdict and get explicit confirmation. Fast track holds only if **al
 
 Allocate nothing. Write `specs/_fast-track/<slug>-escalation.md` (raw input, not a concept): the seed; what the interview established (problem, users, success, non-goals, constraints, drafted stories) marked unconfirmed; the failed criterion with its evidence; the candidate PRD split or open decision. End with the start prompt `/1_concept specs/_fast-track/<slug>-escalation.md` and the reason. Stop.
 
-The same applies if the trigger appears after files exist (cross-review or user review surfaces a second PRD or an open product decision): keep the artifacts as written, name `concept` as owner in the start prompt with the concept and PRD paths as input, and do not claim readiness.
+The same applies if the trigger appears after files exist (cross-review or user review surfaces a second PRD or an open product decision): keep the artifacts as written, but make the folder unreadable as a ready fast-track PROJ: in the concept's `Handoff Readiness` delete the `Authored via: fast-track-spec` bullet (the QA risk check then reads `full`) and add `- Blocked: escalated to concept, see specs/_fast-track/<slug>-escalation.md` (write that escalation file as above). Name `concept` as owner in the start prompt with the concept and PRD paths as input, and do not claim readiness.
 
 ### 5. Allocate and open the PROJ
 

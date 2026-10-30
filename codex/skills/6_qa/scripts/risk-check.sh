@@ -41,11 +41,11 @@ finish() {
 DIR="specs/PROJ-${PROJ}-${THEME}"
 CONCEPT="$DIR/1_concept/PROJ-${PROJ}-concept.md"
 if [ ! -r "$CONCEPT" ]; then full "no readable concept at $CONCEPT"; finish; fi
-# The marker counts only as a line of the Handoff Readiness section whose whole value is fast-track-spec
-# (formatting characters stripped; its own bullet or one segment of a `;`-separated bullet), not anywhere in the file
-# and not as a prefix like fast-track-spec-disabled.
+# The marker counts only as its own line of the Handoff Readiness section (formatting characters stripped, optional
+# `-`/`+` bullet) whose whole value is fast-track-spec: not anywhere else in the file, not as a prefix like
+# fast-track-spec-disabled and not sharing a line with other text (1f dictates two own-line bullets).
 awk '/^#+[[:space:]]/ { in_section = ($0 ~ /^#+[[:space:]]+Handoff Readiness[[:space:]]*$/); next } in_section { gsub(/[`*]/, ""); print }' "$CONCEPT" \
-  | grep -Eq '(^|[-;,|(])[[:space:]]*Authored via:[[:space:]]*fast-track-spec[[:space:]]*([;,|)]|$)' \
+  | grep -Eq '^[[:space:]]*([-+][[:space:]]+)?Authored via:[[:space:]]*fast-track-spec[[:space:]]*$' \
   || { full "no 'Authored via: fast-track-spec' marker in the concept's Handoff Readiness (full chain PROJ)"; finish; }
 
 if [ -z "$BASE_SHA" ]; then
@@ -60,6 +60,9 @@ git merge-base --is-ancestor "$BASE_SHA" HEAD 2>/dev/null || { full "base commit
 # and reads `full`). Only `.md` counts as prose: MDX components and code files under docs/ are executable and stay scanned.
 EXCLUDES=(':(exclude)specs/**' ':(exclude,glob)**/*.md' ':(exclude)**/*.test.*' ':(exclude)**/*.spec.*' ':(exclude)**/__tests__/**' ':(exclude)**/tests/**' ':(exclude)**/test/**' ':(exclude)**/*_test.*' ':(exclude)**/test_*.*')
 RANGE="$BASE_SHA..HEAD"
+# BASE..HEAD does not see staged, unstaged or untracked work: uncommitted production code cannot be assessed.
+dirty="$(git status --porcelain --untracked-files=all -- . "${EXCLUDES[@]}" | wc -l | tr -d ' ')"
+[ "$dirty" -eq 0 ] || full "uncommitted production-code changes ($dirty path(s)); commit before the risk check"
 DIFF_OPTS=(--no-color --no-ext-diff --no-renames)
 
 # --- size: against the PRD story count (a PRD with no parsable story counts as one) ---
@@ -68,8 +71,9 @@ if [ -d "$DIR/2_PRDs" ]; then
   stories="$(cat "$DIR/2_PRDs/"*.md 2>/dev/null | grep -cE '^#{2,4}[[:space:]].*US-[0-9]+' || true)"
 fi
 [ "$stories" -ge 1 ] || stories=1
-read -r changed_lines changed_files < <(git diff "${DIFF_OPTS[@]}" --numstat "$RANGE" -- . "${EXCLUDES[@]}" | awk '{ if ($1 != "-") n += $1 + $2; f++ } END { print n + 0, f + 0 }')
+read -r changed_lines changed_files binary_files < <(git diff "${DIFF_OPTS[@]}" --numstat "$RANGE" -- . "${EXCLUDES[@]}" | awk '{ if ($1 != "-") n += $1 + $2; else b++; f++ } END { print n + 0, f + 0, b + 0 }')
 [ "$changed_files" -gt 0 ] || { full "no production-code change in $RANGE; nothing to assess"; finish; }
+[ "$binary_files" -eq 0 ] || full "binary file changed ($binary_files): the content cannot be inspected"
 [ "$changed_lines" -le $((stories * LINES_PER_STORY)) ] || full "size: $changed_lines changed lines for $stories story/stories (limit $LINES_PER_STORY per story)"
 [ "$changed_files" -le $((stories * FILES_PER_STORY)) ] || full "size: $changed_files changed files for $stories story/stories (limit $FILES_PER_STORY per story)"
 
@@ -78,6 +82,9 @@ while IFS=$'\t' read -r status path; do
   base="${path##*/}"; lower="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
   case "$path" in
     */migrations/*|migrations/*|*/migration/*|*/prisma/*|prisma/*|*/drizzle/*|drizzle/*|*.sql|*schema.prisma) full "migration/schema: $status $path" ;;
+  esac
+  case "$lower" in
+    *schema*|models.py|*/models.py|*.entity.[jt]s|*.entity.py) full "migration/schema: $status $path" ;;
   esac
   case "$base" in
     package-lock.json|pnpm-lock.yaml|yarn.lock|bun.lock|bun.lockb|Cargo.lock|poetry.lock|uv.lock|Pipfile.lock|go.sum|Gemfile.lock|composer.lock) full "dependency: lockfile changed ($status $path)" ;;
