@@ -22,7 +22,7 @@ If the track is complete, report completion without inventing a next step.
 Turn a UI concept into **multiple rough, clickable layout approaches** so the team can decide what the interface should broadly feel like before requirements are written.
 
 <HARD-GATE>
-Do NOT write production code, define colors/typography, create final components, or write detailed acceptance criteria. This step produces disposable low-fidelity exploration artifacts only.
+Do NOT write production code, define colors/typography, create final components, or write detailed acceptance criteria. Do NOT write tests. This step produces disposable low-fidelity exploration artifacts only; opening the HTML in a browser is the only verification.
 </HARD-GATE>
 
 ## Purpose

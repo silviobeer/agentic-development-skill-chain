@@ -48,12 +48,14 @@ Work one PROJ at a time. If the concept contains `Decomposition Context`:
 
 Choose and announce the execution mode separately from visual fidelity:
 
-- **Components (default with a usable app runtime):** Keep mockup screens, fixtures, and simulated interactions in `specs/PROJ-<X>-<theme>/1d_prototypes/`, using the existing stack's source format (not necessarily React). Import real components and their styles/tokens. Reuse required UI providers, but do not mount providers or shells that trigger real authentication, data fetching, or writes; use existing presentation components and fixture seams instead.
+- **Components (default with a usable app runtime):** Keep mockup screens, fixtures, and simulated interactions in `specs/PROJ-<X>-<theme>/1d_prototypes/`, using the existing stack's source format (not necessarily React). Import real components and their styles/tokens. Reuse required UI providers, but do not mount providers or shells that trigger real authentication, data fetching, or writes; use existing presentation components with inline sample data instead.
 - **Standalone HTML (without a usable app runtime):** One self-contained HTML file per screen, inline CSS and small vanilla JavaScript, no external dependencies or build step. Reproduce documented visual patterns and label intended component reuse. This includes discovery with screenshots/design references but no source code.
 
 Inspect the existing start commands, routing, preview setup, imports, and provider requirements before choosing. Use an existing dev preview or Storybook when suitable; do not introduce Storybook. Reuse a running project dev server when available, otherwise start it with the existing project command and confirm the actual local URL. Never stop or replace a server owned by someone else.
 
-Keep only framework-required development entrypoints and minimal integration configuration outside the PROJ folder. For example, a development route at `/dev/mockups/proj-42` can import a screen from `1d_prototypes/`. Use the framework's development-only mechanism and verify the mockup entry is inaccessible in production; hiding a navigation link is insufficient. Check imports, styles, and refresh/deep links through the real preview. If the toolchain excludes the PROJ folder, first try the smallest supported source/include or filesystem-access configuration change. If importing from that location still requires a second runtime or broad refactor, keep the sources in the PROJ folder and use the documented HTML fallback below; do not relocate them into production source directories.
+Keep only framework-required development entrypoints and minimal integration configuration outside the PROJ folder. For example, a development route at `/dev/mockups/proj-42` can import a screen from `1d_prototypes/`. Use the framework's development-only mechanism so the entry does not ship to production. Check imports and styles by opening the real preview. If the toolchain excludes the PROJ folder, first try the smallest supported source/include or filesystem-access configuration change. If importing from that location still requires a second runtime or broad refactor, keep the sources in the PROJ folder and use the documented HTML fallback below; do not relocate them into production source directories.
+
+Do not write tests (unit, component, e2e, or production-guard checks) for mockups; opening them in the browser is the verification. Mockups are disposable.
 
 Do not scaffold a second app or broadly refactor production components to make a mockup work. Diagnose startup failures and make bounded fixes within the existing preview setup. If no usable runtime remains, or component isolation/source placement requires a broad refactor, announce standalone HTML fallback and record the specific blocker, attempted remedy, and approximated components in the handoff. The fallback permits mockup review and subsequent requirements work, but does not count as a verified component preview. Existing HTML mockups need no automatic conversion.
 
@@ -259,7 +261,6 @@ greenfield | brownfield | hybrid
 - Start command and working directory: <existing project command, or not required for standalone HTML>
 - Local preview URL: <verified URL, or not applicable>
 - Development entrypoints/configuration outside the PROJ folder: <paths and purpose, or none>
-- Development-only verification: <check and result, or not applicable>
 - Runtime blockers / fallback reason: <details, or none>
 
 ## Screen References
@@ -344,7 +345,7 @@ Either way, the mockups are required input for user stories, acceptance criteria
 - [ ] App shell detected and embedded where applicable
 - [ ] Sitemap created with all pages and flows
 - [ ] Execution mode chosen and justified; screen sources kept in the PROJ folder
-- [ ] Component preview verified in the browser and development entry inaccessible in production, or standalone HTML verified
+- [ ] Component preview or standalone HTML opened and checked by eye in the browser
 - [ ] Mockup created for each screen
 - [ ] Mockups linked to each other
 - [ ] Relevant interactions simulated locally without real backend calls or persistence
