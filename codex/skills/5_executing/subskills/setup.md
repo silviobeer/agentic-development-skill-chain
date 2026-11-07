@@ -243,7 +243,9 @@ probe per provider (claude hard, codex degradable) and writes the
   Never work around this flag and never unset it by hand.
 - Exit 1 → hard tool missing = **stop condition (§8)**: transition to
   blocked (`bash scripts/chain state transition <X> <theme> P0 blocked`),
-  write the stop report, do not continue.
+  write the stop report, do not continue. `.stop.reason` names every hard failure the
+  preflight found, each with its fix, and the return starts with a `BLOCKED:` line
+  so the lead can escalate immediately (`5_executing/references/escalation.md`).
 
 For a repo with `supabase/migrations/`, preflight also runs
 `chain check migrations`: every git worktree of this repo shares ONE local

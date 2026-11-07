@@ -108,6 +108,7 @@ check_identical() {
 check_identical "$ROOT/claude/skills/5_executing/scripts/wave-gate.sh" "$ROOT/codex/skills/5_executing/scripts/wave-gate.sh"
 check_identical "$ROOT/runner/prompts/p6-controller.md" "$ROOT/claude/skills/5_executing/references/p6-controller.md" "$ROOT/codex/skills/5_executing/references/p6-controller.md"
 check_identical "$ROOT/claude/skills/5_executing/references/in-session-driver.md" "$ROOT/codex/skills/5_executing/references/in-session-driver.md"
+check_identical "$ROOT/claude/skills/5_executing/references/escalation.md" "$ROOT/codex/skills/5_executing/references/escalation.md"
 check_identical "$ROOT/claude/skills/5_executing/scripts/state.sh" "$ROOT/codex/skills/5_executing/scripts/state.sh"
 check_identical "$ROOT/claude/skills/5_executing/scripts/env-local.sh" "$ROOT/codex/skills/5_executing/scripts/env-local.sh"
 check_identical "$ROOT/claude/skills/5_executing/scripts/compat.sh" "$ROOT/codex/skills/5_executing/scripts/compat.sh"
