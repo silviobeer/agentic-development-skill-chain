@@ -69,7 +69,7 @@ from `5_executing` and the same scripts enforce them.
      user's behalf.
    - `CP1:approved`, `P0:running`, `P0:blocked` → one subagent on
      `5_executing/subskills/setup.md` with `<X> <theme>` and this checkout's
-     path. `P0:blocked` back → stop and report its reason. Relay any defaulted
+     path. `P0:blocked` back → escalate at once per `5_executing/references/escalation.md`. Relay any defaulted
      decisions (including the suggested `complexity_cmd` / `arch_rules_cmd` /
      `mutation_cmd` candidates; absent keys simply skip), then `cd` into the
      returned `.worktree.path`.
@@ -324,7 +324,7 @@ reuse or invalidation decisions there. The gate appends its own PASSED blocks.
 
 ## Stop conditions
 
-Escalate or park the run, never improvise past these: Outer Ralph exhausted
+Escalate (`5_executing/references/escalation.md`: notify + chat message at once, then park), never improvise past these: Outer Ralph exhausted
 all four stages; the root cause is in the spec or architecture; a declared
 external prerequisite is missing (exit 76); a required tool is absent (install
 it, do not bypass the gate); requirements contradict each other. In framework
